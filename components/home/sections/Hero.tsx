@@ -5,13 +5,16 @@ import Image from "next/image";
 import { ArrowRight, BadgeCheck, ChevronDown, Sparkles } from "lucide-react";
 import { RevealOnScroll } from "@/components/home/RevealOnScroll";
 import { authorityBadges, rollingValueProps, visuals } from "@/components/home/data";
+import type { LandingOverrides } from "@/lib/landing";
 
 export function Hero({
   onStartWizard,
-  onScheduleDiscovery
+  onScheduleDiscovery,
+  overrides
 }: {
   onStartWizard?: () => void;
   onScheduleDiscovery?: () => void;
+  overrides?: LandingOverrides;
 }) {
   const spotRef = useRef<HTMLDivElement | null>(null);
 
@@ -68,20 +71,26 @@ export function Hero({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 </span>
-                AI Revenue System untuk Bisnis Indonesia
+                {overrides?.heroBadge || "AI Revenue System untuk Bisnis Indonesia"}
               </div>
             </RevealOnScroll>
 
             <RevealOnScroll delay={80}>
               <h1 className="mt-6 text-balance font-semibold leading-[1.04] tracking-[-0.04em] text-foreground text-[clamp(2.4rem,8.5vw,3.5rem)] sm:leading-[1.03]">
-                Kalau Anda tidak pecat pekerjaan lama,{" "}
-                <span className="text-aurora">AI</span> akan pecat bisnis Anda.
+                {overrides?.heroTitle ? (
+                  overrides.heroTitle
+                ) : (
+                  <>
+                    Kalau Anda tidak pecat pekerjaan lama,{" "}
+                    <span className="text-aurora">AI</span> akan pecat bisnis Anda.
+                  </>
+                )}
               </h1>
             </RevealOnScroll>
 
             <RevealOnScroll delay={160}>
               <p className="mt-5 max-w-xl text-balance text-base leading-7 text-foreground-muted sm:text-lg sm:leading-8">
-                Satu orang kini bisa bangun bisnis jutaan dolar dengan AI. Masih puas dengan cara lama?
+                {overrides?.heroSubtitle || "Satu orang kini bisa bangun bisnis jutaan dolar dengan AI. Masih puas dengan cara lama?"}
               </p>
             </RevealOnScroll>
 
@@ -92,17 +101,17 @@ export function Hero({
                   className="motion-cta-shimmer fx-ring group inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-foreground px-7 text-base font-semibold text-surface shadow-[0_18px_50px_-16px_rgba(15,23,42,0.5)] transition hover:-translate-y-0.5 hover:scale-[1.01] sm:w-auto"
                 >
                   <Sparkles className="h-5 w-5" />
-                  Buktikan Sendiri dalam 5 Menit
+                  {overrides?.heroCtaPrimary || "Buktikan Sendiri dalam 5 Menit"}
                   <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
                 </button>
                 <button
                   onClick={() => onScheduleDiscovery?.()}
                   className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full border border-border-base bg-surface-elevated/80 px-7 text-base font-semibold text-foreground backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-border-strong sm:w-auto"
                 >
-                  Jadwalkan Discovery
+                  {overrides?.heroCtaSecondary || "Jadwalkan Discovery"}
                 </button>
               </div>
-              <p className="mt-4 text-sm text-foreground-subtle">Gratis, tanpa signup, tanpa kartu kredit.</p>
+              <p className="mt-4 text-sm text-foreground-subtle">{overrides?.heroNote || "Gratis, tanpa signup, tanpa kartu kredit."}</p>
             </RevealOnScroll>
 
             {/* Mobile-only motion strip — keeps the fold alive without adding scroll content */}

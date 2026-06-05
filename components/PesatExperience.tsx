@@ -18,6 +18,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { CHALLENGE_LABELS, TRANSITION_FACTS } from "@/lib/solutions";
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
+import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
 import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, WizardAnswers } from "@/lib/types";
 
 const detailOptions: Record<ChallengeId, Array<{ id: DetailId; label: string }>> = {
@@ -79,7 +80,8 @@ const initialAnswers: WizardAnswers = {
 
 type Step = "hero" | "s1" | "fact1" | "s2" | "fact2" | "s3" | "s4" | "s5" | "s6" | "s7" | "s8";
 
-export function PesatExperience() {
+export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
+  const cfg = landing ?? DEFAULT_LANDING_CONFIG;
   const [step, setStep] = useState<Step>("hero");
   const [sessionId, setSessionId] = useState<string>("");
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers);
@@ -261,16 +263,16 @@ export function PesatExperience() {
       {step === "hero" ? (
         <>
           <Header onStartWizard={startWizard} />
-          <Hero onStartWizard={startWizard} onScheduleDiscovery={scheduleDiscovery} />
-          <Fomo onStartWizard={startWizard} />
-          <Pillars onStartWizard={startWizard} />
-          <HowItWorks onStartWizard={startWizard} />
-          <CtaBand variant="light" onStartWizard={startWizard} />
-          <WhyPesat />
-          <CaseStudies />
-          <Testimonial />
-          <Pricing onStartWizard={startWizard} />
-          <CtaBand variant="dark" showSecondary onStartWizard={startWizard} onScheduleDiscovery={scheduleDiscovery} />
+          <Hero onStartWizard={startWizard} onScheduleDiscovery={scheduleDiscovery} overrides={cfg.overrides} />
+          {cfg.sections.fomo ? <Fomo onStartWizard={startWizard} /> : null}
+          {cfg.sections.pillars ? <Pillars onStartWizard={startWizard} /> : null}
+          {cfg.sections.howItWorks ? <HowItWorks onStartWizard={startWizard} /> : null}
+          {cfg.sections.ctaLight ? <CtaBand variant="light" onStartWizard={startWizard} /> : null}
+          {cfg.sections.whyPesat ? <WhyPesat /> : null}
+          {cfg.sections.caseStudies ? <CaseStudies /> : null}
+          {cfg.sections.testimonial ? <Testimonial /> : null}
+          {cfg.sections.pricing ? <Pricing onStartWizard={startWizard} /> : null}
+          {cfg.sections.ctaDark ? <CtaBand variant="dark" showSecondary onStartWizard={startWizard} onScheduleDiscovery={scheduleDiscovery} /> : null}
           <Footer onStartWizard={startWizard} />
         </>
       ) : (
