@@ -1,0 +1,15 @@
+.next
+.open-next
+node_modules
+.env
+.env*.local
+dist
+out
+*.tsbuildinfo
+.wrangler
+*.log
+
+# Internal handoff docs — contain real secrets, never push
+coldstart.md
+CLOUDFLARE_GUIDE.md
+.claude
