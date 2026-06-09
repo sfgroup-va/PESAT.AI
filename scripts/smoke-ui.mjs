@@ -17,14 +17,16 @@ let shareLinkStateSeen = false;
 let discoveryCtaSeen = false;
 let discoveryPrefillOk = false;
 let resultRecoveryCtaOk = false;
-
-async function clickText(text) {
-  await page.getByText(text, { exact: false }).click({ timeout: 15000 });
-}
+let decisionRoomSeen = false;
+let aiReplySeen = false;
 
 async function clickButton(name) {
   const button = page.getByRole("button", { name });
   await button.first().click({ timeout: 15000 });
+}
+
+async function clickChoice(text) {
+  await page.locator("button").filter({ hasText: text }).first().click({ timeout: 15000 });
 }
 
 page.on("console", (message) => {
@@ -34,32 +36,38 @@ page.on("console", (message) => {
 await page.goto(baseUrl, { waitUntil: "networkidle" });
 try {
   await clickButton(/Buktikan Sendiri/i);
-  await clickText("Omzet Stagnan");
-  await clickButton(/Lanjut/i);
+  await clickChoice(/omzet stagnan/i);
+  await clickButton(/Lanjut ke Sinyal Industri/i);
   await page.getByText("Insight singkat", { exact: false }).waitFor({ timeout: 15000 });
-  await clickButton(/Lanjut/i);
+  await clickButton(/^Lanjut$/i);
   await page.getByText("Bagian mana yang paling terasa sekarang?").waitFor({ timeout: 15000 });
-  await clickText("Follow-up lead lambat");
-  await clickButton(/Lanjut/i);
+  await clickChoice(/follow-up lead lambat/i);
+  await clickButton(/Lanjut ke Opportunity Signal/i);
   await page.getByText("Insight singkat", { exact: false }).waitFor({ timeout: 15000 });
-  await clickButton(/Lanjut/i);
-  await clickText("Revenue");
-  await clickButton(/Lanjut/i);
-  await clickText("DFY");
-  await clickButton(/Review jawaban/i);
-  await clickButton(/Sudah Pas/i);
-  await page.getByPlaceholder(/Nama perusahaan/i).fill("Smoke Prefill Co");
-  await page.getByPlaceholder(/Nama Anda/i).fill("Smoke Tester");
-  await page.getByPlaceholder(/Nomor WhatsApp/i).fill("+628123456789");
+  await clickButton(/^Lanjut$/i);
+  await clickChoice(/naikkan omzet atau repeat order/i);
+  await clickButton(/Lanjut ke Mode Adopsi/i);
+  await clickChoice(/pesat.ai yang setup dan jalankan/i);
+  await clickButton(/Review Arah Diagnosis/i);
+  await clickButton(/Lanjut Susun Hasil/i);
+  await page.getByRole("textbox", { name: /Nama perusahaan/i }).fill("Smoke Prefill Co");
+  await page.getByRole("textbox", { name: /Nama Anda/i }).fill("Smoke Tester");
+  await page.getByRole("textbox", { name: /Nomor WhatsApp/i }).fill("+628123456789");
   await clickButton(/Susun Hasil & Rencana Saya/i);
   await page.getByText("Hasil Mini Session Pesat.AI").waitFor({ timeout: 20000 });
   resultScreenSeen = true;
   pdfExportSeen = await page.getByRole("button", { name: /Export PDF/i }).isVisible();
   discoveryCtaSeen = await page.getByRole("button", { name: /Ya, Saya Mau Discovery Call/i }).isVisible();
   detailTextareaSeen = await page.getByText("Ceritakan tantangan Anda lebih detail").isVisible();
+  decisionRoomSeen = await page.getByText(/Rapikan brief discovery Anda/i).isVisible();
   shareLinkStateSeen = (await page.getByText("Link aktif setelah DB tersambung").isVisible().catch(() => false)) || (await page.getByText("Copy Link").isVisible().catch(() => false));
-  await page.getByPlaceholder(/proses sales kami/i).fill("Smoke test: follow-up WhatsApp sering hilang setelah lead masuk.");
-  await page.getByPlaceholder(/proses sales kami/i).blur();
+  await page.getByRole("textbox", { name: /Ceritakan tantangan Anda lebih detail/i }).fill("Smoke test: follow-up WhatsApp sering hilang setelah lead masuk.");
+  await page.getByRole("textbox", { name: /Ceritakan tantangan Anda lebih detail/i }).blur();
+  await page.getByRole("textbox", { name: /Pertanyaan Anda/i }).fill("Kalau saya mulai minggu ini, fokus awalnya apa?");
+  await clickButton(/Kirim pertanyaan/i);
+  const assistantReply = page.getByText(/Pesat.AI Assistant/i).last();
+  await assistantReply.waitFor({ timeout: 15000 });
+  aiReplySeen = await assistantReply.isVisible().catch(() => false);
   const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30000 }), clickButton(/Export PDF/i)]);
   const downloadPath = await download.path();
   const suggestedFilename = download.suggestedFilename();
@@ -97,13 +105,15 @@ const result = {
   discoveryPrefillOk,
   resultRecoveryCtaOk,
   hasDetailTextarea: detailTextareaSeen,
+  hasDecisionRoom: decisionRoomSeen,
+  aiReplySeen,
   shareLinkStateShown: shareLinkStateSeen,
   consoleErrors: unexpectedConsoleErrors
 };
 
 await browser.close();
 
-if (!result.hasResult || !result.hasDiscoveryCta || !result.hasPdfExport || !result.pdfDownloadOk || !result.discoveryPrefillOk || !result.resultRecoveryCtaOk || !result.hasDetailTextarea || result.consoleErrors.length > 0) {
+if (!result.hasResult || !result.hasDiscoveryCta || !result.hasPdfExport || !result.pdfDownloadOk || !result.discoveryPrefillOk || !result.resultRecoveryCtaOk || !result.hasDetailTextarea || !result.hasDecisionRoom || !result.aiReplySeen || result.consoleErrors.length > 0) {
   console.error(JSON.stringify(result, null, 2));
   process.exit(1);
 }

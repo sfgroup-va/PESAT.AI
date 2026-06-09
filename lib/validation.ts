@@ -1,4 +1,4 @@
-import type { AdoptionId, ChallengeId, ContactData, DetailId, ImpactId, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, ContactData, DetailId, ImpactId, ResultFollowUpContext, ResultChatMessage, WizardAnswers } from "@/lib/types";
 
 const challengeIds = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"] as const satisfies readonly ChallengeId[];
 const detailIds = [
@@ -27,6 +27,7 @@ const impactIds = ["revenue", "hours", "risk", "cash", "trust"] as const satisfi
 const adoptionIds = ["dfy", "diy", "hybrid", "starting"] as const satisfies readonly AdoptionId[];
 const eventTypes = ["screen_view", "click"] as const;
 const eventScreens = ["hero", "s1", "fact1", "s2", "fact2", "s3", "s4", "s5", "s6", "s7", "s8", "result", "admin"] as const;
+const resultChatRoles = ["user", "assistant"] as const;
 
 const challengeSet = new Set<string>(challengeIds);
 const detailSet = new Set<string>(detailIds);
@@ -34,6 +35,7 @@ const impactSet = new Set<string>(impactIds);
 const adoptionSet = new Set<string>(adoptionIds);
 const eventTypeSet = new Set<string>(eventTypes);
 const eventScreenSet = new Set<string>(eventScreens);
+const resultChatRoleSet = new Set<string>(resultChatRoles);
 
 export type EventType = (typeof eventTypes)[number];
 export type EventScreen = (typeof eventScreens)[number];
@@ -185,5 +187,114 @@ export function validateEventPayload(event: ReturnType<typeof sanitizeEventPaylo
   return {
     ok: missing.length === 0,
     missing
+  };
+}
+
+function sanitizeStringArray(value: unknown, maxItems: number, maxLength = 240) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => sanitizeText(item, maxLength))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function sanitizeImpactCards(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value.slice(0, 4).flatMap((item) => {
+    if (typeof item !== "object" || !item) return [];
+    const raw = item as Record<string, unknown>;
+
+    return [
+      {
+        title: sanitizeText(raw.title, 120),
+        value: sanitizeText(raw.value, 120),
+        description: sanitizeText(raw.description, 280)
+      }
+    ];
+  });
+}
+
+function sanitizePlanSummary(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value.slice(0, 4).flatMap((item) => {
+    if (typeof item !== "object" || !item) return [];
+    const raw = item as Record<string, unknown>;
+
+    return [
+      {
+        title: sanitizeText(raw.title, 140),
+        timeframe: sanitizeText(raw.timeframe, 120),
+        focus: sanitizeText(raw.focus, 280),
+        outcome: sanitizeText(raw.outcome, 220)
+      }
+    ];
+  });
+}
+
+export function sanitizeResultFollowUpContext(value: unknown): ResultFollowUpContext {
+  const input = typeof value === "object" && value ? (value as Record<string, unknown>) : {};
+
+  return {
+    headline: sanitizeText(input.headline, 220),
+    subheadline: sanitizeText(input.subheadline, 320),
+    diagnosis: sanitizeText(input.diagnosis, 1200),
+    firstStep: sanitizeText(input.firstStep, 900),
+    costOfInaction: sanitizeText(input.costOfInaction, 900),
+    uniqueMechanism: sanitizeText(input.uniqueMechanism, 500),
+    promiseStatement: sanitizeText(input.promiseStatement, 1200),
+    measuredBy: sanitizeStringArray(input.measuredBy, 6, 120),
+    solutionsText: sanitizeStringArray(input.solutionsText, 6, 260),
+    mainChallenges: sanitizeStringArray(input.mainChallenges, 3, 120),
+    adoptionLabel: sanitizeText(input.adoptionLabel, 120),
+    detailNote: sanitizeWordLimitedText(input.detailNote, 1000, 12000),
+    priorityFocus: sanitizeWordLimitedText(input.priorityFocus, 120, 4000),
+    discoveryGoal: sanitizeWordLimitedText(input.discoveryGoal, 120, 4000),
+    impactCards: sanitizeImpactCards(input.impactCards),
+    plan: sanitizePlanSummary(input.plan)
+  };
+}
+
+export function sanitizeResultChatHistory(value: unknown): ResultChatMessage[] {
+  if (!Array.isArray(value)) return [];
+
+  const history: ResultChatMessage[] = [];
+
+  for (const item of value.slice(0, 6)) {
+    if (typeof item !== "object" || !item) continue;
+    const raw = item as Record<string, unknown>;
+    const role = typeof raw.role === "string" && resultChatRoleSet.has(raw.role) ? (raw.role as ResultChatMessage["role"]) : null;
+    const content = sanitizeWordLimitedText(raw.content, 220, 3000);
+    if (!role || !content) continue;
+    history.push({ role, content });
+  }
+
+  return history;
+}
+
+export function sanitizeResultChatPayload(value: unknown) {
+  const input = typeof value === "object" && value ? (value as Record<string, unknown>) : {};
+
+  return {
+    sessionId: sanitizeText(input.sessionId, 80),
+    question: sanitizeWordLimitedText(input.question, 120, 2000),
+    context: sanitizeResultFollowUpContext(input.context),
+    history: sanitizeResultChatHistory(input.history)
+  };
+}
+
+export function validateResultChatPayload(payload: ReturnType<typeof sanitizeResultChatPayload>) {
+  const userTurns = payload.history.filter((item) => item.role === "user").length;
+  const missing = [
+    !payload.question ? "question" : "",
+    !payload.context.headline ? "context.headline" : "",
+    !payload.context.diagnosis ? "context.diagnosis" : ""
+  ].filter(Boolean);
+
+  return {
+    ok: missing.length === 0 && userTurns < 3,
+    missing: userTurns >= 3 ? [...missing, "limit"] : missing
   };
 }

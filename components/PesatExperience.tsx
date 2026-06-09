@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, Sparkles, Target, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Bot, Check, ClipboardList, Download, ExternalLink, Lightbulb, Loader2, MessageSquare, SendHorizonal, ShieldCheck, Sparkles, Target, TriangleAlert, User, X } from "lucide-react";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
 import { CtaBand } from "@/components/home/CtaBand";
@@ -19,7 +19,7 @@ import html2canvas from "html2canvas";
 import { CHALLENGE_LABELS, TRANSITION_FACTS } from "@/lib/solutions";
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
-import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, ResultChatMessage, ResultFollowUpContext, WizardAnswers } from "@/lib/types";
 
 const detailOptions: Record<ChallengeId, Array<{ id: DetailId; label: string }>> = {
   revenue: [
@@ -80,6 +80,7 @@ const initialAnswers: WizardAnswers = {
 
 const DETAIL_NOTE_WORD_LIMIT = 1000;
 const DISCOVERY_SHORT_ANSWER_WORD_LIMIT = 120;
+const MAX_RESULT_CHAT_QUESTIONS = 3;
 
 type DiscoveryContextKey = "priorityFocus" | "discoveryGoal";
 type DiscoveryContextAnswers = Record<DiscoveryContextKey, string>;
@@ -180,6 +181,39 @@ const ADOPTION_MODE_SUMMARY: Record<AdoptionId, { label: string; note: string }>
     label: "Baru Mulai AI",
     note: "Tidak perlu menyiapkan semuanya sekaligus. Cukup fokus pada satu proses yang paling sering bocor atau paling mudah diukur dulu."
   }
+};
+
+const FOLLOW_UP_PROMPTS_BY_CHALLENGE: Record<ChallengeId, string[]> = {
+  revenue: [
+    "Kalau saya mulai minggu ini, proses mana yang harus dibenahi dulu agar omzet cepat terasa naik?",
+    "Untuk bisnis saya, data apa yang paling penting disiapkan supaya AI-nya tidak cuma jadi alat tambahan?",
+    "Kalau saya ingin software jualan yang ditenagai AI, modul mana yang paling dulu diprioritaskan?"
+  ],
+  cost: [
+    "Bagian manual mana yang sebaiknya diautomasi dulu supaya biaya cepat turun?",
+    "Kalau tim saya kecil, langkah implementasi paling realistis seperti apa?",
+    "Data apa yang harus saya kumpulkan agar efisiensinya nanti benar-benar terukur?"
+  ],
+  fraud: [
+    "Titik kontrol mana yang paling baik dipasang dulu supaya risiko cepat turun?",
+    "Kalau saya mau validasi blind spot sekarang, data apa yang harus dibuka lebih dulu?",
+    "Langkah pertama apa yang paling aman tanpa mengganggu operasional harian?"
+  ],
+  cash_stock: [
+    "Kalau saya sering selisih stok atau kas, area mana yang paling dulu dibereskan?",
+    "Data apa yang wajib saya siapkan agar prediksi stok atau cashflow nanti akurat?",
+    "Fase implementasi seperti apa yang paling realistis untuk bisnis saya?"
+  ],
+  reporting: [
+    "Laporan atau dashboard mana yang paling dulu dibuat agar keputusan lebih cepat?",
+    "Kalau data saya masih tersebar, langkah awal yang paling realistis seperti apa?",
+    "Metrik mana yang paling penting dipakai dulu supaya hasilnya terasa?"
+  ],
+  brand_trust: [
+    "Kalau saya ingin brand lebih dipercaya, area mana yang paling dulu dibenahi?",
+    "Apa data atau aset digital yang perlu saya siapkan agar AI dan Google lebih mudah memahami bisnis saya?",
+    "Kalau mulai dari yang paling ringan, use case AI apa yang paling cocok lebih dulu?"
+  ]
 };
 
 type Step = "hero" | "s1" | "fact1" | "s2" | "fact2" | "s3" | "s4" | "s5" | "s6" | "s7" | "s8";
@@ -1445,52 +1479,16 @@ function ResultPanel({
           ) : null}
         </div>
       </div>
-      <section className="mt-6 rounded-[1.35rem] border border-border-base bg-surface-elevated p-5 text-foreground shadow-[0_24px_60px_-40px_rgba(15,23,42,0.55)] sm:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-muted">Opsional sebelum discovery call</p>
-            <h3 className="mt-1 text-2xl font-semibold leading-tight text-foreground">Bantu kami memahami konteks Anda lewat 3 pertanyaan singkat</h3>
-          </div>
-          <span className="inline-flex w-fit rounded-full border border-border-base bg-surface px-4 py-2 text-sm font-semibold text-foreground-muted">Semua jawaban bersifat opsional</span>
-        </div>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-foreground-muted">
-          Jawaban di bawah ini akan ikut dikirim saat Anda lanjut ke discovery call, supaya tim Pesat.AI masuk dengan konteks yang lebih jelas dan tidak mengulang pertanyaan dasar.
-        </p>
-
-        <div className="mt-5 grid gap-4">
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-foreground">1. Ceritakan tantangan Anda lebih detail</span>
-            <textarea
-              value={detailNote}
-              onChange={(event) => setDetailNote(trimToWordLimit(event.target.value, DETAIL_NOTE_WORD_LIMIT))}
-              onBlur={(event) => void onDetailNoteBlur(event.target.value)}
-              rows={5}
-              className="w-full rounded-[1.35rem] border border-border-base bg-surface px-5 py-4 text-foreground outline-none placeholder:text-foreground-subtle focus:border-border-strong"
-              placeholder="Contoh: Saya menjual lele biasa sehari kurang lebih 500 kg - 1 ton. Saya masih butuh tools/software untuk pencatatan stok dan penjualan."
-            />
-            <div className="mt-2 flex items-center justify-between gap-4 text-xs text-foreground-subtle">
-              <span>Anda bisa cerita bebas soal proses, volume, bottleneck, atau kebiasaan operasional yang sekarang paling terasa.</span>
-              <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
-            </div>
-          </label>
-
-          {OPTIONAL_DISCOVERY_QUESTIONS.map((question) => (
-            <label key={question.id} className="block">
-              <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                <span className="text-sm font-semibold text-foreground">{question.label}</span>
-                <span className="text-xs text-foreground-subtle">{question.helper}</span>
-              </div>
-              <textarea
-                value={discoveryContext[question.id]}
-                onChange={(event) => onDiscoveryContextChange(question.id, event.target.value)}
-                rows={question.rows}
-                className="w-full rounded-[1.35rem] border border-border-base bg-surface px-5 py-4 text-foreground outline-none placeholder:text-foreground-subtle focus:border-border-strong"
-                placeholder={question.placeholder}
-              />
-            </label>
-          ))}
-        </div>
-      </section>
+      <DecisionRoomSection
+        result={result}
+        answers={answers}
+        detailNote={detailNote}
+        detailNoteWordCount={detailNoteWordCount}
+        discoveryContext={discoveryContext}
+        setDetailNote={setDetailNote}
+        onDiscoveryContextChange={onDiscoveryContextChange}
+        onDetailNoteBlur={onDetailNoteBlur}
+      />
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <button
           onClick={() => void onShare()}
@@ -1511,5 +1509,444 @@ function ResultPanel({
       {!result.persisted ? <p className="mt-3 text-xs text-neutral-400">Share link membutuhkan Supabase agar hasil bisa dibuka ulang.</p> : null}
       {result.llmFallback ? <p className="mt-3 text-xs text-neutral-400">Mode fallback aktif karena OpenAI belum tersedia atau gagal merespons.</p> : null}
     </div>
+  );
+}
+
+function DecisionRoomSection({
+  result,
+  answers,
+  detailNote,
+  detailNoteWordCount,
+  discoveryContext,
+  setDetailNote,
+  onDiscoveryContextChange,
+  onDetailNoteBlur
+}: {
+  result: GeneratedResult;
+  answers: WizardAnswers;
+  detailNote: string;
+  detailNoteWordCount: number;
+  discoveryContext: DiscoveryContextAnswers;
+  setDetailNote: (value: string) => void;
+  onDiscoveryContextChange: (key: DiscoveryContextKey, value: string) => void;
+  onDetailNoteBlur: (value: string) => void | Promise<void>;
+}) {
+  const primaryChallenge = answers.mainChallenges[0] || "revenue";
+  const adoptionSummary = ADOPTION_MODE_SUMMARY[answers.adoptionStyle || "starting"];
+  const [chatHistory, setChatHistory] = useState<ResultChatMessage[]>([]);
+  const [chatQuestion, setChatQuestion] = useState("");
+  const [chatSuggestions, setChatSuggestions] = useState<string[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState("");
+
+  const notePreview =
+    detailNote.trim().length > 220 ? `${detailNote.trim().slice(0, 220).trimEnd()}...` : detailNote.trim();
+  const usedQuestions = chatHistory.filter((item) => item.role === "user").length;
+  const remainingQuestions = Math.max(0, MAX_RESULT_CHAT_QUESTIONS - usedQuestions);
+
+  const followUpContext = useMemo<ResultFollowUpContext>(
+    () => ({
+      headline: result.headline,
+      subheadline: result.subheadline,
+      diagnosis: result.diagnosis,
+      firstStep: result.firstStep,
+      costOfInaction: result.costOfInaction,
+      uniqueMechanism: result.uniqueMechanism,
+      promiseStatement: result.promise.statement,
+      measuredBy: result.promise.measuredBy,
+      solutionsText: result.solutionsText,
+      mainChallenges: answers.mainChallenges.map((item) => CHALLENGE_LABELS[item]),
+      adoptionLabel: adoptionSummary.label,
+      detailNote,
+      priorityFocus: discoveryContext.priorityFocus,
+      discoveryGoal: discoveryContext.discoveryGoal,
+      impactCards: result.impactCards,
+      plan: result.plan.map((phase) => ({
+        title: phase.title,
+        timeframe: phase.timeframe,
+        focus: phase.focus,
+        outcome: phase.outcome
+      }))
+    }),
+    [adoptionSummary.label, answers.mainChallenges, detailNote, discoveryContext.discoveryGoal, discoveryContext.priorityFocus, result]
+  );
+
+  const starterPrompts = useMemo(() => {
+    const contextualPrompts = [
+      discoveryContext.priorityFocus.trim()
+        ? `Kalau prioritas saya ${discoveryContext.priorityFocus.trim()}, langkah paling realistis yang harus dikerjakan dulu apa?`
+        : "",
+      detailNote.trim()
+        ? `Dari konteks yang saya ceritakan, bagian mana yang paling penting divalidasi dulu sebelum mulai bangun sistem AI?`
+        : "",
+      discoveryContext.discoveryGoal.trim()
+        ? `Kalau tujuan saya ${discoveryContext.discoveryGoal.trim()}, pertanyaan apa yang paling penting saya bawa ke discovery call nanti?`
+        : ""
+    ].filter(Boolean);
+
+    return Array.from(new Set([...contextualPrompts, ...FOLLOW_UP_PROMPTS_BY_CHALLENGE[primaryChallenge]])).slice(0, 3);
+  }, [detailNote, discoveryContext.discoveryGoal, discoveryContext.priorityFocus, primaryChallenge]);
+
+  const activeSuggestions = chatSuggestions.length ? chatSuggestions : starterPrompts;
+
+  const roomInsightCards = [
+    {
+      eyebrow: "Yang sudah cukup jelas",
+      title: result.headline,
+      body: "Arah masalah dan opportunity utamanya sudah terbaca dari hasil mini session ini."
+    },
+    {
+      eyebrow: "Prioritas keputusan",
+      title: discoveryContext.priorityFocus.trim() || "Tentukan fokus implementasi pertama",
+      body: discoveryContext.priorityFocus.trim()
+        ? "Bagian ini nanti kami pakai untuk menjaga discovery tetap fokus ke area yang paling penting dulu."
+        : "Isi jika Anda sudah tahu area mana yang paling ingin dibenahi lebih dulu."
+    },
+    {
+      eyebrow: "Yang masih perlu divalidasi",
+      title: discoveryContext.discoveryGoal.trim() || "Scope, biaya, tools, dan urutan implementasi",
+      body: discoveryContext.discoveryGoal.trim()
+        ? "Tujuan ini membantu AI dan tim Pesat.AI menjawab di level keputusan, bukan sekadar ide."
+        : "Kalau belum yakin mau bertanya apa saat discovery, AI di sebelah bisa membantu merapikannya."
+    }
+  ];
+
+  const readinessCards = [
+    {
+      title: "Metrik yang sebaiknya dijaga",
+      body: result.promise.measuredBy.join(", "),
+      icon: ShieldCheck
+    },
+    {
+      title: "Langkah pertama paling konkret",
+      body: result.firstStep,
+      icon: ClipboardList
+    },
+    {
+      title: "Risiko bila ditunda",
+      body: result.costOfInaction,
+      icon: TriangleAlert
+    }
+  ];
+
+  const followUpPromptsLabel = remainingQuestions > 0 ? `${remainingQuestions} pertanyaan AI tersisa` : "Batas pertanyaan AI sudah habis";
+
+  async function submitFollowUpQuestion(questionOverride?: string) {
+    const question = (questionOverride ?? chatQuestion).trim();
+    if (!question || chatLoading || remainingQuestions <= 0) return;
+
+    setChatLoading(true);
+    setChatError("");
+    if (!questionOverride) {
+      setChatQuestion("");
+    }
+
+    try {
+      const response = await fetch("/api/result-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: result.sessionId,
+          question,
+          context: followUpContext,
+          history: chatHistory
+        })
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        answer?: string;
+        suggestions?: string[];
+        error?: string;
+      };
+
+      if (!response.ok || !data.answer) {
+        throw new Error(data.error || "AI follow-up belum bisa menjawab sekarang.");
+      }
+
+      setChatHistory((current) => [...current, { role: "user", content: question }, { role: "assistant", content: data.answer || "" }]);
+      setChatSuggestions(Array.isArray(data.suggestions) ? data.suggestions.slice(0, 2) : []);
+      setChatQuestion("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "AI follow-up belum bisa menjawab sekarang.";
+      setChatError(`${message} Coba pertanyaan yang lebih spesifik atau lanjutkan ke discovery call.`);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  return (
+    <section className="mt-6 overflow-hidden rounded-[1.65rem] border border-neutral-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.15),transparent_22rem),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.12),transparent_24rem),linear-gradient(180deg,#ffffff_0%,#fbfbfb_48%,#f8fafc_100%)] p-5 text-neutral-950 shadow-[0_30px_90px_-54px_rgba(15,23,42,0.45)] sm:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-3xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-100/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-950">
+            <Sparkles className="h-3.5 w-3.5" />
+            Decision Room
+          </span>
+          <h3 className="mt-3 text-2xl font-semibold leading-tight text-neutral-950 sm:text-3xl">
+            Rapikan brief discovery Anda, lalu tanyakan apa yang masih mengganjal ke AI.
+          </h3>
+          <p className="mt-3 text-sm leading-7 text-neutral-600 sm:text-base">
+            Bagian ini sekarang bukan cuma form opsional. Ia menjadi ruang keputusan singkat: Anda bisa melengkapi konteks bisnis, melihat apa yang sudah terbaca dari hasil sebelumnya, lalu bertanya ke AI maksimal 3 kali dengan konteks hasil mini session tetap dibawa ke bawah.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center rounded-full border border-neutral-200 bg-white/90 px-4 py-2 text-sm font-semibold text-neutral-700 shadow-[0_16px_40px_-32px_rgba(15,23,42,0.35)]">
+            {followUpPromptsLabel}
+          </span>
+          <span className="inline-flex items-center rounded-full border border-neutral-200 bg-white/90 px-4 py-2 text-sm font-semibold text-neutral-700 shadow-[0_16px_40px_-32px_rgba(15,23,42,0.35)]">
+            Konteks hasil tetap nyambung
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+        <div className="space-y-5">
+          <div className="grid gap-3 md:grid-cols-3">
+            {roomInsightCards.map((card) => (
+              <div key={card.eyebrow} className="rounded-[1.45rem] border border-white/90 bg-white/82 p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)] backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">{card.eyebrow}</p>
+                <p className="mt-3 text-base font-semibold leading-7 text-neutral-950">{card.title}</p>
+                <p className="mt-3 text-sm leading-6 text-neutral-600">{card.body}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {readinessCards.map((card) => {
+              const Icon = card.icon;
+
+              return (
+                <div key={card.title} className="rounded-[1.45rem] border border-neutral-200 bg-neutral-950 p-5 text-white shadow-[0_28px_80px_-46px_rgba(15,23,42,0.6)]">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/5">
+                      <Icon className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <p className="text-sm font-semibold text-white">{card.title}</p>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-white/75">{card.body}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rounded-[1.55rem] border border-neutral-200 bg-white/80 p-5 shadow-[0_24px_70px_-44px_rgba(15,23,42,0.35)] backdrop-blur sm:p-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Brief discovery yang lebih matang</p>
+                <h4 className="mt-1 text-2xl font-semibold leading-tight text-neutral-950">Lengkapi konteks bisnis Anda supaya AI dan tim Pesat.AI bicara di level keputusan</h4>
+              </div>
+              <span className="inline-flex w-fit rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm font-semibold text-neutral-600">
+                Semua jawaban di sini bersifat opsional
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              <label className="block rounded-[1.45rem] border border-neutral-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbfb_100%)] p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.3)]">
+                <div className="flex items-start gap-4">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-neutral-200 bg-neutral-50 text-sm font-semibold text-neutral-500">01</span>
+                  <div className="flex-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+                      <span className="text-base font-semibold text-neutral-950">Ceritakan tantangan Anda lebih detail</span>
+                      <span className="text-xs text-neutral-400">{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-neutral-600">
+                      Cerita ini membantu kami membedakan apakah Anda butuh software AI baru, otomasi proses, atau justru perbaikan alur kerja yang lebih dulu.
+                    </p>
+                    <textarea
+                      value={detailNote}
+                      onChange={(event) => setDetailNote(trimToWordLimit(event.target.value, DETAIL_NOTE_WORD_LIMIT))}
+                      onBlur={(event) => void onDetailNoteBlur(event.target.value)}
+                      rows={5}
+                      className="mt-4 w-full rounded-[1.35rem] border border-neutral-200 bg-white px-5 py-4 text-neutral-950 outline-none transition placeholder:text-neutral-400 focus:-translate-y-0.5 focus:border-neutral-900"
+                      placeholder="Contoh: saya ingin punya software untuk jualan pisang goreng yang dibantu AI, tapi saya belum tahu apakah prioritasnya stok, harga, kasir, follow-up chat, atau dashboard owner."
+                    />
+                    <div className="mt-3 flex items-center justify-between gap-4 text-xs text-neutral-400">
+                      <span>Ceritakan proses, volume, bottleneck, kebiasaan tim, atau target bisnis yang sekarang paling terasa.</span>
+                      <span>{detailNote.trim() ? "Akan masuk ke konteks discovery" : "Belum ada konteks tambahan"}</span>
+                    </div>
+                  </div>
+                </div>
+              </label>
+
+              {OPTIONAL_DISCOVERY_QUESTIONS.map((question, index) => (
+                <label key={question.id} className="block rounded-[1.45rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.28)]">
+                  <div className="flex items-start gap-4">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-neutral-200 bg-neutral-50 text-sm font-semibold text-neutral-500">
+                      {String(index + 2).padStart(2, "0")}
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+                        <span className="text-base font-semibold text-neutral-950">{question.label.replace(/^\d+\.\s*/, "")}</span>
+                        <span className="text-xs text-neutral-400">{question.helper}</span>
+                      </div>
+                      <textarea
+                        value={discoveryContext[question.id]}
+                        onChange={(event) => onDiscoveryContextChange(question.id, event.target.value)}
+                        rows={question.rows}
+                        className="mt-4 w-full rounded-[1.35rem] border border-neutral-200 bg-neutral-50/80 px-5 py-4 text-neutral-950 outline-none transition placeholder:text-neutral-400 focus:-translate-y-0.5 focus:border-neutral-900 focus:bg-white"
+                        placeholder={question.placeholder}
+                      />
+                    </div>
+                  </div>
+                </label>
+              ))}
+
+              {notePreview ? (
+                <div className="rounded-[1.45rem] border border-dashed border-neutral-300 bg-neutral-50/80 p-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Catatan yang sudah tertangkap</p>
+                  <p className="mt-3 text-sm leading-7 text-neutral-700">{notePreview}</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[1.6rem] border border-neutral-900/90 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_22rem),linear-gradient(180deg,#111111_0%,#090909_100%)] p-5 text-white shadow-[0_36px_100px_-54px_rgba(15,23,42,0.7)] sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="max-w-xl">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/5">
+                  <Bot className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/[0.55]">AI Follow-up</p>
+                  <h4 className="text-2xl font-semibold leading-tight text-white">Tanya jawab singkat sebelum Anda lanjut ke discovery call</h4>
+                </div>
+              </div>
+              <p className="mt-4 text-sm leading-7 text-white/[0.72]">
+                AI ini menjawab berdasarkan headline, diagnosis, rencana aksi, metrik, dan konteks tambahan yang sudah Anda isi. Maksimal {MAX_RESULT_CHAT_QUESTIONS} pertanyaan, dan setiap jawaban akan meneruskan konteks dari percakapan sebelumnya.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80">
+                {remainingQuestions} pertanyaan tersisa
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/60">
+                Grounded ke hasil mini session
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-white/70">
+              <Lightbulb className="h-4 w-4" />
+              Pertanyaan pembuka yang bisa dipakai
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {activeSuggestions.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => setChatQuestion(prompt)}
+                  disabled={remainingQuestions <= 0 || chatLoading}
+                  className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-left text-sm font-medium text-white/[0.85] transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-white/75">
+                <MessageSquare className="h-4 w-4" />
+                Percakapan
+              </div>
+              <span className="text-xs uppercase tracking-[0.18em] text-white/40">Maks 3 user turns</span>
+            </div>
+
+            <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
+              {chatHistory.length === 0 ? (
+                <div className="rounded-[1.25rem] border border-dashed border-white/12 bg-white/[0.03] p-5">
+                  <p className="text-sm font-semibold text-white">Belum ada pertanyaan.</p>
+                  <p className="mt-2 text-sm leading-6 text-white/[0.65]">
+                    Gunakan prompt di atas atau ketik pertanyaan yang lebih spesifik, misalnya soal urutan implementasi, data yang perlu disiapkan, atau apakah Anda benar-benar butuh software baru.
+                  </p>
+                </div>
+              ) : (
+                chatHistory.map((message, index) => (
+                  <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[88%] rounded-[1.35rem] px-4 py-3 shadow-[0_18px_40px_-34px_rgba(0,0,0,0.6)] ${
+                        message.role === "user" ? "bg-amber-300 text-neutral-950" : "border border-white/10 bg-white/[0.08] text-white"
+                      }`}
+                    >
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]">
+                        {message.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                        {message.role === "user" ? "Anda" : "Pesat.AI Assistant"}
+                      </div>
+                      <p className={`text-sm leading-7 ${message.role === "user" ? "text-neutral-950" : "text-white/[0.82]"}`}>{message.content}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {chatLoading ? (
+                <div className="flex justify-start">
+                  <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.08] px-4 py-3 text-white">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-white/75">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      AI sedang menyusun jawaban berdasarkan hasil Anda...
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <form
+            className="mt-5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitFollowUpQuestion();
+            }}
+          >
+            <label className="block">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-white">Pertanyaan Anda</span>
+                <span className="text-xs text-white/[0.45]">Jawaban akan melanjutkan konteks percakapan di atas</span>
+              </div>
+              <textarea
+                value={chatQuestion}
+                onChange={(event) => setChatQuestion(trimToWordLimit(event.target.value, 120))}
+                rows={3}
+                disabled={remainingQuestions <= 0 || chatLoading}
+                className="w-full rounded-[1.35rem] border border-white/10 bg-white/[0.06] px-5 py-4 text-white outline-none transition placeholder:text-white/35 focus:-translate-y-0.5 focus:border-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder={
+                  remainingQuestions > 0
+                    ? "Contoh: kalau saya benar-benar ingin software AI untuk jualan, bagian mana yang paling penting dibangun dulu?"
+                    : "Batas 3 pertanyaan sudah habis. Lanjutkan ke discovery call untuk pembahasan lebih dalam."
+                }
+              />
+            </label>
+
+            {chatError ? <p className="mt-3 rounded-[1.15rem] border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-100">{chatError}</p> : null}
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2 text-xs leading-6 text-white/[0.52]">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>Jawaban AI dibatasi ke konteks hasil mini session ini. Kalau butuh scope, biaya, atau arsitektur final, itu sebaiknya dikunci saat discovery call.</span>
+              </div>
+              <button
+                type="submit"
+                disabled={chatLoading || remainingQuestions <= 0 || !chatQuestion.trim()}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-neutral-950 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/35"
+              >
+                {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
+                Kirim pertanyaan
+              </button>
+            </div>
+          </form>
+
+          {remainingQuestions <= 0 ? (
+            <div className="mt-5 rounded-[1.35rem] border border-amber-300/15 bg-amber-300/10 px-5 py-4 text-sm leading-6 text-amber-50">
+              Batas 3 pertanyaan sudah terpakai. Jika masih ada hal penting yang ingin dipastikan, lanjutkan ke discovery call supaya kami bisa membahas scope, data, dan prioritas implementasi dengan lebih detail.
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }

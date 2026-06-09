@@ -83,6 +83,37 @@ export type DiagnosisPack = {
   firstStep: string;
 };
 
+export type ResultFollowUpContext = {
+  headline: string;
+  subheadline: string;
+  diagnosis: string;
+  firstStep: string;
+  costOfInaction: string;
+  uniqueMechanism: string;
+  promiseStatement: string;
+  measuredBy: string[];
+  solutionsText: string[];
+  mainChallenges: string[];
+  adoptionLabel: string;
+  detailNote: string;
+  priorityFocus: string;
+  discoveryGoal: string;
+  impactCards: Array<{ title: string; value: string; description: string }>;
+  plan: Array<{ title: string; timeframe: string; focus: string; outcome: string }>;
+};
+
+export type ResultChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type ResultChatReply = {
+  answer: string;
+  suggestions: string[];
+  remainingQuestions: number;
+  fallback?: boolean;
+};
+
 export type GeneratedResult = {
   sessionId: string;
   headline: string;

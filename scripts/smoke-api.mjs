@@ -66,6 +66,54 @@ const invalidResultJson = await request("/api/result", {
   method: "POST",
   body: "{"
 });
+const validResultChat = await request("/api/result-chat", {
+  method: "POST",
+  body: JSON.stringify({
+    question: "Kalau saya mulai minggu ini, fokus awalnya apa?",
+    context: {
+      headline: validResult.body?.headline || "Test headline",
+      subheadline: validResult.body?.subheadline || "Test subheadline",
+      diagnosis: validResult.body?.diagnosis || "Test diagnosis",
+      firstStep: validResult.body?.firstStep || "Test first step",
+      costOfInaction: validResult.body?.costOfInaction || "Test urgency",
+      uniqueMechanism: validResult.body?.uniqueMechanism || "Test mechanism",
+      promiseStatement: validResult.body?.promise?.statement || "Test promise",
+      measuredBy: validResult.body?.promise?.measuredBy || ["metric 1"],
+      solutionsText: validResult.body?.solutionsText || ["solusi 1", "solusi 2", "solusi 3"],
+      mainChallenges: ["revenue"],
+      adoptionLabel: "Mode DFY",
+      detailNote: "Lead banyak masuk dari WhatsApp.",
+      priorityFocus: "follow-up",
+      discoveryGoal: "menentukan urutan implementasi",
+      impactCards: validResult.body?.impactCards || [{ title: "Revenue", value: "10-20%", description: "Test description" }],
+      plan:
+        validResult.body?.plan?.map((phase) => ({
+          title: phase.title,
+          timeframe: phase.timeframe,
+          focus: phase.focus,
+          outcome: phase.outcome
+        })) || [{ title: "Fase 1", timeframe: "Minggu 1-2", focus: "Test focus", outcome: "Test outcome" }]
+    },
+    history: []
+  })
+});
+const invalidResultChat = await request("/api/result-chat", {
+  method: "POST",
+  body: JSON.stringify({
+    question: "",
+    context: {
+      headline: "",
+      diagnosis: ""
+    },
+    history: [
+      { role: "user", content: "1" },
+      { role: "assistant", content: "a" },
+      { role: "user", content: "2" },
+      { role: "assistant", content: "b" },
+      { role: "user", content: "3" }
+    ]
+  })
+});
 // When DB is connected, the shared result session should be retrievable (200).
 // When DB is missing, /api/result/[id] returns 503.
 const shareResultUnavailable = await request(`/api/result/${validResult.body?.sessionId || "00000000-0000-0000-0000-000000000000"}`);
@@ -150,6 +198,12 @@ const result = {
   validResultOk: validResult.status === 200 && validResult.body?.solutions?.length >= 3 && validResult.body?.solutions?.length <= 4,
   invalidResultRejected: invalidResult.status === 400,
   invalidResultJsonRejected: invalidResultJson.status === 400,
+  validResultChatOk:
+    validResultChat.status === 200 &&
+    typeof validResultChat.body?.answer === "string" &&
+    Array.isArray(validResultChat.body?.suggestions) &&
+    typeof validResultChat.body?.remainingQuestions === "number",
+  invalidResultChatRejected: invalidResultChat.status === 400,
   shareResultUnavailableOk: [200, 404, 503].includes(shareResultUnavailable.status),
   validEventOk: validEvent.status === 200,
   invalidEventRejected: invalidEvent.status === 400,
@@ -181,6 +235,8 @@ const ok =
   result.validResultOk &&
   result.invalidResultRejected &&
   result.invalidResultJsonRejected &&
+  result.validResultChatOk &&
+  result.invalidResultChatRejected &&
   result.shareResultUnavailableOk &&
   result.validEventOk &&
   result.invalidEventRejected &&
@@ -208,6 +264,8 @@ if (!ok) {
           validResult,
           invalidResult,
           invalidResultJson,
+          validResultChat,
+          invalidResultChat,
           shareResultUnavailable,
           validEvent,
           invalidEvent,

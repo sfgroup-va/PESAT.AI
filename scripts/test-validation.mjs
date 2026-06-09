@@ -28,7 +28,9 @@ try {
     sanitizeDiscoveryPayload,
     validateDiscoveryPayload,
     sanitizeEventPayload,
-    validateEventPayload
+    validateEventPayload,
+    sanitizeResultChatPayload,
+    validateResultChatPayload
   } = await import(pathToFileURL(tempFile).href);
 
   const thousandWordNote = Array.from({ length: 1005 }, (_, index) => `kata${index + 1}`).join(" ");
@@ -100,6 +102,58 @@ try {
   assert.equal("nested" in event.metadata, false);
   assert.deepEqual(validateEventPayload(event), { ok: true, missing: [] });
   assert.deepEqual(validateEventPayload(sanitizeEventPayload({ type: "bad", screen: "unknown" })).missing, ["type", "screen"]);
+
+  const chatPayload = sanitizeResultChatPayload({
+    sessionId: "s".repeat(120),
+    question: Array.from({ length: 140 }, (_, index) => `tanya${index + 1}`).join(" "),
+    context: {
+      headline: "Optimasi AI untuk penjualan pisang goreng",
+      subheadline: "Ringkas",
+      diagnosis: "Follow-up belum konsisten",
+      firstStep: "Mulai dari SOP follow-up",
+      costOfInaction: "Peluang repeat order terus bocor",
+      uniqueMechanism: "Workflow follow-up AI",
+      promiseStatement: "Naik 10-20%",
+      measuredBy: ["closing rate", "repeat order", "lead response time", "extra"],
+      solutionsText: ["Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh"],
+      mainChallenges: ["revenue", "cost", "fraud", "extra"],
+      adoptionLabel: "Mode DIY",
+      detailNote: Array.from({ length: 1005 }, (_, index) => `detail${index + 1}`).join(" "),
+      priorityFocus: "pricing",
+      discoveryGoal: "cek scope",
+      impactCards: [{ title: "Revenue", value: "10-20%", description: "desc", extra: "ignore" }],
+      plan: [{ title: "Fase 1", timeframe: "Minggu 1-2", focus: "pilot", outcome: "hasil", extra: "ignore" }]
+    },
+    history: [
+      { role: "user", content: "Apa dulu yang dibenahi?" },
+      { role: "assistant", content: "Mulai dari follow-up." },
+      { role: "bad", content: "Ignore me" }
+    ]
+  });
+  assert.equal(chatPayload.sessionId.length, 80);
+  assert.equal(chatPayload.question.split(/\s+/).length, 120);
+  assert.equal(chatPayload.context.measuredBy.length, 4);
+  assert.equal(chatPayload.context.solutionsText.length, 6);
+  assert.equal(chatPayload.context.mainChallenges.length, 3);
+  assert.equal(chatPayload.context.detailNote.split(/\s+/).length, 1000);
+  assert.equal(chatPayload.history.length, 2);
+  assert.deepEqual(validateResultChatPayload(chatPayload), { ok: true, missing: [] });
+  assert.deepEqual(
+    validateResultChatPayload(
+      sanitizeResultChatPayload({
+        question: "",
+        context: { headline: "", diagnosis: "" },
+        history: [
+          { role: "user", content: "1" },
+          { role: "assistant", content: "a" },
+          { role: "user", content: "2" },
+          { role: "assistant", content: "b" },
+          { role: "user", content: "3" }
+        ]
+      })
+    ).missing,
+    ["question", "context.headline", "context.diagnosis", "limit"]
+  );
 
   console.log(JSON.stringify({ ok: true, checked: "validation", answerChallenges: answers.mainChallenges.length, metadataKeys: Object.keys(event.metadata).length }, null, 2));
 } finally {
