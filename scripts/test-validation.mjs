@@ -24,24 +24,27 @@ try {
     validateCompleteAnswers,
     sanitizeContact,
     hasUsableWhatsAppNumber,
+    sanitizeWordLimitedText,
     sanitizeDiscoveryPayload,
     validateDiscoveryPayload,
     sanitizeEventPayload,
     validateEventPayload
   } = await import(pathToFileURL(tempFile).href);
 
+  const thousandWordNote = Array.from({ length: 1005 }, (_, index) => `kata${index + 1}`).join(" ");
   const answers = sanitizeAnswers({
     mainChallenges: ["revenue", "fraud", "cost", "fake"],
     detailChallenges: ["follow_up", "follow_up", "repeat_order", "pricing", "lead_quality", "admin_cost", "manual_docs", "invoice_ap", "process_waste", "fake"],
     impactLevel: "revenue",
     adoptionStyle: "dfy",
-    detailNote: "x".repeat(2000)
+    detailNote: thousandWordNote
   });
   assert.deepEqual(answers.mainChallenges, ["revenue", "fraud"]);
   assert.deepEqual(answers.detailChallenges, ["follow_up", "repeat_order", "pricing", "lead_quality", "admin_cost", "manual_docs", "invoice_ap", "process_waste"]);
-  assert.equal(answers.detailNote.length, 1600);
+  assert.equal(answers.detailNote.split(/\s+/).length, 1000);
   assert.deepEqual(validateCompleteAnswers(answers), { ok: true, missing: [] });
   assert.deepEqual(validateCompleteAnswers(sanitizeAnswers({})).missing, ["mainChallenges", "detailChallenges", "impactLevel", "adoptionStyle"]);
+  assert.equal(sanitizeWordLimitedText("  satu dua tiga  ", 2), "satu dua");
 
   const contact = sanitizeContact({
     companyName: ` ${"A".repeat(200)} `,
@@ -64,13 +67,13 @@ try {
     name: "Tester",
     wa: "+62-812-345-6789 ext!",
     budgetContext: "b".repeat(700),
-    message: "m".repeat(2000),
+    message: Array.from({ length: 1505 }, (_, index) => `jawaban${index + 1}`).join(" "),
     summary: "s".repeat(700)
   });
   assert.equal(discovery.sessionId.length, 80);
   assert.equal(discovery.wa, "+62-812-345-6789 ");
   assert.equal(discovery.budgetContext.length, 500);
-  assert.equal(discovery.message.length, 1600);
+  assert.equal(discovery.message.split(/\s+/).length, 1500);
   assert.equal(discovery.summary.length, 500);
   assert.deepEqual(validateDiscoveryPayload(discovery), { ok: true, missing: [] });
   assert.deepEqual(validateDiscoveryPayload(sanitizeDiscoveryPayload({ companyName: "", name: "", wa: "123" })).missing, ["companyName", "name", "wa"]);

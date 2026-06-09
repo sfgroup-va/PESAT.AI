@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     `WA: ${body.wa}`,
     body.budgetContext ? `Budget/konteks: ${body.budgetContext}` : "",
     body.summary ? `Ringkasan mini session: ${body.summary}` : "",
-    body.message ? `Catatan: ${body.message}` : ""
+    body.message ? `Konteks tambahan:\n${body.message}` : ""
   ]
     .filter(Boolean)
     .join("\n");

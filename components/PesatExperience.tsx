@@ -78,6 +78,110 @@ const initialAnswers: WizardAnswers = {
   adoptionStyle: ""
 };
 
+const DETAIL_NOTE_WORD_LIMIT = 1000;
+const DISCOVERY_SHORT_ANSWER_WORD_LIMIT = 120;
+
+type DiscoveryContextKey = "priorityFocus" | "discoveryGoal";
+type DiscoveryContextAnswers = Record<DiscoveryContextKey, string>;
+
+const initialDiscoveryContext: DiscoveryContextAnswers = {
+  priorityFocus: "",
+  discoveryGoal: ""
+};
+
+const OPTIONAL_DISCOVERY_QUESTIONS: Array<{
+  id: DiscoveryContextKey;
+  label: string;
+  helper: string;
+  placeholder: string;
+  rows: number;
+}> = [
+  {
+    id: "priorityFocus",
+    label: "2. Bagian mana yang paling ingin Anda benahi lebih dulu?",
+    helper: "Opsional, cukup jawaban singkat agar tim tahu prioritas Anda.",
+    placeholder: "Contoh: Saya ingin stok dan pencatatan penjualan rapi dulu karena sering selisih.",
+    rows: 3
+  },
+  {
+    id: "discoveryGoal",
+    label: "3. Kalau lanjut discovery call, apa yang paling ingin Anda pahami atau putuskan?",
+    helper: "Opsional, misalnya tools yang cocok, estimasi biaya, atau urutan implementasi.",
+    placeholder: "Contoh: Saya ingin tahu tools yang cocok, kisaran biaya, dan langkah implementasi paling realistis.",
+    rows: 3
+  }
+];
+
+const DISCOVERY_PREP_BY_CHALLENGE: Record<ChallengeId, { title: string; items: string[] }> = {
+  revenue: {
+    title: "Data yang sebaiknya Anda siapkan",
+    items: [
+      "Jumlah lead atau chat masuk per hari/minggu, terutama dari WhatsApp dan channel utama Anda.",
+      "Catatan follow-up: berapa yang cepat ditangani, berapa yang sering telat atau hilang.",
+      "Data repeat order, closing rate, atau produk yang paling sering ditanyakan pelanggan."
+    ]
+  },
+  cost: {
+    title: "Data yang sebaiknya Anda siapkan",
+    items: [
+      "Daftar pekerjaan manual yang paling sering berulang dan memakan waktu tim.",
+      "Contoh dokumen, invoice, atau proses admin yang paling sering diinput ulang.",
+      "Estimasi jam kerja, error, atau bottleneck yang paling sering membuat biaya membengkak."
+    ]
+  },
+  fraud: {
+    title: "Data yang sebaiknya Anda siapkan",
+    items: [
+      "Contoh transaksi atau aktivitas yang pernah terasa janggal, meski belum terbukti fraud.",
+      "Alur approval, akses user, atau titik proses yang paling rawan lolos tanpa kontrol.",
+      "Riwayat insiden, komplain, atau kerugian yang pernah muncul karena blind spot pengawasan."
+    ]
+  },
+  cash_stock: {
+    title: "Data yang sebaiknya Anda siapkan",
+    items: [
+      "Data stok masuk-keluar dan produk yang paling sering stockout atau overstock.",
+      "Catatan penjualan harian/mingguan dan pola permintaan yang terasa naik-turun.",
+      "Arus kas masuk-keluar, piutang, serta momen ketika kas sering terasa ketat."
+    ]
+  },
+  reporting: {
+    title: "Data yang sebaiknya Anda siapkan",
+    items: [
+      "Laporan apa saja yang rutin dibuat dan bagian mana yang paling lama disusun.",
+      "Sumber data utama yang dipakai tim, termasuk file, spreadsheet, atau sistem yang terpisah.",
+      "Keputusan apa yang sering tertunda karena data belum siap atau belum rapi."
+    ]
+  },
+  brand_trust: {
+    title: "Data yang sebaiknya Anda siapkan",
+    items: [
+      "Keyword, layanan, atau brand term yang paling penting untuk ditemukan calon pelanggan.",
+      "Review pelanggan, testimoni, dan pertanyaan yang paling sering muncul tentang bisnis Anda.",
+      "Profil bisnis, listing, atau kanal digital yang saat ini paling memengaruhi trust calon pembeli."
+    ]
+  }
+};
+
+const ADOPTION_MODE_SUMMARY: Record<AdoptionId, { label: string; note: string }> = {
+  dfy: {
+    label: "Mode DFY",
+    note: "Fokuskan discovery call pada data, target, dan prioritas bisnis. Tim Pesat.AI yang akan menyiapkan implementasi awalnya."
+  },
+  diy: {
+    label: "Mode DIY",
+    note: "Selain data bisnis, siapkan juga siapa dari tim internal yang akan jadi PIC agar blueprint dan eksekusinya langsung nyambung."
+  },
+  hybrid: {
+    label: "Mode Hybrid",
+    note: "Yang paling berguna adalah kombinasi data operasional dan kesiapan tim, karena setup awal dibantu tetapi transisi tetap perlu rapi."
+  },
+  starting: {
+    label: "Baru Mulai AI",
+    note: "Tidak perlu menyiapkan semuanya sekaligus. Cukup fokus pada satu proses yang paling sering bocor atau paling mudah diukur dulu."
+  }
+};
+
 type Step = "hero" | "s1" | "fact1" | "s2" | "fact2" | "s3" | "s4" | "s5" | "s6" | "s7" | "s8";
 
 export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
@@ -89,12 +193,14 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [detailNote, setDetailNote] = useState("");
+  const [discoveryContext, setDiscoveryContext] = useState<DiscoveryContextAnswers>(initialDiscoveryContext);
   const [resultError, setResultError] = useState("");
   const [discoveryError, setDiscoveryError] = useState("");
   const [discoveryNotice, setDiscoveryNotice] = useState("");
 
   const primaryChallenge = answers.mainChallenges[0] || "revenue";
   const fact = TRANSITION_FACTS[primaryChallenge];
+  const detailNoteWordCount = useMemo(() => countWords(detailNote), [detailNote]);
 
   const track = useCallback(
     async (type: "screen_view" | "click", screen: Step, metadata?: Record<string, unknown>, sessionIdOverride?: string) => {
@@ -120,6 +226,17 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
 
   // Name + a usable WhatsApp number are required before generating the result.
   const canGenerate = Boolean(contact.name && contact.name.trim()) && hasUsableWhatsAppNumber(contact.wa || "");
+
+  function handleDetailNoteChange(value: string) {
+    setDetailNote(trimToWordLimit(value, DETAIL_NOTE_WORD_LIMIT));
+  }
+
+  function handleDiscoveryContextChange(key: DiscoveryContextKey, value: string) {
+    setDiscoveryContext((current) => ({
+      ...current,
+      [key]: trimToWordLimit(value, DISCOVERY_SHORT_ANSWER_WORD_LIMIT)
+    }));
+  }
 
   async function saveSession(nextAnswers = answers, nextContact = contact, completed = false) {
     const activeSessionId = sessionId || crypto.randomUUID();
@@ -226,7 +343,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       name: String(form.get("name") || contact.name || ""),
       wa: String(form.get("wa") || contact.wa || ""),
       budgetContext: String(form.get("budgetContext") || ""),
-      message: detailNote,
+      message: buildDiscoveryContextMessage(detailNote, discoveryContext),
       summary: result?.headline
     };
     try {
@@ -361,11 +478,15 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                   <span className="mb-2 block text-sm font-semibold text-neutral-500">Ceritakan tantangan Anda (opsional, tapi membuat hasil jauh lebih spesifik)</span>
                   <textarea
                     value={detailNote}
-                    onChange={(event) => setDetailNote(event.target.value)}
+                    onChange={(event) => handleDetailNoteChange(event.target.value)}
                     rows={4}
                     className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900"
                     placeholder="Contoh: penjualan banyak lewat WhatsApp, tapi follow-up sering telat dan pelanggan lama jarang beli lagi..."
                   />
+                  <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
+                    <span>Semakin detail konteks Anda, semakin spesifik hasil dan rencana yang kami susun.</span>
+                    <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
+                  </div>
                 </label>
                 <PrimaryAction
                   onClick={generateResult}
@@ -381,9 +502,13 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
             {step === "s7" && result && (
               <div className="pb-10">
                 <ResultPanel
+                  answers={answers}
                   result={result}
                   detailNote={detailNote}
+                  detailNoteWordCount={detailNoteWordCount}
+                  discoveryContext={discoveryContext}
                   setDetailNote={setDetailNote}
+                  onDiscoveryContextChange={handleDiscoveryContextChange}
                   onDetailNoteBlur={saveResultDetailNote}
                   onShare={() => copyResultLink(result)}
                   onPdf={async () => {
@@ -417,6 +542,40 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   );
 }
 
+function countWords(value: string): number {
+  const words = value.trim().match(/\S+/g);
+  return words ? words.length : 0;
+}
+
+function trimToWordLimit(value: string, maxWords: number): string {
+  const normalized = value.replace(/\r\n/g, "\n");
+  const matches = normalized.match(/\S+/g);
+  if (!matches || matches.length <= maxWords) return normalized;
+
+  let wordCount = 0;
+  let lastAllowedIndex = 0;
+  const matcher = /\S+/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = matcher.exec(normalized)) !== null) {
+    wordCount += 1;
+    if (wordCount > maxWords) break;
+    lastAllowedIndex = match.index + match[0].length;
+  }
+
+  return normalized.slice(0, lastAllowedIndex).trimEnd();
+}
+
+function buildDiscoveryContextMessage(detailNote: string, discoveryContext: DiscoveryContextAnswers): string {
+  const blocks = [
+    detailNote.trim() ? `1. Tantangan detail\n${detailNote.trim()}` : "",
+    discoveryContext.priorityFocus.trim() ? `2. Prioritas yang ingin dibenahi lebih dulu\n${discoveryContext.priorityFocus.trim()}` : "",
+    discoveryContext.discoveryGoal.trim() ? `3. Yang ingin dipahami atau diputuskan saat discovery call\n${discoveryContext.discoveryGoal.trim()}` : ""
+  ].filter(Boolean);
+
+  return blocks.join("\n\n");
+}
+
 function previousStep(step: Step): Step {
   const order: Step[] = ["hero", "s1", "fact1", "s2", "fact2", "s3", "s4", "s5", "s6", "s7", "s8"];
   return order[Math.max(0, order.indexOf(step) - 1)];
@@ -425,9 +584,11 @@ function previousStep(step: Step): Step {
 function QuestionShell({ eyebrow, title, note, children }: { eyebrow: string; title: string; note?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-1 flex-col justify-center pb-8">
-      <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">{eyebrow}</p>
-      <h2 className="mb-4 text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-6xl">{title}</h2>
-      {note ? <p className="mb-8 text-base font-medium leading-7 text-neutral-500">{note}</p> : <div className="mb-6" />}
+      <div className="mb-6 w-fit rounded-full border border-border-base bg-surface-elevated/90 px-4 py-2 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-muted">{eyebrow}</p>
+      </div>
+      <h2 className="mb-4 max-w-4xl text-balance text-4xl font-semibold leading-tight tracking-normal text-foreground sm:text-6xl">{title}</h2>
+      {note ? <p className="mb-8 max-w-2xl text-base font-medium leading-7 text-foreground-muted">{note}</p> : <div className="mb-6" />}
       {children}
     </div>
   );
@@ -497,22 +658,36 @@ function ContactFields({ contact, setContact, optional = false }: { contact: Con
 }
 
 function ResultPanel({
+  answers,
   result,
   detailNote,
+  detailNoteWordCount,
+  discoveryContext,
   setDetailNote,
+  onDiscoveryContextChange,
   onDetailNoteBlur,
   onShare,
   onPdf,
   onDiscovery
 }: {
+  answers: WizardAnswers;
   result: GeneratedResult;
   detailNote: string;
+  detailNoteWordCount: number;
+  discoveryContext: DiscoveryContextAnswers;
   setDetailNote: (value: string) => void;
+  onDiscoveryContextChange: (key: DiscoveryContextKey, value: string) => void;
   onDetailNoteBlur: (value: string) => void | Promise<void>;
   onShare: () => void | Promise<void>;
   onPdf: () => void | Promise<void>;
   onDiscovery: () => void | Promise<void>;
 }) {
+  const primaryChallenge = answers.mainChallenges[0] || "revenue";
+  const prepGuide = DISCOVERY_PREP_BY_CHALLENGE[primaryChallenge];
+  const adoptionSummary = ADOPTION_MODE_SUMMARY[answers.adoptionStyle || "starting"];
+  const notePreview =
+    detailNote.trim().length > 280 ? `${detailNote.trim().slice(0, 280).trimEnd()}...` : detailNote.trim();
+
   return (
     <div>
       <div id="result-panel" className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-soft sm:p-8">
@@ -647,32 +822,105 @@ function ResultPanel({
           </div>
         ) : null}
         <div className="mt-8 overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-gradient-to-br from-white to-neutral-100 p-6">
-          <div className="mx-auto max-w-sm rounded-[1.6rem] border border-neutral-300 bg-white p-4 shadow-soft">
-            <div className="mb-4 h-2 w-20 rounded-full bg-neutral-200" />
-            <div className="space-y-3">
-              <div className="h-20 rounded-2xl bg-neutral-950" />
-              <div className="h-4 w-4/5 rounded-full bg-neutral-200" />
-              <div className="h-4 w-3/5 rounded-full bg-neutral-200" />
-              <div className="grid grid-cols-3 gap-2 pt-2">
-                <div className="h-16 rounded-2xl bg-neutral-100" />
-                <div className="h-16 rounded-2xl bg-neutral-100" />
-                <div className="h-16 rounded-2xl bg-neutral-100" />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Supaya langkah berikutnya tidak ngawang</p>
+              <h3 className="mt-2 text-2xl font-semibold text-neutral-950">Siapkan 3 hal ini agar rekomendasi cepat jadi keputusan nyata</h3>
+            </div>
+            <span className="inline-flex w-fit rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-700">{adoptionSummary.label}</span>
+          </div>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600">{adoptionSummary.note}</p>
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-[1.35rem] border border-neutral-200 bg-white p-5 shadow-soft">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Prioritas pertama</p>
+              <p className="mt-3 text-base font-semibold leading-7 text-neutral-950">{result.firstStep}</p>
+              <p className="mt-3 text-sm leading-6 text-neutral-600">Mulai dari satu area yang paling dekat ke dampak bisnis agar tim tidak kewalahan dan hasil bisa cepat terlihat.</p>
+            </div>
+            <div className="rounded-[1.35rem] border border-neutral-200 bg-white p-5 shadow-soft">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">{prepGuide.title}</p>
+              <ul className="mt-3 space-y-3 text-sm leading-6 text-neutral-700">
+                {prepGuide.items.map((item) => (
+                  <li key={item} className="flex gap-3">
+                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-neutral-900" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-[1.35rem] border border-neutral-200 bg-white p-5 shadow-soft">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Angka yang nanti dicek</p>
+              <p className="mt-3 text-sm leading-6 text-neutral-600">Ini yang dipakai untuk mengukur hasil agar keputusan Anda berbasis angka, bukan asumsi.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {result.promise.measuredBy.map((metric) => (
+                  <span key={metric} className="rounded-full bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-800">
+                    {metric}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-4 space-y-3">
+                {result.impactCards.slice(0, 2).map((card) => (
+                  <div key={card.title} className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">{card.title}</p>
+                    <p className="mt-1 text-lg font-semibold text-neutral-950">{card.value}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
+          {notePreview ? (
+            <div className="mt-5 rounded-[1.35rem] border border-dashed border-neutral-300 bg-white/80 p-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Catatan Anda yang sudah tertangkap</p>
+              <p className="mt-3 text-sm leading-7 text-neutral-700">{notePreview}</p>
+            </div>
+          ) : null}
         </div>
       </div>
-      <label className="mt-6 block">
-        <span className="mb-2 block text-sm font-semibold text-neutral-500">Ceritakan tantangan Anda lebih detail</span>
-        <textarea
-          value={detailNote}
-          onChange={(event) => setDetailNote(event.target.value)}
-          onBlur={(event) => void onDetailNoteBlur(event.target.value)}
-          rows={5}
-          className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900"
-          placeholder="Contoh: proses sales kami banyak lewat WhatsApp, tapi follow-up sering hilang..."
-        />
-      </label>
+      <section className="mt-6 rounded-[1.35rem] border border-border-base bg-surface-elevated p-5 text-foreground shadow-[0_24px_60px_-40px_rgba(15,23,42,0.55)] sm:p-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-muted">Opsional sebelum discovery call</p>
+            <h3 className="mt-1 text-2xl font-semibold leading-tight text-foreground">Bantu kami memahami konteks Anda lewat 3 pertanyaan singkat</h3>
+          </div>
+          <span className="inline-flex w-fit rounded-full border border-border-base bg-surface px-4 py-2 text-sm font-semibold text-foreground-muted">Semua jawaban bersifat opsional</span>
+        </div>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-foreground-muted">
+          Jawaban di bawah ini akan ikut dikirim saat Anda lanjut ke discovery call, supaya tim Pesat.AI masuk dengan konteks yang lebih jelas dan tidak mengulang pertanyaan dasar.
+        </p>
+
+        <div className="mt-5 grid gap-4">
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-foreground">1. Ceritakan tantangan Anda lebih detail</span>
+            <textarea
+              value={detailNote}
+              onChange={(event) => setDetailNote(trimToWordLimit(event.target.value, DETAIL_NOTE_WORD_LIMIT))}
+              onBlur={(event) => void onDetailNoteBlur(event.target.value)}
+              rows={5}
+              className="w-full rounded-[1.35rem] border border-border-base bg-surface px-5 py-4 text-foreground outline-none placeholder:text-foreground-subtle focus:border-border-strong"
+              placeholder="Contoh: Saya menjual lele biasa sehari kurang lebih 500 kg - 1 ton. Saya masih butuh tools/software untuk pencatatan stok dan penjualan."
+            />
+            <div className="mt-2 flex items-center justify-between gap-4 text-xs text-foreground-subtle">
+              <span>Anda bisa cerita bebas soal proses, volume, bottleneck, atau kebiasaan operasional yang sekarang paling terasa.</span>
+              <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
+            </div>
+          </label>
+
+          {OPTIONAL_DISCOVERY_QUESTIONS.map((question) => (
+            <label key={question.id} className="block">
+              <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <span className="text-sm font-semibold text-foreground">{question.label}</span>
+                <span className="text-xs text-foreground-subtle">{question.helper}</span>
+              </div>
+              <textarea
+                value={discoveryContext[question.id]}
+                onChange={(event) => onDiscoveryContextChange(question.id, event.target.value)}
+                rows={question.rows}
+                className="w-full rounded-[1.35rem] border border-border-base bg-surface px-5 py-4 text-foreground outline-none placeholder:text-foreground-subtle focus:border-border-strong"
+                placeholder={question.placeholder}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <button
           onClick={() => void onShare()}

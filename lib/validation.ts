@@ -43,6 +43,27 @@ export function sanitizeText(value: unknown, maxLength = 500) {
   return value.trim().slice(0, maxLength);
 }
 
+export function sanitizeWordLimitedText(value: unknown, maxWords: number, maxLength = 12000) {
+  if (typeof value !== "string") return "";
+
+  const normalized = value.replace(/\r\n/g, "\n").trim().slice(0, maxLength);
+  const words = normalized.match(/\S+/g);
+  if (!words || words.length <= maxWords) return normalized;
+
+  let wordCount = 0;
+  let lastAllowedIndex = 0;
+  const matcher = /\S+/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = matcher.exec(normalized)) !== null) {
+    wordCount += 1;
+    if (wordCount > maxWords) break;
+    lastAllowedIndex = match.index + match[0].length;
+  }
+
+  return normalized.slice(0, lastAllowedIndex).trimEnd();
+}
+
 function uniqueAllowed<T extends string>(value: unknown, allowed: Set<string>, maxItems: number): T[] {
   if (!Array.isArray(value)) return [];
   const selected: T[] = [];
@@ -65,7 +86,7 @@ export function sanitizeAnswers(value: unknown): WizardAnswers {
     detailChallenges: uniqueAllowed<DetailId>(input.detailChallenges, detailSet, 8),
     impactLevel,
     adoptionStyle,
-    detailNote: sanitizeText(input.detailNote, 1600)
+    detailNote: sanitizeWordLimitedText(input.detailNote, 1000)
   };
 }
 
@@ -106,7 +127,7 @@ export function sanitizeDiscoveryPayload(value: unknown) {
     name: sanitizeText(input.name, 120),
     wa: sanitizeText(input.wa, 40).replace(/[^\d+()\-\s]/g, ""),
     budgetContext: sanitizeText(input.budgetContext, 500),
-    message: sanitizeText(input.message, 1600),
+    message: sanitizeWordLimitedText(input.message, 1500, 18000),
     summary: sanitizeText(input.summary, 500)
   };
 }
