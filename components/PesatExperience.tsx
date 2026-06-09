@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
+import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, Sparkles, Target, X } from "lucide-react";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
 import { CtaBand } from "@/components/home/CtaBand";
@@ -184,6 +184,200 @@ const ADOPTION_MODE_SUMMARY: Record<AdoptionId, { label: string; note: string }>
 
 type Step = "hero" | "s1" | "fact1" | "s2" | "fact2" | "s3" | "s4" | "s5" | "s6" | "s7" | "s8";
 
+type WizardStep = Exclude<Step, "hero">;
+type WizardToneName = "amber" | "sky" | "emerald" | "ink";
+type WizardToneToken = {
+  canvasBackground: string;
+  surfaceBackground: string;
+  asideBackground: string;
+  badgeClass: string;
+  iconClass: string;
+  progressClass: string;
+  glowClass: string;
+  secondaryGlowClass: string;
+};
+
+type WizardFlowItem = {
+  step: WizardStep;
+  number: string;
+  railLabel: string;
+  railTitle: string;
+  railDescription: string;
+  tone: WizardToneName;
+  icon: ComponentType<{ className?: string }>;
+  bullets: string[];
+};
+
+const FIELD_CLASS =
+  "w-full rounded-[1.35rem] border border-neutral-200 bg-white/85 px-5 py-4 text-neutral-950 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.35)] outline-none transition duration-200 placeholder:text-neutral-400 focus:-translate-y-0.5 focus:border-neutral-900";
+
+const WIZARD_TONES = {
+  amber: {
+    canvasBackground:
+      "radial-gradient(circle at top left, rgba(251,191,36,0.16), transparent 28%), radial-gradient(circle at 82% 18%, rgba(34,211,238,0.14), transparent 26%), linear-gradient(180deg, #fffdf8 0%, #f8fafc 52%, #ffffff 100%)",
+    surfaceBackground:
+      "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,249,240,0.96) 48%, rgba(240,249,255,0.94))",
+    asideBackground:
+      "linear-gradient(150deg, rgba(255,251,235,0.88), rgba(255,255,255,0.78) 42%, rgba(236,254,255,0.85))",
+    badgeClass: "border-amber-200 bg-amber-100/80 text-amber-950",
+    iconClass: "border-amber-200 bg-white/80 text-amber-900",
+    progressClass: "bg-gradient-to-r from-amber-500 via-orange-500 to-cyan-500",
+    glowClass: "bg-amber-300/40",
+    secondaryGlowClass: "bg-cyan-300/30"
+  },
+  sky: {
+    canvasBackground:
+      "radial-gradient(circle at 16% 12%, rgba(125,211,252,0.18), transparent 26%), radial-gradient(circle at 82% 22%, rgba(244,114,182,0.12), transparent 24%), linear-gradient(180deg, #f8fcff 0%, #f8fafc 56%, #ffffff 100%)",
+    surfaceBackground:
+      "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(240,249,255,0.94) 46%, rgba(253,242,248,0.94))",
+    asideBackground:
+      "linear-gradient(145deg, rgba(240,249,255,0.9), rgba(255,255,255,0.78) 44%, rgba(253,242,248,0.84))",
+    badgeClass: "border-sky-200 bg-sky-100/80 text-sky-950",
+    iconClass: "border-sky-200 bg-white/80 text-sky-900",
+    progressClass: "bg-gradient-to-r from-sky-500 via-cyan-500 to-fuchsia-500",
+    glowClass: "bg-sky-300/35",
+    secondaryGlowClass: "bg-fuchsia-200/30"
+  },
+  emerald: {
+    canvasBackground:
+      "radial-gradient(circle at 14% 10%, rgba(16,185,129,0.16), transparent 28%), radial-gradient(circle at 84% 18%, rgba(251,191,36,0.14), transparent 24%), linear-gradient(180deg, #f7fdf9 0%, #f8fafc 52%, #ffffff 100%)",
+    surfaceBackground:
+      "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(236,253,245,0.95) 46%, rgba(255,251,235,0.92))",
+    asideBackground:
+      "linear-gradient(145deg, rgba(236,253,245,0.9), rgba(255,255,255,0.78) 44%, rgba(255,251,235,0.84))",
+    badgeClass: "border-emerald-200 bg-emerald-100/80 text-emerald-950",
+    iconClass: "border-emerald-200 bg-white/80 text-emerald-900",
+    progressClass: "bg-gradient-to-r from-emerald-500 via-lime-500 to-amber-400",
+    glowClass: "bg-emerald-300/35",
+    secondaryGlowClass: "bg-amber-200/35"
+  },
+  ink: {
+    canvasBackground:
+      "radial-gradient(circle at 15% 14%, rgba(148,163,184,0.16), transparent 26%), radial-gradient(circle at 82% 20%, rgba(251,191,36,0.12), transparent 22%), linear-gradient(180deg, #f8fafc 0%, #f5f5f5 56%, #ffffff 100%)",
+    surfaceBackground:
+      "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,250,250,0.95) 48%, rgba(241,245,249,0.94))",
+    asideBackground:
+      "linear-gradient(145deg, rgba(248,250,252,0.9), rgba(255,255,255,0.8) 44%, rgba(245,245,245,0.84))",
+    badgeClass: "border-slate-200 bg-slate-100/80 text-slate-950",
+    iconClass: "border-slate-200 bg-white/80 text-slate-900",
+    progressClass: "bg-gradient-to-r from-slate-900 via-slate-700 to-amber-500",
+    glowClass: "bg-slate-300/35",
+    secondaryGlowClass: "bg-amber-200/30"
+  }
+} as const satisfies Record<WizardToneName, WizardToneToken>;
+
+const CHALLENGE_NOTES: Record<ChallengeId, string> = {
+  revenue: "Cari titik bocor yang paling dekat ke closing, repeat order, atau kualitas lead.",
+  cost: "Cocok kalau tim masih tenggelam di pekerjaan manual yang berulang setiap hari.",
+  fraud: "Tepat saat blind spot approval, transaksi aneh, atau akses data mulai terasa riskan.",
+  cash_stock: "Pilih ini jika stok, kas, dan perencanaan pembelian sering terasa tidak sinkron.",
+  reporting: "Dipakai saat laporan lama jadi keputusan ikut lambat dan data sulit dibaca cepat.",
+  brand_trust: "Fokus untuk bisnis yang butuh lebih dipercaya di Google, review, dan AI search."
+};
+
+const WIZARD_FLOW: WizardFlowItem[] = [
+  {
+    step: "s1",
+    number: "01",
+    railLabel: "Tantangan inti",
+    railTitle: "Cari kebocoran yang paling mahal",
+    railDescription: "Kita mulai dari bottleneck yang paling terasa supaya diagnosis tidak melebar ke mana-mana.",
+    tone: "amber",
+    icon: Target,
+    bullets: ["Pilih maksimal dua area agar rekomendasi tetap fokus.", "Semua step setelah ini akan menyesuaikan arah problem yang Anda pilih."]
+  },
+  {
+    step: "fact1",
+    number: "02",
+    railLabel: "Reality check",
+    railTitle: "Lihat pattern yang sering muncul di lapangan",
+    railDescription: "Sisipan insight ini bikin mini session terasa seperti diagnosis, bukan form yang datar.",
+    tone: "sky",
+    icon: Sparkles,
+    bullets: ["Gunakan insight ini sebagai pembanding saat membaca hasil akhir.", "Masalah yang Anda pilih biasanya memang punya pola yang berulang lintas bisnis."]
+  },
+  {
+    step: "s2",
+    number: "03",
+    railLabel: "Detail operasional",
+    railTitle: "Persempit area yang paling sering bocor",
+    railDescription: "Semakin spesifik detail yang dipilih, semakin tajam blueprint yang bisa disusun.",
+    tone: "sky",
+    icon: Target,
+    bullets: ["Ini membantu membedakan gejala permukaan vs akar masalah.", "Detail yang tepat membuat rekomendasi tidak generik."]
+  },
+  {
+    step: "fact2",
+    number: "04",
+    railLabel: "Opportunity signal",
+    railTitle: "Lihat kenapa area ini layak diprioritaskan",
+    railDescription: "Insight kedua dipakai untuk menggeser mindset dari masalah ke peluang yang terukur.",
+    tone: "emerald",
+    icon: Sparkles,
+    bullets: ["Mini session jadi terasa progresif karena ada konteks di antara decision points.", "Nanti sinyal ini akan nyambung ke estimasi impact di hasil akhir."]
+  },
+  {
+    step: "s3",
+    number: "05",
+    railLabel: "Target impact",
+    railTitle: "Tentukan efek bisnis yang paling ingin terasa duluan",
+    railDescription: "Kita perlu tahu hasil apa yang paling bernilai buat Anda sebelum bicara tools.",
+    tone: "emerald",
+    icon: BarChart3,
+    bullets: ["Dampak yang dipilih akan mengubah framing hasil dan prioritas implementasi.", "Fokus awal yang jelas membuat keputusan lebih cepat."]
+  },
+  {
+    step: "s4",
+    number: "06",
+    railLabel: "Mode adopsi",
+    railTitle: "Sesuaikan ritme eksekusi dengan kesiapan tim",
+    railDescription: "Solusi yang bagus tetap perlu cara adopsi yang pas agar tidak berhenti di presentasi.",
+    tone: "ink",
+    icon: Check,
+    bullets: ["DFY, DIY, dan Hybrid butuh ritme pendampingan yang berbeda.", "Pilihan ini membantu Pesat.AI menyesuaikan level intervensi."]
+  },
+  {
+    step: "s5",
+    number: "07",
+    railLabel: "Review hipotesis",
+    railTitle: "Pastikan arah diagnosis sudah terasa pas",
+    railDescription: "Sebelum hasil disusun, kita cek dulu apakah hipotesis kerjanya sudah cukup akurat.",
+    tone: "ink",
+    icon: BarChart3,
+    bullets: ["Review singkat ini menjaga kualitas output tetap relevan.", "Anda masih bisa mengubah arah sebelum hasil dibuat."]
+  },
+  {
+    step: "s6",
+    number: "08",
+    railLabel: "Context capture",
+    railTitle: "Kirim konteks supaya hasil terasa lebih personal",
+    railDescription: "Di step ini kita mengubah jawaban pilihan menjadi bahan diagnosis yang jauh lebih tajam.",
+    tone: "amber",
+    icon: Check,
+    bullets: ["Nama dan WhatsApp dipakai untuk mengirim hasil serta tindak lanjut yang relevan.", "Catatan operasional membuat output tidak terdengar seperti template umum."]
+  },
+  {
+    step: "s7",
+    number: "09",
+    railLabel: "Result board",
+    railTitle: "Baca hasil seperti board mini yang siap dibawa diskusi",
+    railDescription: "Output dirancang agar langsung bisa dipakai untuk menyamakan persepsi internal.",
+    tone: "emerald",
+    icon: Sparkles,
+    bullets: ["Anda dapat headline, diagnosis, impact, dan rencana aksi dalam satu alur.", "Hasil ini sengaja dibuat shareable supaya momentum tidak hilang."]
+  },
+  {
+    step: "s8",
+    number: "10",
+    railLabel: "Discovery handoff",
+    railTitle: "Ubah hasil mini session jadi keputusan eksekusi",
+    railDescription: "Discovery call dipakai untuk memvalidasi prioritas, data, dan budget yang paling realistis.",
+    tone: "sky",
+    icon: Target,
+    bullets: ["Tim masuk ke call dengan konteks yang lebih matang.", "Tujuannya bukan mengulang pertanyaan dasar, tapi mempercepat keputusan."]
+  }
+];
+
 export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   const cfg = landing ?? DEFAULT_LANDING_CONFIG;
   const [step, setStep] = useState<Step>("hero");
@@ -223,6 +417,41 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     const clusters = answers.mainChallenges.length ? answers.mainChallenges : ["revenue" as ChallengeId];
     return clusters.flatMap((cluster) => detailOptions[cluster]);
   }, [answers.mainChallenges]);
+
+  const selectedDetailLabels = useMemo(
+    () => selectedDetails.filter((item) => answers.detailChallenges.includes(item.id)).map((item) => item.label),
+    [answers.detailChallenges, selectedDetails]
+  );
+
+  const activeStage = WIZARD_FLOW.find((item) => item.step === (step === "hero" ? "s1" : step)) ?? WIZARD_FLOW[0];
+  const activeStageIndex = WIZARD_FLOW.findIndex((item) => item.step === activeStage.step);
+  const activeTone = WIZARD_TONES[activeStage.tone];
+  const progressPercent = ((activeStageIndex + 1) / WIZARD_FLOW.length) * 100;
+  const selectedChallengeLabels = answers.mainChallenges.map((id) => CHALLENGE_LABELS[id]);
+  const impactSummary = impactOptions.find((item) => item.id === answers.impactLevel)?.label || "Belum dipilih";
+  const adoptionSummaryValue = adoptionOptions.find((item) => item.id === answers.adoptionStyle)?.label || "Belum dipilih";
+  const sessionSnapshot = [
+    {
+      label: "Fokus masalah",
+      value: selectedChallengeLabels.length ? summarizeLabels(selectedChallengeLabels, 2) : "Pilih 1-2 area agar diagnosis tetap tajam."
+    },
+    {
+      label: "Detail operasional",
+      value: selectedDetailLabels.length ? summarizeLabels(selectedDetailLabels, 2) : "Belum dipersempit. Step ini akan menajamkan gejala yang paling sering bocor."
+    },
+    {
+      label: "Target impact",
+      value: impactSummary === "Belum dipilih" ? "Belum dipilih. Nanti Anda tentukan outcome bisnis yang ingin terasa duluan." : impactSummary
+    },
+    {
+      label: "Mode eksekusi",
+      value: adoptionSummaryValue === "Belum dipilih" ? "Belum dipilih. Kita akan sesuaikan ritme implementasi dengan kesiapan tim." : adoptionSummaryValue
+    },
+    {
+      label: "Konteks tambahan",
+      value: detailNoteWordCount ? `${detailNoteWordCount} kata konteks sudah masuk untuk memperkaya diagnosis.` : "Masih kosong. Tambahkan cerita operasional agar hasil terasa lebih spesifik."
+    }
+  ];
 
   // Name + a usable WhatsApp number are required before generating the result.
   const canGenerate = Boolean(contact.name && contact.name.trim()) && hasUsableWhatsAppNumber(contact.wa || "");
@@ -331,7 +560,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     }
   }
 
-  async function submitDiscovery(event: React.FormEvent<HTMLFormElement>) {
+  async function submitDiscovery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setDiscoveryError("");
@@ -393,148 +622,289 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
           <Footer onStartWizard={startWizard} />
         </>
       ) : (
-        <section className="fixed inset-0 z-20 overflow-y-auto bg-surface">
-          <div className={`mx-auto flex min-h-screen w-full flex-col px-5 py-5 sm:px-8 ${step === "s7" ? "max-w-5xl" : "max-w-3xl"}`}>
-            <div className="mb-8 flex items-center justify-between">
+        <section className="fixed inset-0 z-20 overflow-y-auto">
+          <div className="absolute inset-0" style={{ backgroundImage: activeTone.canvasBackground }} />
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className={`absolute left-[-8%] top-16 h-64 w-64 rounded-full blur-3xl ${activeTone.glowClass} animate-soft-drift`} />
+            <div
+              className={`absolute right-[-6%] top-1/3 h-72 w-72 rounded-full blur-3xl ${activeTone.secondaryGlowClass} animate-soft-drift`}
+              style={{ animationDelay: "1200ms" }}
+            />
+          </div>
+
+          <div className={`relative mx-auto min-h-screen w-full px-4 py-4 sm:px-6 lg:px-8 ${step === "s7" ? "max-w-7xl" : "max-w-6xl"}`}>
+            <div className="mb-5 flex items-center justify-between gap-4">
               <button
+                type="button"
                 onClick={() => (step === "s1" ? setStep("hero") : setStep(previousStep(step)))}
-                className="grid h-11 w-11 place-items-center rounded-full border border-neutral-200 text-neutral-900"
+                className="grid h-12 w-12 place-items-center rounded-full border border-white/70 bg-white/70 text-neutral-900 shadow-[0_20px_50px_-36px_rgba(15,23,42,0.7)] backdrop-blur-xl transition hover:-translate-y-0.5"
                 aria-label="Kembali"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
-              <div className="text-sm font-semibold text-neutral-500">Pesat.AI Mini Session</div>
-              <button onClick={() => setStep("hero")} className="grid h-11 w-11 place-items-center rounded-full border border-neutral-200 text-neutral-900" aria-label="Tutup">
+              <div className="flex flex-col items-center text-center">
+                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${activeTone.badgeClass}`}>
+                  Beat {activeStage.number}
+                </span>
+                <div className="mt-2 text-sm font-semibold text-neutral-500">Pesat.AI Mini Session</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep("hero")}
+                className="grid h-12 w-12 place-items-center rounded-full border border-white/70 bg-white/70 text-neutral-900 shadow-[0_20px_50px_-36px_rgba(15,23,42,0.7)] backdrop-blur-xl transition hover:-translate-y-0.5"
+                aria-label="Tutup"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {step === "s1" && (
-              <QuestionShell eyebrow="01 / Tantangan terbesar" title="Apa tantangan terbesar bisnis Anda sekarang?" note="Pilih maksimal 2 agar rekomendasi tetap fokus.">
-                <div className="grid gap-3">
-                  {(Object.entries(CHALLENGE_LABELS) as Array<[ChallengeId, string]>).map(([id, label]) => (
-                    <ChoiceButton key={id} active={answers.mainChallenges.includes(id)} onClick={() => toggleChallenge(id)} label={label} />
-                  ))}
-                </div>
-                <PrimaryAction disabled={answers.mainChallenges.length === 0} onClick={() => saveSession().then(() => setStep("fact1"))} label="Lanjut" />
-              </QuestionShell>
-            )}
+            <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
+              <WizardContextRail
+                activeStage={activeStage}
+                activeStageIndex={activeStageIndex}
+                progressPercent={progressPercent}
+                tone={activeTone}
+                primaryChallengeLabel={CHALLENGE_LABELS[primaryChallenge]}
+                sessionSnapshot={sessionSnapshot}
+              />
 
-            {step === "fact1" && <FactScreen fact={fact.first} source={fact.source} onNext={() => setStep("s2")} />}
-
-            {step === "s2" && (
-              <QuestionShell eyebrow="02 / Detail tantangan" title="Bagian mana yang paling terasa sekarang?" note="Pilih semua yang relevan.">
-                <div className="grid gap-3">
-                  {selectedDetails.map((item) => (
-                    <ChoiceButton key={item.id} active={answers.detailChallenges.includes(item.id)} onClick={() => toggleDetail(item.id)} label={item.label} />
-                  ))}
-                </div>
-                <PrimaryAction disabled={answers.detailChallenges.length === 0} onClick={() => saveSession().then(() => setStep("fact2"))} label="Lanjut" />
-              </QuestionShell>
-            )}
-
-            {step === "fact2" && <FactScreen fact={fact.second} source={fact.source} onNext={() => setStep("s3")} />}
-
-            {step === "s3" && (
-              <QuestionShell eyebrow="03 / Skala dampak" title="Dampak apa yang paling ingin Anda lihat dulu?">
-                <div className="grid gap-3">
-                  {impactOptions.map((item) => (
-                    <ChoiceButton key={item.id} active={answers.impactLevel === item.id} onClick={() => setAnswers({ ...answers, impactLevel: item.id })} label={item.label} note={item.note} />
-                  ))}
-                </div>
-                <PrimaryAction disabled={!answers.impactLevel} onClick={() => saveSession().then(() => setStep("s4"))} label="Lanjut" />
-              </QuestionShell>
-            )}
-
-            {step === "s4" && (
-              <QuestionShell eyebrow="04 / Preferensi adopsi" title="Cara adopsi AI seperti apa yang paling cocok?">
-                <div className="grid gap-3">
-                  {adoptionOptions.map((item) => (
-                    <ChoiceButton key={item.id} active={answers.adoptionStyle === item.id} onClick={() => setAnswers({ ...answers, adoptionStyle: item.id })} label={item.label} note={item.note} />
-                  ))}
-                </div>
-                <PrimaryAction disabled={!answers.adoptionStyle} onClick={() => saveSession().then(() => setStep("s5"))} label="Review jawaban" />
-              </QuestionShell>
-            )}
-
-            {step === "s5" && (
-              <QuestionShell eyebrow="05 / Review" title="Cek sebentar. Apakah ini sudah pas?">
-                <ReviewRow label="Tantangan" value={answers.mainChallenges.map((id) => CHALLENGE_LABELS[id]).join(", ")} onEdit={() => setStep("s1")} />
-                <ReviewRow label="Detail" value={`${answers.detailChallenges.length} area dipilih`} onEdit={() => setStep("s2")} />
-                <ReviewRow label="Dampak" value={impactOptions.find((item) => item.id === answers.impactLevel)?.label || "-"} onEdit={() => setStep("s3")} />
-                <ReviewRow label="Adopsi" value={adoptionOptions.find((item) => item.id === answers.adoptionStyle)?.label || "-"} onEdit={() => setStep("s4")} />
-                <PrimaryAction onClick={() => setStep("s6")} label="Sudah Pas" />
-              </QuestionShell>
-            )}
-
-            {step === "s6" && (
-              <QuestionShell
-                eyebrow="06 / Data Anda"
-                title="Ke mana hasil & rencana ini kami kirim?"
-                note="Nama dan WhatsApp wajib agar kami bisa menyusun hasil dan mengirim rincian rencananya ke Anda."
-              >
-                <ContactFields contact={contact} setContact={setContact} />
-                <label className="mt-4 block">
-                  <span className="mb-2 block text-sm font-semibold text-neutral-500">Ceritakan tantangan Anda (opsional, tapi membuat hasil jauh lebih spesifik)</span>
-                  <textarea
-                    value={detailNote}
-                    onChange={(event) => handleDetailNoteChange(event.target.value)}
-                    rows={4}
-                    className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900"
-                    placeholder="Contoh: penjualan banyak lewat WhatsApp, tapi follow-up sering telat dan pelanggan lama jarang beli lagi..."
-                  />
-                  <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
-                    <span>Semakin detail konteks Anda, semakin spesifik hasil dan rencana yang kami susun.</span>
-                    <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
+              <div className="lg:pt-1">
+                {step === "s7" && result ? (
+                  <div className="animate-fade-in-up pb-10">
+                    <div
+                      className="mb-4 overflow-hidden rounded-[1.75rem] border border-white/70 p-5 shadow-[0_30px_90px_-50px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:p-6"
+                      style={{ backgroundImage: activeTone.surfaceBackground }}
+                    >
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Result board siap</p>
+                          <h2 className="mt-2 max-w-3xl text-3xl font-semibold leading-tight text-neutral-950 sm:text-4xl">
+                            Hasil mini session kini terasa seperti board singkat yang siap dibawa ke diskusi internal.
+                          </h2>
+                        </div>
+                        <span className={`inline-flex w-fit items-center rounded-full border px-4 py-2 text-sm font-semibold ${activeTone.badgeClass}`}>Blueprint + Impact + Action Plan</span>
+                      </div>
+                    </div>
+                    <ResultPanel
+                      answers={answers}
+                      result={result}
+                      detailNote={detailNote}
+                      detailNoteWordCount={detailNoteWordCount}
+                      discoveryContext={discoveryContext}
+                      setDetailNote={setDetailNote}
+                      onDiscoveryContextChange={handleDiscoveryContextChange}
+                      onDetailNoteBlur={saveResultDetailNote}
+                      onShare={() => copyResultLink(result)}
+                      onPdf={async () => {
+                        await track("click", "s7", { cta: "Export PDF" }, result.sessionId);
+                        await downloadPdf();
+                      }}
+                      onDiscovery={async () => {
+                        await saveResultDetailNote(detailNote);
+                        void track("click", "s7", { cta: "Discovery Call" }, result.sessionId);
+                        setStep("s8");
+                      }}
+                    />
                   </div>
-                </label>
-                <PrimaryAction
-                  onClick={generateResult}
-                  label={loading ? "Menyusun hasil & rencana..." : "Susun Hasil & Rencana Saya"}
-                  disabled={loading || !canGenerate}
-                  loading={loading}
-                />
-                {!canGenerate ? <p className="mt-3 text-xs text-neutral-400">Isi Nama Anda dan Nomor WhatsApp yang valid untuk melanjutkan.</p> : null}
-                {resultError ? <p className="mt-4 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold leading-6 text-red-700">{resultError}</p> : null}
-              </QuestionShell>
-            )}
+                ) : (
+                  <div
+                    className="relative overflow-hidden rounded-[2rem] border border-white/70 p-5 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:p-8 lg:p-10 animate-fade-in-up"
+                    style={{ backgroundImage: activeTone.surfaceBackground }}
+                  >
+                    <div className={`pointer-events-none absolute -right-16 top-[-10%] h-56 w-56 rounded-full blur-3xl ${activeTone.secondaryGlowClass}`} />
+                    <div className={`pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full blur-3xl ${activeTone.glowClass}`} />
 
-            {step === "s7" && result && (
-              <div className="pb-10">
-                <ResultPanel
-                  answers={answers}
-                  result={result}
-                  detailNote={detailNote}
-                  detailNoteWordCount={detailNoteWordCount}
-                  discoveryContext={discoveryContext}
-                  setDetailNote={setDetailNote}
-                  onDiscoveryContextChange={handleDiscoveryContextChange}
-                  onDetailNoteBlur={saveResultDetailNote}
-                  onShare={() => copyResultLink(result)}
-                  onPdf={async () => {
-                    await track("click", "s7", { cta: "Export PDF" }, result.sessionId);
-                    await downloadPdf();
-                  }}
-                  onDiscovery={async () => {
-                    await saveResultDetailNote(detailNote);
-                    void track("click", "s7", { cta: "Discovery Call" }, result.sessionId);
-                    setStep("s8");
-                  }}
-                />
+                    <div className="relative">
+                      {step === "s1" && (
+                        <QuestionShell
+                          eyebrow="01 / Tantangan terbesar"
+                          title="Apa tantangan terbesar bisnis Anda sekarang?"
+                          note="Pilih 1-2 area yang paling mahal jika dibiarkan. Dari sini arah diagnosis akan dibentuk."
+                        >
+                          <div className="grid gap-3">
+                            {(Object.entries(CHALLENGE_LABELS) as Array<[ChallengeId, string]>).map(([id, label], index) => (
+                              <ChoiceButton
+                                key={id}
+                                active={answers.mainChallenges.includes(id)}
+                                onClick={() => toggleChallenge(id)}
+                                label={label}
+                                note={CHALLENGE_NOTES[id]}
+                                index={index + 1}
+                              />
+                            ))}
+                          </div>
+                          <PrimaryAction disabled={answers.mainChallenges.length === 0} onClick={() => saveSession().then(() => setStep("fact1"))} label="Lanjut ke Sinyal Industri" />
+                        </QuestionShell>
+                      )}
+
+                      {step === "fact1" && (
+                        <FactScreen fact={fact.first} source={fact.source} onNext={() => setStep("s2")} stage={activeStage} tone={activeTone} />
+                      )}
+
+                      {step === "s2" && (
+                        <QuestionShell
+                          eyebrow="02 / Detail tantangan"
+                          title="Bagian mana yang paling terasa sekarang?"
+                          note="Pilih semua yang relevan. Semakin tajam bagian yang dipilih, semakin terasa diagnosisnya."
+                        >
+                          <div className="grid gap-3">
+                            {selectedDetails.map((item, index) => (
+                              <ChoiceButton
+                                key={item.id}
+                                active={answers.detailChallenges.includes(item.id)}
+                                onClick={() => toggleDetail(item.id)}
+                                label={item.label}
+                                index={index + 1}
+                              />
+                            ))}
+                          </div>
+                          <PrimaryAction disabled={answers.detailChallenges.length === 0} onClick={() => saveSession().then(() => setStep("fact2"))} label="Lanjut ke Opportunity Signal" />
+                        </QuestionShell>
+                      )}
+
+                      {step === "fact2" && (
+                        <FactScreen fact={fact.second} source={fact.source} onNext={() => setStep("s3")} stage={activeStage} tone={activeTone} />
+                      )}
+
+                      {step === "s3" && (
+                        <QuestionShell
+                          eyebrow="03 / Skala dampak"
+                          title="Dampak apa yang paling ingin Anda lihat dulu?"
+                          note="Kita prioritaskan efek bisnis pertama yang paling berarti buat Anda, baru bicara detail implementasi."
+                        >
+                          <div className="grid gap-3">
+                            {impactOptions.map((item, index) => (
+                              <ChoiceButton
+                                key={item.id}
+                                active={answers.impactLevel === item.id}
+                                onClick={() => setAnswers({ ...answers, impactLevel: item.id })}
+                                label={item.label}
+                                note={item.note}
+                                index={index + 1}
+                              />
+                            ))}
+                          </div>
+                          <PrimaryAction disabled={!answers.impactLevel} onClick={() => saveSession().then(() => setStep("s4"))} label="Lanjut ke Mode Adopsi" />
+                        </QuestionShell>
+                      )}
+
+                      {step === "s4" && (
+                        <QuestionShell
+                          eyebrow="04 / Preferensi adopsi"
+                          title="Cara adopsi AI seperti apa yang paling cocok?"
+                          note="Pilihan ini membantu kami menyesuaikan ritme implementasi dengan kapasitas tim dan ekspektasi Anda."
+                        >
+                          <div className="grid gap-3">
+                            {adoptionOptions.map((item, index) => (
+                              <ChoiceButton
+                                key={item.id}
+                                active={answers.adoptionStyle === item.id}
+                                onClick={() => setAnswers({ ...answers, adoptionStyle: item.id })}
+                                label={item.label}
+                                note={item.note}
+                                index={index + 1}
+                              />
+                            ))}
+                          </div>
+                          <PrimaryAction disabled={!answers.adoptionStyle} onClick={() => saveSession().then(() => setStep("s5"))} label="Review Arah Diagnosis" />
+                        </QuestionShell>
+                      )}
+
+                      {step === "s5" && (
+                        <QuestionShell
+                          eyebrow="05 / Review"
+                          title="Cek sebentar. Apakah arah diagnosis ini sudah pas?"
+                          note="Anggap ini sebagai hipotesis kerja. Kalau sudah terasa pas, kita lanjut susun hasilnya."
+                        >
+                          <ReviewRow label="Tantangan" value={selectedChallengeLabels.length ? summarizeLabels(selectedChallengeLabels, 2) : "-"} onEdit={() => setStep("s1")} />
+                          <ReviewRow label="Detail" value={selectedDetailLabels.length ? summarizeLabels(selectedDetailLabels, 2) : "-"} onEdit={() => setStep("s2")} />
+                          <ReviewRow label="Dampak" value={impactSummary} onEdit={() => setStep("s3")} />
+                          <ReviewRow label="Adopsi" value={adoptionSummaryValue} onEdit={() => setStep("s4")} />
+                          <PrimaryAction onClick={() => setStep("s6")} label="Lanjut Susun Hasil" />
+                        </QuestionShell>
+                      )}
+
+                      {step === "s6" && (
+                        <QuestionShell
+                          eyebrow="06 / Data Anda"
+                          title="Ke mana hasil & rencana ini kami kirim?"
+                          note="Nama dan WhatsApp wajib agar kami bisa menyusun hasil dan mengirim rincian rencananya ke Anda."
+                        >
+                          <div className="mb-6 grid gap-3 sm:grid-cols-3">
+                            {[
+                              { title: "Diagnosis tajam", body: "Jawaban pilihan Anda kami olah jadi hipotesis masalah yang lebih fokus." },
+                              { title: "Impact yang kebayang", body: "Hasil akan menampilkan estimasi impact dan perubahan before-after." },
+                              { title: "Rencana bertahap", body: "Output akhir bukan cuma insight, tapi juga langkah pertama yang realistis." }
+                            ].map((card) => (
+                              <div key={card.title} className="rounded-[1.35rem] border border-neutral-200 bg-white/70 p-4 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)]">
+                                <p className="text-sm font-semibold text-neutral-950">{card.title}</p>
+                                <p className="mt-2 text-sm leading-6 text-neutral-600">{card.body}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <ContactFields contact={contact} setContact={setContact} />
+                          <label className="mt-5 block">
+                            <span className="mb-2 block text-sm font-semibold text-neutral-500">Ceritakan tantangan Anda lebih detail</span>
+                            <textarea
+                              value={detailNote}
+                              onChange={(event) => handleDetailNoteChange(event.target.value)}
+                              rows={5}
+                              className={FIELD_CLASS}
+                              placeholder="Contoh: penjualan banyak lewat WhatsApp, tapi follow-up sering telat dan pelanggan lama jarang beli lagi. Saya ingin tahu proses mana yang paling cepat dibenahi lebih dulu."
+                            />
+                            <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
+                              <span>Semakin detail konteks Anda, semakin spesifik hasil dan rencana yang kami susun.</span>
+                              <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
+                            </div>
+                          </label>
+                          <PrimaryAction
+                            onClick={generateResult}
+                            label={loading ? "Menyusun hasil & rencana..." : "Susun Hasil & Rencana Saya"}
+                            disabled={loading || !canGenerate}
+                            loading={loading}
+                          />
+                          {!canGenerate ? <p className="mt-3 text-xs text-neutral-400">Isi Nama Anda dan Nomor WhatsApp yang valid untuk melanjutkan.</p> : null}
+                          {resultError ? <p className="mt-4 rounded-[1.35rem] border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold leading-6 text-red-700">{resultError}</p> : null}
+                        </QuestionShell>
+                      )}
+
+                      {step === "s8" && result && (
+                        <QuestionShell
+                          eyebrow="08 / Discovery call"
+                          title="Diskusikan solusi khusus untuk bisnis dan budget Anda."
+                          note="Kami gunakan hasil mini session ini sebagai titik start, lalu sesuaikan dengan realitas operasional dan prioritas budget Anda."
+                        >
+                          <div className="mb-6 grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-[1.35rem] border border-neutral-200 bg-white/70 p-4 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)]">
+                              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Headline hasil</p>
+                              <p className="mt-2 text-sm font-semibold leading-6 text-neutral-950">{result.headline}</p>
+                            </div>
+                            <div className="rounded-[1.35rem] border border-neutral-200 bg-white/70 p-4 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)]">
+                              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Langkah pertama</p>
+                              <p className="mt-2 text-sm font-semibold leading-6 text-neutral-950">{result.firstStep}</p>
+                            </div>
+                            <div className="rounded-[1.35rem] border border-neutral-200 bg-white/70 p-4 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)]">
+                              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Output discovery</p>
+                              <p className="mt-2 text-sm font-semibold leading-6 text-neutral-950">Prioritas implementasi, budget context, dan keputusan next step yang lebih konkret.</p>
+                            </div>
+                          </div>
+                          <form onSubmit={submitDiscovery} className="grid gap-4">
+                            <ContactFields contact={contact} setContact={setContact} />
+                            <label className="block">
+                              <span className="mb-2 block text-sm font-semibold text-neutral-500">Konteks budget atau target bisnis</span>
+                              <input name="budgetContext" className={FIELD_CLASS} placeholder="Contoh: target 3 bulan ke depan, range budget, atau area yang harus diprioritaskan dulu." />
+                            </label>
+                            <PrimaryAction type="submit" label={loading ? "Menyimpan..." : "Ya, Saya Mau Discovery Call"} loading={loading} disabled={loading} />
+                            {discoveryError ? <p className="rounded-[1.35rem] border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold leading-6 text-red-700">{discoveryError}</p> : null}
+                            {discoveryNotice ? <p className="rounded-[1.35rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-700">{discoveryNotice}</p> : null}
+                          </form>
+                        </QuestionShell>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-
-            {step === "s8" && result && (
-              <QuestionShell eyebrow="08 / Discovery call" title="Diskusikan solusi khusus untuk bisnis dan budget Anda.">
-                <form onSubmit={submitDiscovery} className="grid gap-4">
-                  <ContactFields contact={contact} setContact={setContact} />
-                  <input name="budgetContext" className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900" placeholder="Konteks budget atau target bisnis" />
-                  <PrimaryAction type="submit" label={loading ? "Menyimpan..." : "Ya, Saya Mau Discovery Call"} loading={loading} disabled={loading} />
-                  {discoveryError ? <p className="text-sm font-semibold leading-6 text-red-700">{discoveryError}</p> : null}
-                  {discoveryNotice ? <p className="text-sm font-semibold text-amber-700">{discoveryNotice}</p> : null}
-                </form>
-              </QuestionShell>
-            )}
+            </div>
           </div>
         </section>
       )}
@@ -581,47 +951,218 @@ function previousStep(step: Step): Step {
   return order[Math.max(0, order.indexOf(step) - 1)];
 }
 
-function QuestionShell({ eyebrow, title, note, children }: { eyebrow: string; title: string; note?: string; children: React.ReactNode }) {
+function summarizeLabels(labels: string[], maxItems = 2): string {
+  if (!labels.length) return "-";
+  const visible = labels.slice(0, maxItems);
+  return labels.length > maxItems ? `${visible.join(", ")} +${labels.length - maxItems}` : visible.join(", ");
+}
+
+function WizardContextRail({
+  activeStage,
+  activeStageIndex,
+  progressPercent,
+  tone,
+  primaryChallengeLabel,
+  sessionSnapshot
+}: {
+  activeStage: WizardFlowItem;
+  activeStageIndex: number;
+  progressPercent: number;
+  tone: WizardToneToken;
+  primaryChallengeLabel: string;
+  sessionSnapshot: Array<{ label: string; value: string }>;
+}) {
+  const Icon = activeStage.icon;
+
   return (
-    <div className="flex flex-1 flex-col justify-center pb-8">
-      <div className="mb-6 w-fit rounded-full border border-border-base bg-surface-elevated/90 px-4 py-2 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-muted">{eyebrow}</p>
+    <aside className="lg:sticky lg:top-6">
+      <div
+        className="relative overflow-hidden rounded-[2rem] border border-white/70 p-5 shadow-[0_36px_100px_-58px_rgba(15,23,42,0.55)] backdrop-blur-xl sm:p-6"
+        style={{ backgroundImage: tone.asideBackground }}
+      >
+        <div className={`pointer-events-none absolute -left-10 top-14 h-36 w-36 rounded-full blur-3xl ${tone.glowClass} animate-soft-drift`} />
+        <div className={`pointer-events-none absolute -right-10 bottom-0 h-32 w-32 rounded-full blur-3xl ${tone.secondaryGlowClass} animate-soft-drift`} style={{ animationDelay: "900ms" }} />
+
+        <div className="relative">
+          <div className="flex items-center justify-between gap-3">
+            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${tone.badgeClass}`}>
+              Pesat.AI Session
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Beat {activeStageIndex + 1}/10</span>
+          </div>
+
+          <div className="mt-5 flex items-start gap-4">
+            <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-[1.35rem] border ${tone.iconClass} shadow-[0_18px_50px_-32px_rgba(15,23,42,0.55)] backdrop-blur`}>
+              <Icon className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{activeStage.railLabel}</p>
+              <h3 className="mt-2 text-2xl font-semibold leading-tight text-neutral-950">{activeStage.railTitle}</h3>
+              <p className="mt-3 text-sm leading-6 text-neutral-600">{activeStage.railDescription}</p>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+              <span>Progress</span>
+              <span>{Math.round(progressPercent)}%</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
+              <div className={`h-full rounded-full ${tone.progressClass}`} style={{ width: `${progressPercent}%` }} />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {WIZARD_FLOW.map((item, index) => {
+                const isDone = index < activeStageIndex;
+                const isCurrent = index === activeStageIndex;
+
+                return (
+                  <span
+                    key={item.step}
+                    className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-2xl border px-3 text-xs font-semibold shadow-[0_16px_40px_-34px_rgba(15,23,42,0.45)] ${
+                      isDone ? "border-neutral-950 bg-neutral-950 text-white" : isCurrent ? `${tone.badgeClass}` : "border-white/80 bg-white/55 text-neutral-400"
+                    }`}
+                  >
+                    {isDone ? <Check className="h-4 w-4" /> : item.number}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-[1.5rem] border border-white/70 bg-white/72 p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)] backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Kenapa step ini penting</p>
+            <div className="mt-4 space-y-3">
+              {activeStage.bullets.map((bullet) => (
+                <div key={bullet} className="flex gap-3">
+                  <span className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${tone.progressClass}`} />
+                  <p className="text-sm leading-6 text-neutral-700">{bullet}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-[1.5rem] border border-neutral-900/90 bg-neutral-950 p-5 text-white shadow-[0_28px_80px_-40px_rgba(15,23,42,0.7)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Hipotesis aktif</p>
+            <p className="mt-3 text-lg font-semibold leading-7">{primaryChallengeLabel}</p>
+            <p className="mt-3 text-sm leading-6 text-white/70">Pilihan dan konteks Anda akan terus mempertajam diagnosis sampai hasil akhir siap dibaca dan dibawa meeting.</p>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {sessionSnapshot.map((item) => (
+              <div key={item.label} className="rounded-[1.35rem] border border-white/70 bg-white/65 p-4 backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">{item.label}</p>
+                <p className="mt-2 text-sm font-medium leading-6 text-neutral-800">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      <h2 className="mb-4 max-w-4xl text-balance text-4xl font-semibold leading-tight tracking-normal text-foreground sm:text-6xl">{title}</h2>
-      {note ? <p className="mb-8 max-w-2xl text-base font-medium leading-7 text-foreground-muted">{note}</p> : <div className="mb-6" />}
+    </aside>
+  );
+}
+
+function QuestionShell({ eyebrow, title, note, children }: { eyebrow: string; title: string; note?: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-1 flex-col justify-center pb-4">
+      <div className="mb-6 w-fit rounded-full border border-white/80 bg-white/80 px-4 py-2 shadow-[0_14px_36px_-24px_rgba(15,23,42,0.35)] backdrop-blur">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">{eyebrow}</p>
+      </div>
+      <h2 className="mb-4 max-w-4xl text-balance text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-6xl">{title}</h2>
+      {note ? <p className="mb-8 max-w-3xl text-base font-medium leading-7 text-neutral-600">{note}</p> : <div className="mb-6" />}
       {children}
     </div>
   );
 }
 
-function ChoiceButton({ active, onClick, label, note }: { active: boolean; onClick: () => void; label: string; note?: string }) {
+function ChoiceButton({ active, onClick, label, note, index }: { active: boolean; onClick: () => void; label: string; note?: string; index?: number }) {
   return (
-    <button onClick={onClick} className={`flex min-h-16 items-center justify-between rounded-[1.35rem] border px-5 py-4 text-left transition ${active ? "border-neutral-950 bg-neutral-950 text-white" : "border-neutral-200 bg-white text-neutral-950 hover:border-neutral-400"}`}>
-      <span>
-        <span className="block text-base font-semibold capitalize">{label}</span>
-        {note ? <span className={`mt-1 block text-sm ${active ? "text-neutral-300" : "text-neutral-500"}`}>{note}</span> : null}
-      </span>
-      {active ? <Check className="h-5 w-5 shrink-0" /> : <span className="h-5 w-5 shrink-0 rounded-full border border-neutral-300" />}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative overflow-hidden rounded-[1.55rem] border px-5 py-5 text-left transition duration-300 ${
+        active
+          ? "border-neutral-950 bg-neutral-950 text-white shadow-[0_30px_80px_-40px_rgba(15,23,42,0.8)]"
+          : "border-neutral-200 bg-white/82 text-neutral-950 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)] hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-[0_30px_70px_-44px_rgba(15,23,42,0.45)]"
+      }`}
+    >
+      <div
+        className={`absolute inset-0 ${
+          active
+            ? "bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_42%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent)]"
+            : "bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.12),transparent_42%),radial-gradient(circle_at_bottom_left,rgba(34,211,238,0.1),transparent_38%)] opacity-0 transition group-hover:opacity-100"
+        }`}
+      />
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="flex gap-4">
+          <span className={`mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-sm font-semibold ${active ? "border-white/15 bg-white/10 text-white" : "border-neutral-200 bg-neutral-50 text-neutral-500"}`}>
+            {active ? <Check className="h-5 w-5" /> : String(index || 0).padStart(2, "0")}
+          </span>
+          <span>
+            <span className="block text-base font-semibold leading-6">{label}</span>
+            {note ? <span className={`mt-2 block text-sm leading-6 ${active ? "text-neutral-300" : "text-neutral-500"}`}>{note}</span> : null}
+          </span>
+        </div>
+        <ArrowRight className={`mt-1 h-5 w-5 shrink-0 transition ${active ? "text-white" : "text-neutral-300 group-hover:translate-x-1 group-hover:text-neutral-600"}`} />
+      </div>
     </button>
   );
 }
 
 function PrimaryAction({ label, onClick, disabled, loading, type = "button" }: { label: string; onClick?: () => void; disabled?: boolean; loading?: boolean; type?: "button" | "submit" }) {
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className="mt-8 flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-neutral-950 px-5 text-base font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-neutral-300">
-      {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
-      {label}
-      {!loading ? <ArrowRight className="h-5 w-5" /> : null}
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className="group relative mt-8 flex min-h-14 w-full items-center justify-center overflow-hidden rounded-full bg-neutral-950 px-6 text-base font-semibold text-white shadow-[0_24px_80px_-34px_rgba(15,23,42,0.75)] transition duration-300 hover:-translate-y-0.5 hover:bg-black disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:shadow-none"
+    >
+      <span className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_30%,rgba(255,255,255,0.14),transparent_65%)] opacity-0 transition group-hover:opacity-100" />
+      <span className="absolute left-[-30%] top-0 h-full w-24 bg-gradient-to-r from-white/0 via-white/25 to-white/0 opacity-0 blur-lg transition group-hover:animate-cta-shimmer group-hover:opacity-100" />
+      <span className="relative flex items-center gap-2">
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+        {label}
+        {!loading ? <ArrowRight className="h-5 w-5" /> : null}
+      </span>
     </button>
   );
 }
 
-function FactScreen({ fact, source, onNext }: { fact: string; source: string; onNext: () => void }) {
+function FactScreen({ fact, source, onNext, stage, tone }: { fact: string; source: string; onNext: () => void; stage: WizardFlowItem; tone: WizardToneToken }) {
+  const Icon = stage.icon;
+
   return (
-    <div className="flex flex-1 flex-col justify-center pb-8">
-      <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Insight singkat</p>
-      <h2 className="text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-6xl">{fact}</h2>
-      <p className="mt-6 text-sm font-medium text-neutral-500">Sumber: {source}</p>
+    <div className="flex flex-1 flex-col justify-center pb-4">
+      <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr] xl:items-end">
+        <div>
+          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${tone.badgeClass}`}>Insight beat</span>
+          <p className="mt-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Insight singkat</p>
+          <h2 className="mt-4 max-w-4xl text-balance text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-6xl">{fact}</h2>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-600">
+            Kami sisipkan momentum seperti ini agar mini session terasa seperti membaca pola bisnis Anda secara bertahap, bukan mengisi form yang monoton.
+          </p>
+          <p className="mt-5 text-sm font-medium text-neutral-500">Sumber: {source}</p>
+        </div>
+
+        <div className="relative overflow-hidden rounded-[1.7rem] border border-white/80 bg-white/76 p-5 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.4)] backdrop-blur-xl">
+          <div className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-3xl ${tone.secondaryGlowClass}`} />
+          <div className="relative">
+            <div className={`grid h-12 w-12 place-items-center rounded-[1rem] border ${tone.iconClass}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">{stage.railLabel}</p>
+            <h3 className="mt-2 text-xl font-semibold leading-tight text-neutral-950">{stage.railTitle}</h3>
+            <div className="mt-4 space-y-3">
+              {stage.bullets.map((bullet) => (
+                <div key={bullet} className="flex gap-3">
+                  <span className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${tone.progressClass}`} />
+                  <p className="text-sm leading-6 text-neutral-700">{bullet}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <PrimaryAction onClick={onNext} label="Lanjut" />
     </div>
   );
@@ -629,12 +1170,12 @@ function FactScreen({ fact, source, onNext }: { fact: string; source: string; on
 
 function ReviewRow({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
   return (
-    <div className="mb-3 flex items-center justify-between rounded-[1.35rem] border border-neutral-200 px-5 py-4">
+    <div className="mb-3 flex items-center justify-between gap-4 rounded-[1.5rem] border border-neutral-200 bg-white/78 px-5 py-4 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)]">
       <div>
         <p className="text-sm font-semibold text-neutral-500">{label}</p>
-        <p className="mt-1 text-base font-semibold text-neutral-950">{value}</p>
+        <p className="mt-1 text-base font-semibold leading-7 text-neutral-950">{value}</p>
       </div>
-      <button onClick={onEdit} className="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold">
+      <button type="button" onClick={onEdit} className="rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-white">
         Ubah
       </button>
     </div>
@@ -643,12 +1184,41 @@ function ReviewRow({ label, value, onEdit }: { label: string; value: string; onE
 
 function ContactFields({ contact, setContact, optional = false }: { contact: ContactData; setContact: (contact: ContactData) => void; optional?: boolean }) {
   return (
-    <div className="grid gap-3">
-      <input name="companyName" value={contact.companyName || ""} onChange={(event) => setContact({ ...contact, companyName: event.target.value })} className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900" placeholder="Nama perusahaan (opsional)" />
-      <input name="name" value={contact.name || ""} required={!optional} onChange={(event) => setContact({ ...contact, name: event.target.value })} className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900" placeholder={`Nama Anda${optional ? " (opsional)" : ""}`} />
-      <input name="wa" value={contact.wa || ""} required={!optional} onChange={(event) => setContact({ ...contact, wa: event.target.value })} className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900" placeholder={`Nomor WhatsApp${optional ? " (opsional)" : ""}`} />
+    <div className="grid gap-4">
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold text-neutral-500">Nama perusahaan</span>
+        <input
+          name="companyName"
+          value={contact.companyName || ""}
+          onChange={(event) => setContact({ ...contact, companyName: event.target.value })}
+          className={FIELD_CLASS}
+          placeholder="Nama perusahaan (opsional)"
+        />
+      </label>
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold text-neutral-500">Nama Anda</span>
+        <input
+          name="name"
+          value={contact.name || ""}
+          required={!optional}
+          onChange={(event) => setContact({ ...contact, name: event.target.value })}
+          className={FIELD_CLASS}
+          placeholder={`Nama Anda${optional ? " (opsional)" : ""}`}
+        />
+      </label>
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold text-neutral-500">Nomor WhatsApp</span>
+        <input
+          name="wa"
+          value={contact.wa || ""}
+          required={!optional}
+          onChange={(event) => setContact({ ...contact, wa: event.target.value })}
+          className={FIELD_CLASS}
+          placeholder={`Nomor WhatsApp${optional ? " (opsional)" : ""}`}
+        />
+      </label>
       {optional ? (
-        <label className="flex items-center gap-3 rounded-3xl border border-neutral-200 px-5 py-4 text-sm font-semibold text-neutral-700">
+        <label className="flex items-center gap-3 rounded-[1.35rem] border border-neutral-200 bg-white/75 px-5 py-4 text-sm font-semibold text-neutral-700 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.35)]">
           <input type="checkbox" checked={Boolean(contact.followUpAllowed)} onChange={(event) => setContact({ ...contact, followUpAllowed: event.target.checked })} />
           boleh follow up
         </label>
