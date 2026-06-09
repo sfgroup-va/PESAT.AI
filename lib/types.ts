@@ -76,6 +76,19 @@ export type PlanPhase = {
   outcome: string;
 };
 
+export type InsightStat = {
+  label: string;
+  value: string;
+  description: string;
+};
+
+export type FocusRow = {
+  area: string;
+  symptom: string;
+  metric: string;
+  action: string;
+};
+
 export type DiagnosisPack = {
   diagnosis: string;
   rootCause: RootCause;
@@ -101,6 +114,8 @@ export type GeneratedResult = {
   solutions: PesatSolution[];
   impactRanges: ImpactRanges;
   chart: Array<{ name: string; before: number; after: number }>;
+  insightStats?: InsightStat[];
+  focusRows?: FocusRow[];
   persisted?: boolean;
   llmFallback?: boolean;
 };

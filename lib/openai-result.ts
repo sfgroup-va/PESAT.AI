@@ -32,6 +32,8 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
               "Gaya: bahasa Indonesia, profesional dan kredibel seperti konsultan strategi; tajam, spesifik, berbasis bukti, percaya diri tanpa hype. Hindari klise dan kata kosong.",
               "Tujuan: pembaca merasa benar-benar dipahami dan melihat jalan keluar yang jelas, sehingga tertarik melanjutkan ke discovery call dengan Pesat.AI.",
               "Buat hasil personal dan insightful, bukan generik:",
+              "- 'headline': tajam, singkat, dan spesifik. Sebut area fokus utama dari diagnosisContext.focusRows bila tersedia. Hindari headline template seperti 'ada peluang' atau 'bisa ditingkatkan'.",
+              "- 'subheadline': jelaskan kenapa masalah ini penting sekarang, hubungkan ke ritme bisnis user dan metrik yang akan diukur. Gunakan diagnosisContext.insightStats sebagai anchor bila membantu.",
               "- 'diagnosis': cerminkan masalah SPESIFIK klien dari answers.detailChallenges dan detailNote. Jika userSignals berisi angka dari klien (mis. jumlah chat, omzet, jam kerja), gunakan untuk membuat insight lebih konkret. Tunjukkan kamu paham, lalu reframe ke akar masalah. Dasar: diagnosisContext.deterministicDiagnosis.",
               "- 'promiseStatement': janji meyakinkan TAPI jujur. Wajib menyebut rentang dari impactRanges apa adanya, sebut diukur lewat diagnosisContext.promiseFrame.measuredBy, dan tegaskan ini estimasi bukan garansi.",
               "- 'costOfInaction': konsekuensi jujur bila masalah dibiarkan, untuk membangun urgensi tanpa menakut-nakuti berlebihan. Boleh merujuk userSignals, tapi JANGAN mengarang angka. Dasar: diagnosisContext.costOfInactionFrame.",
@@ -57,6 +59,8 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
                   measuredBy: fallback.promise.measuredBy,
                   disclaimer: fallback.promise.disclaimer
                 },
+                insightStats: fallback.insightStats,
+                focusRows: fallback.focusRows,
                 firstStepFrame: fallback.firstStep,
                 costOfInactionFrame: fallback.costOfInaction,
                 adoptionStyle: answers.adoptionStyle

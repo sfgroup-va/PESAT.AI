@@ -30,7 +30,9 @@ try {
   compileTsToFile(ruleEngineSource, "rule-engine.mjs");
 
   const { AVAILABLE_SOLUTIONS } = await import(pathToFileURL(path.join(tempDir, "solutions.mjs")).href);
-  const { selectSolutions, calculateImpactRanges, buildChart, buildDiagnosisPack, buildActionPlan, extractUserSignals, buildCostOfInaction } = await import(pathToFileURL(path.join(tempDir, "rule-engine.mjs")).href);
+  const { selectSolutions, calculateImpactRanges, buildChart, buildDiagnosisPack, buildActionPlan, buildFocusRows, buildInsightStats, extractUserSignals, buildCostOfInaction } = await import(
+    pathToFileURL(path.join(tempDir, "rule-engine.mjs")).href
+  );
 
   const solutionIds = new Set(AVAILABLE_SOLUTIONS.map((solution) => solution.id));
   const expectedPrimary = {
@@ -103,8 +105,9 @@ try {
   });
 
   assert.deepEqual(buildChart({ mainChallenges: ["fraud"], detailChallenges: [], impactLevel: "risk", adoptionStyle: "dfy" }), [
-    { name: "Sekarang", before: 35, after: 35 },
-    { name: "Sesudah AI", before: 35, after: 67 }
+    { name: "anomali terdeteksi lebih dini", before: 24, after: 58 },
+    { name: "waktu deteksi risiko", before: 31, after: 60 },
+    { name: "nilai risiko yang tertahan", before: 29, after: 58 }
   ]);
 
   // The diagnosis pack must produce a measurable, honest, source-backed promise.
@@ -123,6 +126,16 @@ try {
   assert.ok(plan[0].title.includes("Fase 1"), "first phase must be the quick win");
   assert.ok(plan[0].solutions.length >= 1, "quick win phase must name at least one selected solution");
   assert.ok(plan.every((phase) => phase.timeframe && phase.focus && phase.outcome), "each phase must carry timeframe, focus, and outcome");
+
+  const focusRows = buildFocusRows(diagnosisAnswers, diagnosisSolutions);
+  assert.equal(focusRows.length, 2, "selected detail challenges should map to two focus rows");
+  assert.ok(focusRows[0].area.toLowerCase().includes("respons"), "first focus row should reflect follow-up friction");
+  assert.ok(focusRows.every((row) => row.metric && row.action), "focus rows must carry metric and action columns");
+
+  const insightStats = buildInsightStats(diagnosisAnswers, calculateImpactRanges(diagnosisAnswers), [], focusRows, plan);
+  assert.equal(insightStats.length, 4, "insight stats must provide four summary cards");
+  assert.ok(insightStats[0].value.includes("/100"), "urgency stat must present a score");
+  assert.ok(insightStats[2].value.toLowerCase().includes("minggu"), "quick win stat must expose timeframe");
 
   // Optional statistics: only echo numbers the user actually typed, never invent them.
   const signals = extractUserSignals("Omzet kami sekitar Rp100 juta/bulan, ada 50 chat WA per hari, tim 5 orang.");
