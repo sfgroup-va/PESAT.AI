@@ -1,16 +1,19 @@
 import { spawnSync } from "node:child_process";
 
+// Use the right npm binary per platform (npm.cmd on Windows, npm on Linux/macOS CI).
+const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+
 const checks = [
-  { name: "test:admin-summary", command: ["npm.cmd", "run", "test:admin-summary"], json: true },
-  { name: "test:rule-engine", command: ["npm.cmd", "run", "test:rule-engine"], json: true },
-  { name: "test:result-normalizer", command: ["npm.cmd", "run", "test:result-normalizer"], json: true },
-  { name: "test:solutions", command: ["npm.cmd", "run", "test:solutions"], json: true },
-  { name: "test:supabase-schema", command: ["npm.cmd", "run", "test:supabase-schema"], json: true },
-  { name: "test:transition-facts", command: ["npm.cmd", "run", "test:transition-facts"], json: true },
-  { name: "test:validation", command: ["npm.cmd", "run", "test:validation"], json: true },
-  { name: "audit:requirements", command: ["npm.cmd", "run", "audit:requirements"], json: true },
-  { name: "lint", command: ["npm.cmd", "run", "lint"], json: false },
-  { name: "typecheck", command: ["npm.cmd", "run", "typecheck"], json: false }
+  { name: "test:admin-summary", command: [npm, "run", "test:admin-summary"], json: true },
+  { name: "test:rule-engine", command: [npm, "run", "test:rule-engine"], json: true },
+  { name: "test:result-normalizer", command: [npm, "run", "test:result-normalizer"], json: true },
+  { name: "test:solutions", command: [npm, "run", "test:solutions"], json: true },
+  { name: "test:supabase-schema", command: [npm, "run", "test:supabase-schema"], json: true },
+  { name: "test:transition-facts", command: [npm, "run", "test:transition-facts"], json: true },
+  { name: "test:validation", command: [npm, "run", "test:validation"], json: true },
+  { name: "audit:requirements", command: [npm, "run", "audit:requirements"], json: true },
+  { name: "lint", command: [npm, "run", "lint"], json: false },
+  { name: "typecheck", command: [npm, "run", "typecheck"], json: false }
 ];
 
 function runCommand(command, args) {
