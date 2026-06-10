@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, X, Sparkles, TrendingUp, Shield, Clock, Zap } from "lucide-react";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
 import { CtaBand } from "@/components/home/CtaBand";
@@ -16,66 +16,32 @@ import { Testimonial } from "@/components/home/sections/Testimonial";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { CHALLENGE_LABELS, TRANSITION_FACTS } from "@/lib/solutions";
+import { CHALLENGE_LABELS, TRANSITION_FACTS, QUALITY_QUESTIONS, DETAIL_TO_CHALLENGE } from "@/lib/solutions";
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
 import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, WizardAnswers } from "@/lib/types";
-
-const detailOptions: Record<ChallengeId, Array<{ id: DetailId; label: string }>> = {
-  revenue: [
-    { id: "follow_up", label: "Follow-up lead lambat" },
-    { id: "repeat_order", label: "Repeat order belum rapi" },
-    { id: "pricing", label: "Harga sulit dioptimalkan" },
-    { id: "lead_quality", label: "Lead banyak tapi kualitas campur" }
-  ],
-  cost: [
-    { id: "admin_cost", label: "Admin terlalu banyak manual" },
-    { id: "manual_docs", label: "Dokumen perlu input ulang" },
-    { id: "invoice_ap", label: "Invoice/AP makan waktu" },
-    { id: "process_waste", label: "Bottleneck proses tidak terlihat" }
-  ],
-  fraud: [
-    { id: "transaction_anomaly", label: "Transaksi aneh terlambat terlihat" },
-    { id: "data_leak", label: "Akses/data sulit diawasi" },
-    { id: "approval_gap", label: "Approval rawan dilewati" }
-  ],
-  cash_stock: [
-    { id: "cashflow_blind", label: "Cashflow sulit diprediksi" },
-    { id: "stockout", label: "Stok habis mendadak" },
-    { id: "overstock", label: "Modal tertahan di stok" }
-  ],
-  reporting: [
-    { id: "slow_reports", label: "Laporan telat selesai" },
-    { id: "no_bi", label: "Belum ada BI dashboard" },
-    { id: "manual_meetings", label: "Meeting banyak tanpa action jelas" }
-  ],
-  brand_trust: [
-    { id: "google_visibility", label: "Sulit unggul di Google" },
-    { id: "ai_search", label: "Belum siap muncul di AI search" },
-    { id: "review_sentiment", label: "Review dan sentimen tidak terbaca" }
-  ]
-};
-
-const impactOptions: Array<{ id: ImpactId; label: string; note: string }> = [
-  { id: "revenue", label: "Revenue", note: "Naikkan omzet atau repeat order" },
-  { id: "hours", label: "Waktu", note: "Hemat jam kerja tim" },
-  { id: "risk", label: "Risiko", note: "Kurangi fraud dan blind spot" },
-  { id: "cash", label: "Kas/Stok", note: "Prediksi lebih cepat" },
-  { id: "trust", label: "Trust", note: "Lebih dipercaya di Google dan AI" }
-];
-
-const adoptionOptions: Array<{ id: AdoptionId; label: string; note: string }> = [
-  { id: "dfy", label: "DFY", note: "Pesat.AI yang setup dan jalankan" },
-  { id: "diy", label: "DIY", note: "Tim internal butuh blueprint" },
-  { id: "hybrid", label: "Kombinasi", note: "Pesat.AI bantu setup, tim ikut jalan" },
-  { id: "starting", label: "Baru mulai AI", note: "Butuh use case pertama yang jelas" }
-];
 
 const initialAnswers: WizardAnswers = {
   mainChallenges: [],
   detailChallenges: [],
   impactLevel: "",
   adoptionStyle: ""
+};
+
+type Step = "hero" | "s1" | "s2" | "s3" | "s4" | "s5" | "s6" | "s7" | "s8";
+
+const STEP_ORDER: Step[] = ["hero", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"];
+
+const STEP_PROGRESS: Record<Step, number> = {
+  hero: 0,
+  s1: 15,
+  s2: 35,
+  s3: 55,
+  s4: 75,
+  s5: 85,
+  s6: 95,
+  s7: 100,
+  s8: 100
 };
 
 const DETAIL_NOTE_WORD_LIMIT = 1000;
@@ -112,78 +78,6 @@ const OPTIONAL_DISCOVERY_QUESTIONS: Array<{
   }
 ];
 
-const DISCOVERY_PREP_BY_CHALLENGE: Record<ChallengeId, { title: string; items: string[] }> = {
-  revenue: {
-    title: "Data yang sebaiknya Anda siapkan",
-    items: [
-      "Jumlah lead atau chat masuk per hari/minggu, terutama dari WhatsApp dan channel utama Anda.",
-      "Catatan follow-up: berapa yang cepat ditangani, berapa yang sering telat atau hilang.",
-      "Data repeat order, closing rate, atau produk yang paling sering ditanyakan pelanggan."
-    ]
-  },
-  cost: {
-    title: "Data yang sebaiknya Anda siapkan",
-    items: [
-      "Daftar pekerjaan manual yang paling sering berulang dan memakan waktu tim.",
-      "Contoh dokumen, invoice, atau proses admin yang paling sering diinput ulang.",
-      "Estimasi jam kerja, error, atau bottleneck yang paling sering membuat biaya membengkak."
-    ]
-  },
-  fraud: {
-    title: "Data yang sebaiknya Anda siapkan",
-    items: [
-      "Contoh transaksi atau aktivitas yang pernah terasa janggal, meski belum terbukti fraud.",
-      "Alur approval, akses user, atau titik proses yang paling rawan lolos tanpa kontrol.",
-      "Riwayat insiden, komplain, atau kerugian yang pernah muncul karena blind spot pengawasan."
-    ]
-  },
-  cash_stock: {
-    title: "Data yang sebaiknya Anda siapkan",
-    items: [
-      "Data stok masuk-keluar dan produk yang paling sering stockout atau overstock.",
-      "Catatan penjualan harian/mingguan dan pola permintaan yang terasa naik-turun.",
-      "Arus kas masuk-keluar, piutang, serta momen ketika kas sering terasa ketat."
-    ]
-  },
-  reporting: {
-    title: "Data yang sebaiknya Anda siapkan",
-    items: [
-      "Laporan apa saja yang rutin dibuat dan bagian mana yang paling lama disusun.",
-      "Sumber data utama yang dipakai tim, termasuk file, spreadsheet, atau sistem yang terpisah.",
-      "Keputusan apa yang sering tertunda karena data belum siap atau belum rapi."
-    ]
-  },
-  brand_trust: {
-    title: "Data yang sebaiknya Anda siapkan",
-    items: [
-      "Keyword, layanan, atau brand term yang paling penting untuk ditemukan calon pelanggan.",
-      "Review pelanggan, testimoni, dan pertanyaan yang paling sering muncul tentang bisnis Anda.",
-      "Profil bisnis, listing, atau kanal digital yang saat ini paling memengaruhi trust calon pembeli."
-    ]
-  }
-};
-
-const ADOPTION_MODE_SUMMARY: Record<AdoptionId, { label: string; note: string }> = {
-  dfy: {
-    label: "Mode DFY",
-    note: "Fokuskan discovery call pada data, target, dan prioritas bisnis. Tim Pesat.AI yang akan menyiapkan implementasi awalnya."
-  },
-  diy: {
-    label: "Mode DIY",
-    note: "Selain data bisnis, siapkan juga siapa dari tim internal yang akan jadi PIC agar blueprint dan eksekusinya langsung nyambung."
-  },
-  hybrid: {
-    label: "Mode Hybrid",
-    note: "Yang paling berguna adalah kombinasi data operasional dan kesiapan tim, karena setup awal dibantu tetapi transisi tetap perlu rapi."
-  },
-  starting: {
-    label: "Baru Mulai AI",
-    note: "Tidak perlu menyiapkan semuanya sekaligus. Cukup fokus pada satu proses yang paling sering bocor atau paling mudah diukur dulu."
-  }
-};
-
-type Step = "hero" | "s1" | "fact1" | "s2" | "fact2" | "s3" | "s4" | "s5" | "s6" | "s7" | "s8";
-
 export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   const cfg = landing ?? DEFAULT_LANDING_CONFIG;
   const [step, setStep] = useState<Step>("hero");
@@ -191,16 +85,18 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers);
   const [contact, setContact] = useState<ContactData>({});
   const [result, setResult] = useState<GeneratedResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [detailNote, setDetailNote] = useState("");
   const [discoveryContext, setDiscoveryContext] = useState<DiscoveryContextAnswers>(initialDiscoveryContext);
   const [resultError, setResultError] = useState("");
   const [discoveryError, setDiscoveryError] = useState("");
   const [discoveryNotice, setDiscoveryNotice] = useState("");
+  const [loadingFact, setLoadingFact] = useState<{ text: string; source: string } | null>(null);
+
+  const detailNoteWordCount = useMemo(() => countWords(detailNote), [detailNote]);
 
   const primaryChallenge = answers.mainChallenges[0] || "revenue";
   const fact = TRANSITION_FACTS[primaryChallenge];
-  const detailNoteWordCount = useMemo(() => countWords(detailNote), [detailNote]);
 
   const track = useCallback(
     async (type: "screen_view" | "click", screen: Step, metadata?: Record<string, unknown>, sessionIdOverride?: string) => {
@@ -219,24 +115,8 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     }
   }, [step, track]);
 
-  const selectedDetails = useMemo(() => {
-    const clusters = answers.mainChallenges.length ? answers.mainChallenges : ["revenue" as ChallengeId];
-    return clusters.flatMap((cluster) => detailOptions[cluster]);
-  }, [answers.mainChallenges]);
-
   // Name + a usable WhatsApp number are required before generating the result.
   const canGenerate = Boolean(contact.name && contact.name.trim()) && hasUsableWhatsAppNumber(contact.wa || "");
-
-  function handleDetailNoteChange(value: string) {
-    setDetailNote(trimToWordLimit(value, DETAIL_NOTE_WORD_LIMIT));
-  }
-
-  function handleDiscoveryContextChange(key: DiscoveryContextKey, value: string) {
-    setDiscoveryContext((current) => ({
-      ...current,
-      [key]: trimToWordLimit(value, DISCOVERY_SHORT_ANSWER_WORD_LIMIT)
-    }));
-  }
 
   async function saveSession(nextAnswers = answers, nextContact = contact, completed = false) {
     const activeSessionId = sessionId || crypto.randomUUID();
@@ -257,19 +137,38 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     setStep("s1");
   }
 
-  function toggleChallenge(id: ChallengeId) {
-    setAnswers((current) => {
-      const exists = current.mainChallenges.includes(id);
-      const mainChallenges = exists ? current.mainChallenges.filter((item) => item !== id) : [...current.mainChallenges, id].slice(0, 2);
-      return { ...current, mainChallenges, detailChallenges: [] };
-    });
-  }
-
-  function toggleDetail(id: DetailId) {
+  function selectChallenge(id: ChallengeId) {
     setAnswers((current) => ({
       ...current,
-      detailChallenges: current.detailChallenges.includes(id) ? current.detailChallenges.filter((item) => item !== id) : [...current.detailChallenges, id]
+      mainChallenges: current.mainChallenges[0] === id ? [] : [id],
+      detailChallenges: []
     }));
+  }
+
+  function selectDetail(id: DetailId) {
+    setAnswers((current) => ({
+      ...current,
+      detailChallenges: current.detailChallenges[0] === id ? [] : [id]
+    }));
+  }
+
+  function advanceWithFact(currentStep: Step, nextStep: Step) {
+    const isFirstTransition = currentStep === "s1";
+    setLoadingFact({ text: isFirstTransition ? fact.first : fact.second, source: fact.source });
+    setTimeout(() => {
+      setLoadingFact(null);
+      setStep(nextStep);
+    }, 2400);
+  }
+
+  function handleDetailNoteChange(value: string) {
+    const normalized = value.replace(/\r\n/g, "\n");
+    const trimmed = trimToWordLimit(normalized, DETAIL_NOTE_WORD_LIMIT);
+    setDetailNote(trimmed);
+  }
+
+  function handleDiscoveryContextChange(key: DiscoveryContextKey, value: string) {
+    setDiscoveryContext((current) => ({ ...current, [key]: trimToWordLimit(value.replace(/\r\n/g, "\n"), DISCOVERY_SHORT_ANSWER_WORD_LIMIT) }));
   }
 
   async function generateResult() {
@@ -277,7 +176,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       setResultError("Mohon isi Nama Anda dan Nomor WhatsApp yang valid agar hasil bisa disusun.");
       return;
     }
-    setLoading(true);
+    setIsLoading(true);
     setResultError("");
     const nextAnswers = { ...answers, detailNote };
     try {
@@ -302,7 +201,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       setResultError(`${message} Silakan coba lagi.`);
       void track("click", "s6", { error: "result_generation_failed", message });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }
 
@@ -333,17 +232,18 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
 
   async function submitDiscovery(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setDiscoveryError("");
     setDiscoveryNotice("");
     const form = new FormData(event.currentTarget);
+    const combinedMessage = buildDiscoveryContextMessage(detailNote, discoveryContext);
     const payload = {
       sessionId: result?.sessionId || sessionId,
       companyName: String(form.get("companyName") || contact.companyName || ""),
       name: String(form.get("name") || contact.name || ""),
       wa: String(form.get("wa") || contact.wa || ""),
       budgetContext: String(form.get("budgetContext") || ""),
-      message: buildDiscoveryContextMessage(detailNote, discoveryContext),
+      message: combinedMessage,
       summary: result?.headline
     };
     try {
@@ -366,7 +266,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       setDiscoveryError(`${message} Periksa data dan coba lagi.`);
       void track("click", "s8", { error: "discovery_request_failed", message }, result?.sessionId || sessionId);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }
 
@@ -374,6 +274,8 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     void track("click", "hero", { cta: "schedule_discovery" });
     void startWizard();
   };
+
+  const progress = STEP_PROGRESS[step];
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
@@ -395,145 +297,275 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       ) : (
         <section className="fixed inset-0 z-20 overflow-y-auto bg-surface">
           <div className={`mx-auto flex min-h-screen w-full flex-col px-5 py-5 sm:px-8 ${step === "s7" ? "max-w-5xl" : "max-w-3xl"}`}>
-            <div className="mb-8 flex items-center justify-between">
+            {/* Header */}
+            <div className="mb-6 flex items-center justify-between">
               <button
                 onClick={() => (step === "s1" ? setStep("hero") : setStep(previousStep(step)))}
-                className="grid h-11 w-11 place-items-center rounded-full border border-neutral-200 text-neutral-900"
+                className="grid h-11 w-11 place-items-center rounded-full border border-neutral-200 text-neutral-900 transition hover:bg-neutral-50"
                 aria-label="Kembali"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="text-sm font-semibold text-neutral-500">Pesat.AI Mini Session</div>
-              <button onClick={() => setStep("hero")} className="grid h-11 w-11 place-items-center rounded-full border border-neutral-200 text-neutral-900" aria-label="Tutup">
+              <button onClick={() => setStep("hero")} className="grid h-11 w-11 place-items-center rounded-full border border-neutral-200 text-neutral-900 transition hover:bg-neutral-50" aria-label="Tutup">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {step === "s1" && (
-              <QuestionShell eyebrow="01 / Tantangan terbesar" title="Apa tantangan terbesar bisnis Anda sekarang?" note="Pilih maksimal 2 agar rekomendasi tetap fokus.">
-                <div className="grid gap-3">
-                  {(Object.entries(CHALLENGE_LABELS) as Array<[ChallengeId, string]>).map(([id, label]) => (
-                    <ChoiceButton key={id} active={answers.mainChallenges.includes(id)} onClick={() => toggleChallenge(id)} label={label} />
+            {/* Progress Bar */}
+            <div className="mb-8 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+              <div
+                className="h-full rounded-full bg-neutral-950 transition-all duration-700 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            {/* Loading Fact Overlay */}
+            {loadingFact && (
+              <div className="flex flex-1 flex-col items-center justify-center pb-8 text-center">
+                <div className="mb-8 inline-flex h-16 w-16 animate-pulse items-center justify-center rounded-2xl bg-neutral-950 text-white">
+                  <Sparkles className="h-8 w-8" />
+                </div>
+                <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Insight singkat</p>
+                <h2 className="max-w-xl text-3xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-4xl">
+                  {loadingFact.text}
+                </h2>
+                <p className="mt-6 text-sm font-medium text-neutral-500">Sumber: {loadingFact.source}</p>
+                <div className="mt-8 flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-2 w-2 animate-bounce rounded-full bg-neutral-400" style={{ animationDelay: `${i * 150}ms` }} />
                   ))}
                 </div>
-                <PrimaryAction disabled={answers.mainChallenges.length === 0} onClick={() => saveSession().then(() => setStep("fact1"))} label="Lanjut" />
-              </QuestionShell>
-            )}
-
-            {step === "fact1" && <FactScreen fact={fact.first} source={fact.source} onNext={() => setStep("s2")} />}
-
-            {step === "s2" && (
-              <QuestionShell eyebrow="02 / Detail tantangan" title="Bagian mana yang paling terasa sekarang?" note="Pilih semua yang relevan.">
-                <div className="grid gap-3">
-                  {selectedDetails.map((item) => (
-                    <ChoiceButton key={item.id} active={answers.detailChallenges.includes(item.id)} onClick={() => toggleDetail(item.id)} label={item.label} />
-                  ))}
-                </div>
-                <PrimaryAction disabled={answers.detailChallenges.length === 0} onClick={() => saveSession().then(() => setStep("fact2"))} label="Lanjut" />
-              </QuestionShell>
-            )}
-
-            {step === "fact2" && <FactScreen fact={fact.second} source={fact.source} onNext={() => setStep("s3")} />}
-
-            {step === "s3" && (
-              <QuestionShell eyebrow="03 / Skala dampak" title="Dampak apa yang paling ingin Anda lihat dulu?">
-                <div className="grid gap-3">
-                  {impactOptions.map((item) => (
-                    <ChoiceButton key={item.id} active={answers.impactLevel === item.id} onClick={() => setAnswers({ ...answers, impactLevel: item.id })} label={item.label} note={item.note} />
-                  ))}
-                </div>
-                <PrimaryAction disabled={!answers.impactLevel} onClick={() => saveSession().then(() => setStep("s4"))} label="Lanjut" />
-              </QuestionShell>
-            )}
-
-            {step === "s4" && (
-              <QuestionShell eyebrow="04 / Preferensi adopsi" title="Cara adopsi AI seperti apa yang paling cocok?">
-                <div className="grid gap-3">
-                  {adoptionOptions.map((item) => (
-                    <ChoiceButton key={item.id} active={answers.adoptionStyle === item.id} onClick={() => setAnswers({ ...answers, adoptionStyle: item.id })} label={item.label} note={item.note} />
-                  ))}
-                </div>
-                <PrimaryAction disabled={!answers.adoptionStyle} onClick={() => saveSession().then(() => setStep("s5"))} label="Review jawaban" />
-              </QuestionShell>
-            )}
-
-            {step === "s5" && (
-              <QuestionShell eyebrow="05 / Review" title="Cek sebentar. Apakah ini sudah pas?">
-                <ReviewRow label="Tantangan" value={answers.mainChallenges.map((id) => CHALLENGE_LABELS[id]).join(", ")} onEdit={() => setStep("s1")} />
-                <ReviewRow label="Detail" value={`${answers.detailChallenges.length} area dipilih`} onEdit={() => setStep("s2")} />
-                <ReviewRow label="Dampak" value={impactOptions.find((item) => item.id === answers.impactLevel)?.label || "-"} onEdit={() => setStep("s3")} />
-                <ReviewRow label="Adopsi" value={adoptionOptions.find((item) => item.id === answers.adoptionStyle)?.label || "-"} onEdit={() => setStep("s4")} />
-                <PrimaryAction onClick={() => setStep("s6")} label="Sudah Pas" />
-              </QuestionShell>
-            )}
-
-            {step === "s6" && (
-              <QuestionShell
-                eyebrow="06 / Data Anda"
-                title="Ke mana hasil & rencana ini kami kirim?"
-                note="Nama dan WhatsApp wajib agar kami bisa menyusun hasil dan mengirim rincian rencananya ke Anda."
-              >
-                <ContactFields contact={contact} setContact={setContact} />
-                <label className="mt-4 block">
-                  <span className="mb-2 block text-sm font-semibold text-neutral-500">Ceritakan tantangan Anda (opsional, tapi membuat hasil jauh lebih spesifik)</span>
-                  <textarea
-                    value={detailNote}
-                    onChange={(event) => handleDetailNoteChange(event.target.value)}
-                    rows={4}
-                    className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900"
-                    placeholder="Contoh: penjualan banyak lewat WhatsApp, tapi follow-up sering telat dan pelanggan lama jarang beli lagi..."
-                  />
-                  <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
-                    <span>Semakin detail konteks Anda, semakin spesifik hasil dan rencana yang kami susun.</span>
-                    <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
-                  </div>
-                </label>
-                <PrimaryAction
-                  onClick={generateResult}
-                  label={loading ? "Menyusun hasil & rencana..." : "Susun Hasil & Rencana Saya"}
-                  disabled={loading || !canGenerate}
-                  loading={loading}
-                />
-                {!canGenerate ? <p className="mt-3 text-xs text-neutral-400">Isi Nama Anda dan Nomor WhatsApp yang valid untuk melanjutkan.</p> : null}
-                {resultError ? <p className="mt-4 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold leading-6 text-red-700">{resultError}</p> : null}
-              </QuestionShell>
-            )}
-
-            {step === "s7" && result && (
-              <div className="pb-10">
-                <ResultPanel
-                  answers={answers}
-                  result={result}
-                  detailNote={detailNote}
-                  detailNoteWordCount={detailNoteWordCount}
-                  discoveryContext={discoveryContext}
-                  setDetailNote={setDetailNote}
-                  onDiscoveryContextChange={handleDiscoveryContextChange}
-                  onDetailNoteBlur={saveResultDetailNote}
-                  onShare={() => copyResultLink(result)}
-                  onPdf={async () => {
-                    await track("click", "s7", { cta: "Export PDF" }, result.sessionId);
-                    await downloadPdf();
-                  }}
-                  onDiscovery={async () => {
-                    await saveResultDetailNote(detailNote);
-                    void track("click", "s7", { cta: "Discovery Call" }, result.sessionId);
-                    setStep("s8");
-                  }}
-                />
               </div>
             )}
 
-            {step === "s8" && result && (
-              <QuestionShell eyebrow="08 / Discovery call" title="Diskusikan solusi khusus untuk bisnis dan budget Anda.">
-                <form onSubmit={submitDiscovery} className="grid gap-4">
-                  <ContactFields contact={contact} setContact={setContact} />
-                  <input name="budgetContext" className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900" placeholder="Konteks budget atau target bisnis" />
-                  <PrimaryAction type="submit" label={loading ? "Menyimpan..." : "Ya, Saya Mau Discovery Call"} loading={loading} disabled={loading} />
-                  {discoveryError ? <p className="text-sm font-semibold leading-6 text-red-700">{discoveryError}</p> : null}
-                  {discoveryNotice ? <p className="text-sm font-semibold text-amber-700">{discoveryNotice}</p> : null}
-                </form>
-              </QuestionShell>
+            {!loadingFact && (
+              <>
+                {/* S1: Quality Question 1 — Main Challenge */}
+                {step === "s1" && (
+                  <QualityQuestionShell
+                    eyebrow={QUALITY_QUESTIONS[0].eyebrow}
+                    title={QUALITY_QUESTIONS[0].title}
+                    note={QUALITY_QUESTIONS[0].note}
+                  >
+                    <div className="grid gap-3">
+                      {QUALITY_QUESTIONS[0].options.map((option) => (
+                        <QualityChoiceButton
+                          key={option.id}
+                          active={answers.mainChallenges[0] === option.id}
+                          onClick={() => selectChallenge(option.id as ChallengeId)}
+                          label={option.label}
+                          note={option.note}
+                          emoji={option.emoji}
+                        />
+                      ))}
+                    </div>
+                    <PrimaryAction
+                      disabled={!answers.mainChallenges[0]}
+                      onClick={() => advanceWithFact("s1", "s2")}
+                      label="Lanjut"
+                    />
+                  </QualityQuestionShell>
+                )}
+
+                {/* S2: Quality Question 2 — Detail Challenge */}
+                {step === "s2" && (
+                  <QualityQuestionShell
+                    eyebrow={QUALITY_QUESTIONS[1].eyebrow}
+                    title={QUALITY_QUESTIONS[1].title}
+                    note={QUALITY_QUESTIONS[1].note}
+                  >
+                    <div className="grid gap-3">
+                      {QUALITY_QUESTIONS[1].options
+                        .filter((option) => {
+                          const challengeForDetail = DETAIL_TO_CHALLENGE[option.id as DetailId];
+                          return challengeForDetail === answers.mainChallenges[0];
+                        })
+                        .map((option) => (
+                          <QualityChoiceButton
+                            key={option.id}
+                            active={answers.detailChallenges[0] === option.id}
+                            onClick={() => selectDetail(option.id as DetailId)}
+                            label={option.label}
+                            note={option.note}
+                            emoji={option.emoji}
+                          />
+                        ))}
+                    </div>
+                    <PrimaryAction
+                      disabled={!answers.detailChallenges[0]}
+                      onClick={() => advanceWithFact("s2", "s3")}
+                      label="Lanjut"
+                    />
+                  </QualityQuestionShell>
+                )}
+
+                {/* S3: Quality Question 3 — Impact Level */}
+                {step === "s3" && (
+                  <QualityQuestionShell
+                    eyebrow={QUALITY_QUESTIONS[2].eyebrow}
+                    title={QUALITY_QUESTIONS[2].title}
+                    note={QUALITY_QUESTIONS[2].note}
+                  >
+                    <div className="grid gap-3">
+                      {QUALITY_QUESTIONS[2].options.map((option) => (
+                        <QualityChoiceButton
+                          key={option.id}
+                          active={answers.impactLevel === option.id}
+                          onClick={() => setAnswers({ ...answers, impactLevel: option.id as ImpactId })}
+                          label={option.label}
+                          note={option.note}
+                          emoji={option.emoji}
+                        />
+                      ))}
+                    </div>
+                    <PrimaryAction
+                      disabled={!answers.impactLevel}
+                      onClick={() => setStep("s4")}
+                      label="Lanjut"
+                    />
+                  </QualityQuestionShell>
+                )}
+
+                {/* S4: Quality Question 4 — Adoption Style */}
+                {step === "s4" && (
+                  <QualityQuestionShell
+                    eyebrow={QUALITY_QUESTIONS[3].eyebrow}
+                    title={QUALITY_QUESTIONS[3].title}
+                    note={QUALITY_QUESTIONS[3].note}
+                  >
+                    <div className="grid gap-3">
+                      {QUALITY_QUESTIONS[3].options.map((option) => (
+                        <QualityChoiceButton
+                          key={option.id}
+                          active={answers.adoptionStyle === option.id}
+                          onClick={() => setAnswers({ ...answers, adoptionStyle: option.id as AdoptionId })}
+                          label={option.label}
+                          note={option.note}
+                          emoji={option.emoji}
+                        />
+                      ))}
+                    </div>
+                    <PrimaryAction
+                      disabled={!answers.adoptionStyle}
+                      onClick={() => setStep("s5")}
+                      label="Review jawaban"
+                    />
+                  </QualityQuestionShell>
+                )}
+
+                {/* S5: Review */}
+                {step === "s5" && (
+                  <QualityQuestionShell eyebrow="05 / Review" title="Cek sebentar. Apakah ini sudah pas?">
+                    <ReviewRow
+                      label="Situasi terberat"
+                      value={CHALLENGE_LABELS[answers.mainChallenges[0] || "revenue"]}
+                      onEdit={() => setStep("s1")}
+                    />
+                    <ReviewRow
+                      label="Metric merah"
+                      value={
+                        QUALITY_QUESTIONS[1].options.find((o) => o.id === answers.detailChallenges[0])?.label || "-"
+                      }
+                      onEdit={() => setStep("s2")}
+                    />
+                    <ReviewRow
+                      label="Intensitas masalah"
+                      value={QUALITY_QUESTIONS[2].options.find((o) => o.id === answers.impactLevel)?.label || "-"}
+                      onEdit={() => setStep("s3")}
+                    />
+                    <ReviewRow
+                      label="Prioritas AI"
+                      value={QUALITY_QUESTIONS[3].options.find((o) => o.id === answers.adoptionStyle)?.label || "-"}
+                      onEdit={() => setStep("s4")}
+                    />
+                    <PrimaryAction onClick={() => setStep("s6")} label="Sudah Pas" />
+                  </QualityQuestionShell>
+                )}
+
+                {/* S6: Contact */}
+                {step === "s6" && (
+                  <QualityQuestionShell
+                    eyebrow="06 / Data Anda"
+                    title="Ke mana hasil & rencana ini kami kirim?"
+                    note="Nama dan WhatsApp wajib agar kami bisa menyusun hasil dan mengirim rincian rencananya ke Anda."
+                  >
+                    <ContactFields contact={contact} setContact={setContact} />
+                    <label className="mt-4 block">
+                      <span className="mb-2 block text-sm font-semibold text-neutral-500">
+                        Ceritakan tantangan Anda (opsional, tapi membuat hasil jauh lebih spesifik)
+                      </span>
+                      <textarea
+                        value={detailNote}
+                        onChange={(event) => handleDetailNoteChange(event.target.value)}
+                        rows={4}
+                        className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+                        placeholder="Contoh: penjualan banyak lewat WhatsApp, tapi follow-up sering telat dan pelanggan lama jarang beli lagi..."
+                      />
+                      <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
+                        <span>Semakin detail konteks Anda, semakin spesifik hasil dan rencana yang kami susun.</span>
+                        <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
+                      </div>
+                    </label>
+                    <PrimaryAction
+                      onClick={generateResult}
+                      label={isLoading ? "Menyusun hasil & rencana..." : "Susun Hasil & Rencana Saya"}
+                      disabled={isLoading || !canGenerate}
+                      loading={isLoading}
+                    />
+                    {!canGenerate ? (
+                      <p className="mt-3 text-xs text-neutral-400">Isi Nama Anda dan Nomor WhatsApp yang valid untuk melanjutkan.</p>
+                    ) : null}
+                    {resultError ? (
+                      <p className="mt-4 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold leading-6 text-red-700">
+                        {resultError}
+                      </p>
+                    ) : null}
+                  </QualityQuestionShell>
+                )}
+
+                {/* S7: Result */}
+                {step === "s7" && result && (
+                  <div className="pb-10">
+                    <ResultPanel
+                      result={result}
+                      detailNote={detailNote}
+                      detailNoteWordCount={detailNoteWordCount}
+                      discoveryContext={discoveryContext}
+                      setDetailNote={setDetailNote}
+                      onDiscoveryContextChange={handleDiscoveryContextChange}
+                      onDetailNoteBlur={saveResultDetailNote}
+                      onShare={() => copyResultLink(result)}
+                      onPdf={async () => {
+                        await track("click", "s7", { cta: "Export PDF" }, result.sessionId);
+                        await downloadPdf();
+                      }}
+                      onDiscovery={async () => {
+                        await saveResultDetailNote(detailNote);
+                        void track("click", "s7", { cta: "Discovery Call" }, result.sessionId);
+                        setStep("s8");
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* S8: Discovery */}
+                {step === "s8" && result && (
+                  <QualityQuestionShell eyebrow="08 / Discovery call" title="Diskusikan solusi khusus untuk bisnis dan budget Anda.">
+                    <form onSubmit={submitDiscovery} className="grid gap-4">
+                      <ContactFields contact={contact} setContact={setContact} />
+                      <input
+                        name="budgetContext"
+                        className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+                        placeholder="Konteks budget atau target bisnis"
+                      />
+                      <PrimaryAction type="submit" label={isLoading ? "Menyimpan..." : "Ya, Saya Mau Discovery Call"} loading={isLoading} disabled={isLoading} />
+                      {discoveryError ? <p className="text-sm font-semibold leading-6 text-red-700">{discoveryError}</p> : null}
+                      {discoveryNotice ? <p className="text-sm font-semibold text-amber-700">{discoveryNotice}</p> : null}
+                    </form>
+                  </QualityQuestionShell>
+                )}
+              </>
             )}
           </div>
         </section>
@@ -576,29 +608,35 @@ function buildDiscoveryContextMessage(detailNote: string, discoveryContext: Disc
   return blocks.join("\n\n");
 }
 
-function previousStep(step: Step): Step {
-  const order: Step[] = ["hero", "s1", "fact1", "s2", "fact2", "s3", "s4", "s5", "s6", "s7", "s8"];
-  return order[Math.max(0, order.indexOf(step) - 1)];
+function previousStep(current: Step): Step {
+  const idx = STEP_ORDER.indexOf(current);
+  return STEP_ORDER[Math.max(0, idx - 1)];
 }
 
-function QuestionShell({ eyebrow, title, note, children }: { eyebrow: string; title: string; note?: string; children: React.ReactNode }) {
+function QualityQuestionShell({ eyebrow, title, note, children }: { eyebrow: string; title: string; note?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-1 flex-col justify-center pb-8">
-      <div className="mb-6 w-fit rounded-full border border-border-base bg-surface-elevated/90 px-4 py-2 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-muted">{eyebrow}</p>
-      </div>
-      <h2 className="mb-4 max-w-4xl text-balance text-4xl font-semibold leading-tight tracking-normal text-foreground sm:text-6xl">{title}</h2>
-      {note ? <p className="mb-8 max-w-2xl text-base font-medium leading-7 text-foreground-muted">{note}</p> : <div className="mb-6" />}
+    <div className="flex flex-1 flex-col justify-center pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">{eyebrow}</p>
+      <h2 className="mb-4 text-3xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-5xl">{title}</h2>
+      {note ? <p className="mb-8 text-base font-medium leading-7 text-neutral-500">{note}</p> : <div className="mb-6" />}
       {children}
     </div>
   );
 }
 
-function ChoiceButton({ active, onClick, label, note }: { active: boolean; onClick: () => void; label: string; note?: string }) {
+function QualityChoiceButton({ active, onClick, label, note, emoji }: { active: boolean; onClick: () => void; label: string; note?: string; emoji?: string }) {
   return (
-    <button onClick={onClick} className={`flex min-h-16 items-center justify-between rounded-[1.35rem] border px-5 py-4 text-left transition ${active ? "border-neutral-950 bg-neutral-950 text-white" : "border-neutral-200 bg-white text-neutral-950 hover:border-neutral-400"}`}>
-      <span>
-        <span className="block text-base font-semibold capitalize">{label}</span>
+    <button
+      onClick={onClick}
+      className={`flex min-h-16 items-center gap-4 rounded-[1.35rem] border px-5 py-4 text-left transition-all duration-200 ${
+        active
+          ? "border-neutral-950 bg-neutral-950 text-white shadow-lg shadow-neutral-900/10"
+          : "border-neutral-200 bg-white text-neutral-950 hover:border-neutral-400 hover:shadow-md"
+      }`}
+    >
+      {emoji ? <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-xl">{emoji}</span> : null}
+      <span className="flex-1">
+        <span className="block text-base font-semibold">{label}</span>
         {note ? <span className={`mt-1 block text-sm ${active ? "text-neutral-300" : "text-neutral-500"}`}>{note}</span> : null}
       </span>
       {active ? <Check className="h-5 w-5 shrink-0" /> : <span className="h-5 w-5 shrink-0 rounded-full border border-neutral-300" />}
@@ -608,7 +646,12 @@ function ChoiceButton({ active, onClick, label, note }: { active: boolean; onCli
 
 function PrimaryAction({ label, onClick, disabled, loading, type = "button" }: { label: string; onClick?: () => void; disabled?: boolean; loading?: boolean; type?: "button" | "submit" }) {
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className="mt-8 flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-neutral-950 px-5 text-base font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-neutral-300">
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className="mt-8 flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-neutral-950 px-5 text-base font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-neutral-300"
+    >
       {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
       {label}
       {!loading ? <ArrowRight className="h-5 w-5" /> : null}
@@ -616,25 +659,14 @@ function PrimaryAction({ label, onClick, disabled, loading, type = "button" }: {
   );
 }
 
-function FactScreen({ fact, source, onNext }: { fact: string; source: string; onNext: () => void }) {
-  return (
-    <div className="flex flex-1 flex-col justify-center pb-8">
-      <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Insight singkat</p>
-      <h2 className="text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-6xl">{fact}</h2>
-      <p className="mt-6 text-sm font-medium text-neutral-500">Sumber: {source}</p>
-      <PrimaryAction onClick={onNext} label="Lanjut" />
-    </div>
-  );
-}
-
 function ReviewRow({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
   return (
-    <div className="mb-3 flex items-center justify-between rounded-[1.35rem] border border-neutral-200 px-5 py-4">
+    <div className="mb-3 flex items-center justify-between rounded-[1.35rem] border border-neutral-200 px-5 py-4 transition hover:border-neutral-300">
       <div>
         <p className="text-sm font-semibold text-neutral-500">{label}</p>
         <p className="mt-1 text-base font-semibold text-neutral-950">{value}</p>
       </div>
-      <button onClick={onEdit} className="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold">
+      <button onClick={onEdit} className="rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold transition hover:bg-neutral-50">
         Ubah
       </button>
     </div>
@@ -644,9 +676,29 @@ function ReviewRow({ label, value, onEdit }: { label: string; value: string; onE
 function ContactFields({ contact, setContact, optional = false }: { contact: ContactData; setContact: (contact: ContactData) => void; optional?: boolean }) {
   return (
     <div className="grid gap-3">
-      <input name="companyName" value={contact.companyName || ""} onChange={(event) => setContact({ ...contact, companyName: event.target.value })} className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900" placeholder="Nama perusahaan (opsional)" />
-      <input name="name" value={contact.name || ""} required={!optional} onChange={(event) => setContact({ ...contact, name: event.target.value })} className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900" placeholder={`Nama Anda${optional ? " (opsional)" : ""}`} />
-      <input name="wa" value={contact.wa || ""} required={!optional} onChange={(event) => setContact({ ...contact, wa: event.target.value })} className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none focus:border-neutral-900" placeholder={`Nomor WhatsApp${optional ? " (opsional)" : ""}`} />
+      <input
+        name="companyName"
+        value={contact.companyName || ""}
+        onChange={(event) => setContact({ ...contact, companyName: event.target.value })}
+        className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+        placeholder="Nama perusahaan (opsional)"
+      />
+      <input
+        name="name"
+        value={contact.name || ""}
+        required={!optional}
+        onChange={(event) => setContact({ ...contact, name: event.target.value })}
+        className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+        placeholder={`Nama Anda${optional ? " (opsional)" : ""}`}
+      />
+      <input
+        name="wa"
+        value={contact.wa || ""}
+        required={!optional}
+        onChange={(event) => setContact({ ...contact, wa: event.target.value })}
+        className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+        placeholder={`Nomor WhatsApp${optional ? " (opsional)" : ""}`}
+      />
       {optional ? (
         <label className="flex items-center gap-3 rounded-3xl border border-neutral-200 px-5 py-4 text-sm font-semibold text-neutral-700">
           <input type="checkbox" checked={Boolean(contact.followUpAllowed)} onChange={(event) => setContact({ ...contact, followUpAllowed: event.target.checked })} />
@@ -657,8 +709,9 @@ function ContactFields({ contact, setContact, optional = false }: { contact: Con
   );
 }
 
+/* ─── Result Panel (WOW upgrade) ─── */
+
 function ResultPanel({
-  answers,
   result,
   detailNote,
   detailNoteWordCount,
@@ -670,7 +723,6 @@ function ResultPanel({
   onPdf,
   onDiscovery
 }: {
-  answers: WizardAnswers;
   result: GeneratedResult;
   detailNote: string;
   detailNoteWordCount: number;
@@ -682,21 +734,32 @@ function ResultPanel({
   onPdf: () => void | Promise<void>;
   onDiscovery: () => void | Promise<void>;
 }) {
-  const primaryChallenge = answers.mainChallenges[0] || "revenue";
-  const prepGuide = DISCOVERY_PREP_BY_CHALLENGE[primaryChallenge];
-  const adoptionSummary = ADOPTION_MODE_SUMMARY[answers.adoptionStyle || "starting"];
-  const notePreview =
-    detailNote.trim().length > 280 ? `${detailNote.trim().slice(0, 280).trimEnd()}...` : detailNote.trim();
+  const [monthlyRevenue, setMonthlyRevenue] = useState(500000000); // default 500jt
+  const impactPercent = parseImpactPercent(result.impactCards);
+
+  const projectedGain = Math.round(monthlyRevenue * (impactPercent / 100));
+  const annualGain = projectedGain * 12;
 
   return (
     <div>
       <div id="result-panel" className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-soft sm:p-8">
+        {/* Executive Summary Hero */}
         <div className="mb-6 flex items-center gap-2 text-sm font-semibold text-neutral-500">
           <BarChart3 className="h-4 w-4" />
           Hasil Mini Session Pesat.AI
         </div>
-        <h2 className="text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-6xl">{result.headline}</h2>
+
+        <h2 className="text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-5xl">{result.headline}</h2>
         <p className="mt-5 text-lg leading-8 text-neutral-600">{result.subheadline}</p>
+
+        {/* Before → After → Lift Cards */}
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <BeforeAfterCard label="Before" value={`Rp ${formatRupiah(Math.round(monthlyRevenue))}`} icon={<Clock className="h-5 w-5" />} tone="muted" />
+          <BeforeAfterCard label="After AI" value={`Rp ${formatRupiah(Math.round(monthlyRevenue + projectedGain))}`} icon={<TrendingUp className="h-5 w-5" />} tone="highlight" />
+          <BeforeAfterCard label="Potensi Lift" value={`+${impactPercent}%`} icon={<Zap className="h-5 w-5" />} tone="accent" />
+        </div>
+
+        {/* Diagnosis */}
         {result.diagnosis ? (
           <div className="mt-8 rounded-[1.35rem] border border-neutral-200 bg-neutral-50 p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Diagnosa</p>
@@ -709,6 +772,8 @@ function ResultPanel({
             ) : null}
           </div>
         ) : null}
+
+        {/* User Signals */}
         {result.userSignals?.length ? (
           <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Sinyal dari bisnis Anda</p>
@@ -722,6 +787,8 @@ function ResultPanel({
             </div>
           </div>
         ) : null}
+
+        {/* Impact Cards */}
         <div className="mt-8 grid gap-3 sm:grid-cols-3">
           {result.impactCards.map((card) => (
             <div key={card.title} className="rounded-[1.35rem] border border-neutral-200 p-5">
@@ -731,6 +798,8 @@ function ResultPanel({
             </div>
           ))}
         </div>
+
+        {/* Bar Chart */}
         <div className="mt-8 h-64 rounded-[1.35rem] border border-neutral-200 p-4">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={result.chart}>
@@ -743,6 +812,8 @@ function ResultPanel({
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Before / After Text */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {result.beforeAfterText.map((text, index) => (
             <div key={text} className="rounded-[1.35rem] bg-neutral-50 p-5">
@@ -751,6 +822,36 @@ function ResultPanel({
             </div>
           ))}
         </div>
+
+        {/* ROI Calculator */}
+        <div className="mt-8 rounded-[1.35rem] border border-neutral-200 bg-gradient-to-br from-white to-neutral-50 p-6">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Kalkulator ROI</p>
+          <p className="mt-2 text-sm leading-6 text-neutral-500">Geser untuk melihat potensi impact di bisnis Anda.</p>
+          <div className="mt-5">
+            <label className="mb-2 block text-sm font-semibold text-neutral-700">Omzet bulanan (Rp)</label>
+            <input
+              type="range"
+              min="10000000"
+              max="5000000000"
+              step="50000000"
+              value={monthlyRevenue}
+              onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
+              className="w-full accent-neutral-950"
+            />
+            <div className="mt-2 flex justify-between text-sm font-semibold text-neutral-600">
+              <span>Rp 10jt</span>
+              <span className="text-lg text-neutral-950">Rp {formatRupiah(monthlyRevenue)}</span>
+              <span>Rp 5M</span>
+            </div>
+          </div>
+          <div className="mt-5 rounded-[1.35rem] bg-neutral-950 p-5 text-white">
+            <p className="text-sm text-neutral-400">Potensi tambahan per tahun</p>
+            <p className="mt-1 text-3xl font-semibold">Rp {formatRupiah(annualGain)}</p>
+            <p className="mt-2 text-xs text-neutral-500">Estimasi berbasis benchmark industri. Angka final setelah discovery.</p>
+          </div>
+        </div>
+
+        {/* Promise */}
         {result.promise?.statement ? (
           <div className="mt-8 rounded-[1.35rem] bg-neutral-950 p-6 text-white">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Janji terukur</p>
@@ -770,32 +871,72 @@ function ResultPanel({
             {result.promise.disclaimer ? <p className="mt-5 text-xs leading-6 text-neutral-400">{result.promise.disclaimer}</p> : null}
           </div>
         ) : null}
+
+        {/* First Step */}
         {result.firstStep ? (
           <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Langkah pertama</p>
             <p className="mt-3 text-lg font-medium leading-8 text-neutral-900">{result.firstStep}</p>
           </div>
         ) : null}
+
+        {/* Cost of Inaction */}
         {result.costOfInaction ? (
           <div className="mt-8 rounded-[1.35rem] border border-neutral-200 border-l-4 border-l-neutral-900 bg-neutral-50 p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Jika dibiarkan</p>
             <p className="mt-3 text-base font-medium leading-7 text-neutral-800">{result.costOfInaction}</p>
           </div>
         ) : null}
+
+        {/* Unique Mechanism */}
         <div className="mt-8 rounded-[1.35rem] bg-neutral-950 p-6 text-white">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Unique mechanism</p>
           <p className="mt-3 text-xl font-semibold leading-8">{result.uniqueMechanism}</p>
         </div>
+
+        {/* Solution Cards with Proof Trail */}
         <div className="mt-8">
           <h3 className="text-2xl font-semibold">Solusi yang paling relevan</h3>
+          <p className="mt-2 text-sm leading-6 text-neutral-500">Diurutkan berdasarkan match dengan profil bisnis Anda.</p>
           <div className="mt-4 grid gap-3">
-            {result.solutionsText.map((solution) => (
+            {result.solutionCards?.map((card, index) => (
+              <div
+                key={card.name}
+                className="group relative overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white p-5 transition-all duration-300 hover:shadow-lg hover:border-neutral-300"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-white text-lg font-bold">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-lg font-semibold text-neutral-950">{card.name}</h4>
+                      <ImpactBadge badge={card.impactBadge} />
+                      <ConfidenceBadge score={card.confidenceScore} />
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-neutral-600">{card.description}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-500">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1">
+                        <Clock className="h-3 w-3" />
+                        Setup: {card.setupTime}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+                        <Shield className="h-3 w-3" />
+                        {card.proofBasis}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )) ?? result.solutionsText.map((solution) => (
               <div key={solution} className="rounded-[1.35rem] border border-neutral-200 p-5 text-base leading-7 text-neutral-700">
                 {solution}
               </div>
             ))}
           </div>
         </div>
+
+        {/* Action Plan */}
         {result.plan?.length ? (
           <div className="mt-8">
             <h3 className="text-2xl font-semibold">Rencana aksi</h3>
@@ -821,84 +962,49 @@ function ResultPanel({
             </div>
           </div>
         ) : null}
+
+        {/* Phone Mockup */}
         <div className="mt-8 overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-gradient-to-br from-white to-neutral-100 p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Supaya langkah berikutnya tidak ngawang</p>
-              <h3 className="mt-2 text-2xl font-semibold text-neutral-950">Siapkan 3 hal ini agar rekomendasi cepat jadi keputusan nyata</h3>
-            </div>
-            <span className="inline-flex w-fit rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-700">{adoptionSummary.label}</span>
-          </div>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600">{adoptionSummary.note}</p>
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
-            <div className="rounded-[1.35rem] border border-neutral-200 bg-white p-5 shadow-soft">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Prioritas pertama</p>
-              <p className="mt-3 text-base font-semibold leading-7 text-neutral-950">{result.firstStep}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-600">Mulai dari satu area yang paling dekat ke dampak bisnis agar tim tidak kewalahan dan hasil bisa cepat terlihat.</p>
-            </div>
-            <div className="rounded-[1.35rem] border border-neutral-200 bg-white p-5 shadow-soft">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">{prepGuide.title}</p>
-              <ul className="mt-3 space-y-3 text-sm leading-6 text-neutral-700">
-                {prepGuide.items.map((item) => (
-                  <li key={item} className="flex gap-3">
-                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-neutral-900" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-[1.35rem] border border-neutral-200 bg-white p-5 shadow-soft">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Angka yang nanti dicek</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-600">Ini yang dipakai untuk mengukur hasil agar keputusan Anda berbasis angka, bukan asumsi.</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {result.promise.measuredBy.map((metric) => (
-                  <span key={metric} className="rounded-full bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-800">
-                    {metric}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-4 space-y-3">
-                {result.impactCards.slice(0, 2).map((card) => (
-                  <div key={card.title} className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">{card.title}</p>
-                    <p className="mt-1 text-lg font-semibold text-neutral-950">{card.value}</p>
-                  </div>
-                ))}
+          <div className="mx-auto max-w-sm rounded-[1.6rem] border border-neutral-300 bg-white p-4 shadow-soft">
+            <div className="mb-4 h-2 w-20 rounded-full bg-neutral-200" />
+            <div className="space-y-3">
+              <div className="h-20 rounded-2xl bg-neutral-950" />
+              <div className="h-4 w-4/5 rounded-full bg-neutral-200" />
+              <div className="h-4 w-3/5 rounded-full bg-neutral-200" />
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                <div className="h-16 rounded-2xl bg-neutral-100" />
+                <div className="h-16 rounded-2xl bg-neutral-100" />
+                <div className="h-16 rounded-2xl bg-neutral-100" />
               </div>
             </div>
           </div>
-          {notePreview ? (
-            <div className="mt-5 rounded-[1.35rem] border border-dashed border-neutral-300 bg-white/80 p-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Catatan Anda yang sudah tertangkap</p>
-              <p className="mt-3 text-sm leading-7 text-neutral-700">{notePreview}</p>
-            </div>
-          ) : null}
         </div>
       </div>
-      <section className="mt-6 rounded-[1.35rem] border border-border-base bg-surface-elevated p-5 text-foreground shadow-[0_24px_60px_-40px_rgba(15,23,42,0.55)] sm:p-6">
+
+      <section className="mt-6 rounded-[1.35rem] border border-neutral-200 bg-white p-5 shadow-soft sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-muted">Opsional sebelum discovery call</p>
-            <h3 className="mt-1 text-2xl font-semibold leading-tight text-foreground">Bantu kami memahami konteks Anda lewat 3 pertanyaan singkat</h3>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Opsional sebelum discovery call</p>
+            <h3 className="mt-1 text-2xl font-semibold leading-tight text-neutral-950">Bantu kami memahami konteks Anda lewat 3 pertanyaan singkat</h3>
           </div>
-          <span className="inline-flex w-fit rounded-full border border-border-base bg-surface px-4 py-2 text-sm font-semibold text-foreground-muted">Semua jawaban bersifat opsional</span>
+          <span className="inline-flex w-fit rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-500">Semua jawaban bersifat opsional</span>
         </div>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-foreground-muted">
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-500">
           Jawaban di bawah ini akan ikut dikirim saat Anda lanjut ke discovery call, supaya tim Pesat.AI masuk dengan konteks yang lebih jelas dan tidak mengulang pertanyaan dasar.
         </p>
 
         <div className="mt-5 grid gap-4">
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-foreground">1. Ceritakan tantangan Anda lebih detail</span>
+            <span className="mb-2 block text-sm font-semibold text-neutral-700">1. Ceritakan tantangan Anda lebih detail</span>
             <textarea
               value={detailNote}
-              onChange={(event) => setDetailNote(trimToWordLimit(event.target.value, DETAIL_NOTE_WORD_LIMIT))}
+              onChange={(event) => setDetailNote(event.target.value)}
               onBlur={(event) => void onDetailNoteBlur(event.target.value)}
               rows={5}
-              className="w-full rounded-[1.35rem] border border-border-base bg-surface px-5 py-4 text-foreground outline-none placeholder:text-foreground-subtle focus:border-border-strong"
-              placeholder="Contoh: Saya menjual lele biasa sehari kurang lebih 500 kg - 1 ton. Saya masih butuh tools/software untuk pencatatan stok dan penjualan."
+              className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+              placeholder="Contoh: proses sales kami banyak lewat WhatsApp, tapi follow-up sering hilang..."
             />
-            <div className="mt-2 flex items-center justify-between gap-4 text-xs text-foreground-subtle">
+            <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
               <span>Anda bisa cerita bebas soal proses, volume, bottleneck, atau kebiasaan operasional yang sekarang paling terasa.</span>
               <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
             </div>
@@ -907,34 +1013,39 @@ function ResultPanel({
           {OPTIONAL_DISCOVERY_QUESTIONS.map((question) => (
             <label key={question.id} className="block">
               <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                <span className="text-sm font-semibold text-foreground">{question.label}</span>
-                <span className="text-xs text-foreground-subtle">{question.helper}</span>
+                <span className="text-sm font-semibold text-neutral-700">{question.label}</span>
+                <span className="text-xs text-neutral-400">{question.helper}</span>
               </div>
               <textarea
                 value={discoveryContext[question.id]}
                 onChange={(event) => onDiscoveryContextChange(question.id, event.target.value)}
                 rows={question.rows}
-                className="w-full rounded-[1.35rem] border border-border-base bg-surface px-5 py-4 text-foreground outline-none placeholder:text-foreground-subtle focus:border-border-strong"
+                className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
                 placeholder={question.placeholder}
               />
             </label>
           ))}
         </div>
       </section>
+
+      {/* Actions */}
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <button
           onClick={() => void onShare()}
           disabled={!result.persisted}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-neutral-200 px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:border-neutral-100 disabled:text-neutral-300"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-neutral-200 px-5 text-sm font-semibold transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:border-neutral-100 disabled:text-neutral-300"
         >
           <ExternalLink className="h-4 w-4" />
           {result.persisted ? "Copy Link" : "Link aktif setelah DB tersambung"}
         </button>
-        <button onClick={() => void onPdf()} className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-neutral-200 px-5 text-sm font-semibold">
+        <button
+          onClick={() => void onPdf()}
+          className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-neutral-200 px-5 text-sm font-semibold transition hover:bg-neutral-50"
+        >
           <Download className="h-4 w-4" />
           Export PDF
         </button>
-        <button onClick={onDiscovery} className="min-h-12 rounded-full bg-neutral-950 px-5 text-sm font-semibold text-white">
+        <button onClick={onDiscovery} className="min-h-12 rounded-full bg-neutral-950 px-5 text-sm font-semibold text-white transition hover:bg-black">
           Ya, Saya Mau Discovery Call
         </button>
       </div>
@@ -942,4 +1053,69 @@ function ResultPanel({
       {result.llmFallback ? <p className="mt-3 text-xs text-neutral-400">Mode fallback aktif karena OpenAI belum tersedia atau gagal merespons.</p> : null}
     </div>
   );
+}
+
+/* ─── Helper Components ─── */
+
+function BeforeAfterCard({ label, value, icon, tone }: { label: string; value: string; icon: React.ReactNode; tone: "muted" | "highlight" | "accent" }) {
+  const toneStyles = {
+    muted: "bg-neutral-100 text-neutral-600",
+    highlight: "bg-neutral-950 text-white",
+    accent: "bg-emerald-600 text-white"
+  };
+  return (
+    <div className={`rounded-[1.35rem] p-5 ${toneStyles[tone]}`}>
+      <div className="flex items-center gap-2 text-sm font-semibold opacity-70">{icon}{label}</div>
+      <p className="mt-2 text-2xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function ImpactBadge({ badge }: { badge: string }) {
+  const styles: Record<string, string> = {
+    "quick-win": "bg-amber-50 text-amber-700 border-amber-200",
+    "high-impact": "bg-emerald-50 text-emerald-700 border-emerald-200",
+    strategic: "bg-blue-50 text-blue-700 border-blue-200"
+  };
+  const labels: Record<string, string> = {
+    "quick-win": "⚡ Quick Win",
+    "high-impact": "🎯 High Impact",
+    strategic: "🧭 Strategic"
+  };
+  return (
+    <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${styles[badge] || styles["high-impact"]}`}>
+      {labels[badge] || badge}
+    </span>
+  );
+}
+
+function ConfidenceBadge({ score }: { score: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-600">
+      <Sparkles className="h-3 w-3" />
+      {score}% match
+    </span>
+  );
+}
+
+/* ─── Utilities ─── */
+
+function formatRupiah(value: number): string {
+  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}M`;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(0)}jt`;
+  if (value >= 1000) return `${(value / 1000).toFixed(0)}rb`;
+  return value.toString();
+}
+
+function parseImpactPercent(cards: Array<{ title: string; value: string }>): number {
+  // Try to find the highest percentage in impact cards
+  let maxPercent = 20; // default
+  for (const card of cards) {
+    const match = card.value.match(/(\d+)-?(\d+)?%?/);
+    if (match) {
+      const val = parseInt(match[2] || match[1], 10);
+      if (val > maxPercent) maxPercent = val;
+    }
+  }
+  return maxPercent;
 }

@@ -143,6 +143,7 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
       ...copy,
       sessionId,
       solutions,
+      solutionCards: fallback.solutionCards,
       impactRanges,
       chart: fallback.chart,
       diagnosis,

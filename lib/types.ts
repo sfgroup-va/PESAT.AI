@@ -45,6 +45,8 @@ export type PesatSolution = {
   name: string;
   cluster: ChallengeId[];
   description: string;
+  setupTime?: string;
+  impactBadge?: "quick-win" | "high-impact" | "strategic";
 };
 
 export type ImpactRanges = {
@@ -76,6 +78,15 @@ export type PlanPhase = {
   outcome: string;
 };
 
+export type SolutionCard = {
+  name: string;
+  description: string;
+  impactBadge: "quick-win" | "high-impact" | "strategic";
+  setupTime: string;
+  confidenceScore: number;
+  proofBasis: string;
+};
+
 export type DiagnosisPack = {
   diagnosis: string;
   rootCause: RootCause;
@@ -99,6 +110,7 @@ export type GeneratedResult = {
   uniqueMechanism: string;
   solutionsText: string[];
   solutions: PesatSolution[];
+  solutionCards?: SolutionCard[];
   impactRanges: ImpactRanges;
   chart: Array<{ name: string; before: number; after: number }>;
   persisted?: boolean;

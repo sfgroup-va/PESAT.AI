@@ -26,7 +26,7 @@ const detailIds = [
 const impactIds = ["revenue", "hours", "risk", "cash", "trust"] as const satisfies readonly ImpactId[];
 const adoptionIds = ["dfy", "diy", "hybrid", "starting"] as const satisfies readonly AdoptionId[];
 const eventTypes = ["screen_view", "click"] as const;
-const eventScreens = ["hero", "s1", "fact1", "s2", "fact2", "s3", "s4", "s5", "s6", "s7", "s8", "result", "admin"] as const;
+const eventScreens = ["hero", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "result", "admin"] as const;
 
 const challengeSet = new Set<string>(challengeIds);
 const detailSet = new Set<string>(detailIds);

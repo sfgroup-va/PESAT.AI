@@ -1,5 +1,5 @@
 import { AVAILABLE_SOLUTIONS, DETAIL_LABELS, DETAIL_SOLUTION_MAP, TRANSITION_FACTS } from "@/lib/solutions";
-import type { AdoptionId, ChallengeId, DiagnosisPack, GeneratedResult, ImpactRanges, PesatSolution, PlanPhase, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, DiagnosisPack, GeneratedResult, ImpactRanges, PesatSolution, PlanPhase, SolutionCard, WizardAnswers } from "@/lib/types";
 
 const CLUSTER_PRIORITY: Record<ChallengeId, string[]> = {
   revenue: ["ai_sales_assistant", "ai_repeat_order", "ai_crm_pintar", "ai_dynamic_pricing"],
@@ -200,6 +200,36 @@ export function buildChart(answers: WizardAnswers) {
   ];
 }
 
+export function buildSolutionCards(solutions: PesatSolution[], answers: WizardAnswers): SolutionCard[] {
+  const primary = answers.mainChallenges[0] || "revenue";
+  const detail = answers.detailChallenges[0];
+
+  return solutions.map((solution, index) => {
+    // Confidence score: higher if solution directly maps to selected detail, then by cluster match
+    let confidence = 75;
+    if (detail && DETAIL_SOLUTION_MAP[detail]?.includes(solution.id)) {
+      confidence = 96;
+    } else if (solution.cluster.includes(primary)) {
+      confidence = 88;
+    }
+    // Slight variance so they don't all look identical
+    confidence = Math.min(99, confidence + index * 2);
+
+    const proofBasis = detail
+      ? `Direct match: ${DETAIL_LABELS[detail]} → ${solution.name}`
+      : `Cluster match: ${primary} priority → ${solution.name}`;
+
+    return {
+      name: solution.name,
+      description: solution.description,
+      impactBadge: solution.impactBadge || "high-impact",
+      setupTime: solution.setupTime || "2-3 minggu",
+      confidenceScore: confidence,
+      proofBasis
+    };
+  });
+}
+
 export function buildFallbackResult(sessionId: string, answers: WizardAnswers, solutions: PesatSolution[], impactRanges: ImpactRanges): GeneratedResult {
   const primary = answers.mainChallenges[0] || "revenue";
   const headlineByCluster: Record<ChallengeId, string> = {
@@ -238,6 +268,7 @@ export function buildFallbackResult(sessionId: string, answers: WizardAnswers, s
     uniqueMechanism: "Cara kerjanya seperti memasang co-pilot operasional: Pesat.AI membaca sinyal dari proses berjalan, memilih tindakan prioritas, lalu membantu tim mengeksekusi dan mengukur hasilnya.",
     solutionsText: solutions.map((solution) => `${solution.name}: ${solution.description}`),
     solutions,
+    solutionCards: buildSolutionCards(solutions, answers),
     impactRanges,
     chart: buildChart(answers),
     llmFallback: true
