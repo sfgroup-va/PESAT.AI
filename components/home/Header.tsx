@@ -38,14 +38,14 @@ export function Header({ onStartWizard }: { onStartWizard?: () => void }) {
           scrolled ? "bg-opacity-95 backdrop-blur-xl" : "bg-opacity-100"
         }`}
       >
-        <nav className="mx-auto flex min-h-[110px] max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
+        <nav className="mx-auto flex min-h-[58px] max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link href="/" className="flex items-center">
             <Image
               src="/images/Pesat.AI logo.png"
               alt="Pesat.AI"
               width={500}
               height={422}
-              className="h-[86px] w-auto object-contain"
+              className="h-12 w-auto object-contain"
               priority
             />
           </Link>
@@ -87,7 +87,7 @@ export function Header({ onStartWizard }: { onStartWizard?: () => void }) {
 
       {/* Mobile menu */}
       {open ? (
-        <div className="fixed inset-0 top-[110px] z-40 bg-[#0a0a14] px-5 py-6 lg:hidden">
+        <div className="fixed inset-0 top-[58px] z-40 bg-[#0a0a14] px-5 py-6 lg:hidden">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <a

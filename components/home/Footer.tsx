@@ -31,7 +31,7 @@ export function Footer({ onStartWizard }: { onStartWizard?: () => void }) {
               alt="Pesat.AI"
               width={500}
               height={422}
-              className="h-[86px] w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
             <p className="mt-4 max-w-xs text-sm leading-7 text-white/60">
               AI Revenue System untuk bisnis Indonesia. Ubah masalah jadi solusi AI yang nyata, terukur, dan terpakai.
