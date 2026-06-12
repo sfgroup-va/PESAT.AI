@@ -1148,20 +1148,71 @@ function ResultPanel({
           </div>
         ) : null}
 
-        {/* Phone Mockup */}
+        {/* Phone Mockup — Live Dashboard Preview */}
         <div className="mt-8 overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-gradient-to-br from-white to-neutral-100 p-6">
           <div className="mx-auto max-w-sm rounded-[1.6rem] border border-neutral-300 bg-white p-4 shadow-soft">
-            <div className="mb-4 h-2 w-20 rounded-full bg-neutral-200" />
-            <div className="space-y-3">
-              <div className="h-20 rounded-2xl bg-neutral-950" />
-              <div className="h-4 w-4/5 rounded-full bg-neutral-200" />
-              <div className="h-4 w-3/5 rounded-full bg-neutral-200" />
-              <div className="grid grid-cols-3 gap-2 pt-2">
-                <div className="h-16 rounded-2xl bg-neutral-100" />
-                <div className="h-16 rounded-2xl bg-neutral-100" />
-                <div className="h-16 rounded-2xl bg-neutral-100" />
+            {/* Status bar notch */}
+            <div className="mb-4 flex justify-center">
+              <div className="h-2 w-20 rounded-full bg-neutral-200" />
+            </div>
+
+            {/* Dashboard header */}
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Pesat.AI</p>
+                <p className="text-sm font-semibold text-neutral-950">Dashboard Operasional</p>
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950 text-white">
+                <Sparkles className="h-4 w-4" />
               </div>
             </div>
+
+            {/* Main insight card */}
+            <div className="mb-3 rounded-2xl bg-neutral-950 p-3 text-white">
+              <p className="text-[10px] font-medium text-neutral-400">Diagnosis utama</p>
+              <p className="mt-1 text-xs font-semibold leading-5">{result.headline}</p>
+              {result.efficiencyMetrics[0] ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-lg font-semibold">{result.efficiencyMetrics[0].after}</span>
+                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                    {result.efficiencyMetrics[0].impact}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Mini metric cards */}
+            <div className="grid grid-cols-2 gap-2">
+              {result.efficiencyMetrics.slice(1, 3).map((metric) => (
+                <div key={metric.label} className="rounded-2xl bg-neutral-50 p-3">
+                  <p className="text-[9px] font-medium text-neutral-500 leading-tight">{metric.label}</p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-950">{metric.after}</p>
+                  <p className="text-[9px] font-semibold text-emerald-600">{metric.impact}</p>
+                </div>
+              ))}
+              {result.hiddenCosts.length ? (
+                <div className="rounded-2xl bg-amber-50 p-3">
+                  <p className="text-[9px] font-medium text-amber-700 leading-tight">Biaya tersembunyi/bulan</p>
+                  <p className="mt-1 text-sm font-semibold text-amber-900">
+                    Rp {(result.hiddenCosts.reduce((sum, cost) => sum + cost.monthlyEstimate, 0) / 1_000_000).toFixed(0)}jt
+                  </p>
+                  <p className="text-[9px] font-semibold text-amber-700">teridentifikasi</p>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Quick wins */}
+            {result.solutionCards?.slice(0, 2).map((solution, index) => (
+              <div key={solution.name} className="mt-2 flex items-center gap-3 rounded-2xl border border-neutral-100 bg-white p-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-xs font-bold text-neutral-700">
+                  {index + 1}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-neutral-950">{solution.name}</p>
+                  <p className="text-[9px] text-neutral-500">{solution.setupTime}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
