@@ -61,7 +61,7 @@ export function Hero({
         }}
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col px-5 pb-8 pt-20 sm:px-8 sm:pt-28 lg:px-10 lg:pb-12 lg:pt-24">
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col px-5 pb-8 pt-32 sm:px-8 sm:pt-36 lg:px-10 lg:pb-12 lg:pt-32">
         <div className="grid flex-1 gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           {/* LEFT — on mobile this column fills the viewport and centers vertically */}
           <div className="flex min-w-0 flex-1 flex-col justify-center lg:block lg:max-w-2xl">
