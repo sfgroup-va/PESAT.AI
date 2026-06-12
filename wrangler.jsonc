@@ -18,9 +18,11 @@
   "observability": {
     "enabled": true
   },
-  "workers_dev": true,
-  "routes": [
-    { "pattern": "pesat.ai", "custom_domain": true },
-    { "pattern": "www.pesat.ai", "custom_domain": true }
-  ]
+  "workers_dev": true
+  // Custom domain attaches only AFTER the `pesat.ai` zone exists in Cloudflare.
+  // First deploy goes to *.workers.dev. To bind the domain later, re-enable:
+  // "routes": [
+  //   { "pattern": "pesat.ai", "custom_domain": true },
+  //   { "pattern": "www.pesat.ai", "custom_domain": true }
+  // ]
 }
