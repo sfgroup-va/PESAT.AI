@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Clock, TrendingUp, Zap, Shield, Sparkles, TrendingDown, Search, AlertTriangle, Brain, ArrowRight, BarChart3 } from "lucide-react";
+import { ImpactComparisonChart } from "@/components/ImpactComparisonChart";
 import type { GeneratedResult } from "@/lib/types";
 
 export function ResultView({ sessionId }: { sessionId: string }) {
@@ -214,19 +215,8 @@ export function ResultView({ sessionId }: { sessionId: string }) {
           ))}
         </div>
 
-        {/* Chart */}
-        <div className="mt-8 h-64 rounded-[1.35rem] border border-neutral-200 p-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={result.chart}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} />
-              <YAxis hide />
-              <Tooltip />
-              <Bar dataKey="before" fill="#d4d4d4" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="after" fill="#111111" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Impact Comparison */}
+        <ImpactComparisonChart result={result} />
 
         {/* Before / After Text */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2">

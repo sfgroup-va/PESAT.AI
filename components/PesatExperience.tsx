@@ -17,6 +17,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { CHALLENGE_LABELS, TRANSITION_FACTS, QUALITY_QUESTIONS, DETAIL_TO_CHALLENGE, FRICTION_SOURCES, LOADING_INSIGHTS } from "@/lib/solutions";
+import { ImpactComparisonChart } from "@/components/ImpactComparisonChart";
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
 import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, FrictionSourceId, WizardAnswers } from "@/lib/types";
@@ -979,19 +980,8 @@ function ResultPanel({
           ))}
         </div>
 
-        {/* Legacy Bar Chart */}
-        <div className="mt-8 h-64 rounded-[1.35rem] border border-neutral-200 p-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={result.chart}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} />
-              <YAxis hide />
-              <Tooltip />
-              <Bar dataKey="before" fill="#d4d4d4" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="after" fill="#111111" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Impact Comparison */}
+        <ImpactComparisonChart result={result} />
 
         {/* Before / After Text */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
