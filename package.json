@@ -40,8 +40,7 @@
     "openai": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "recharts": "latest",
-    "wrangler": "^4.99.0"
+    "recharts": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
