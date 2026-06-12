@@ -10,6 +10,5 @@ out
 *.log
 
 # Internal handoff docs — contain real secrets, never push
-coldstart.md
 CLOUDFLARE_GUIDE.md
 .claude
