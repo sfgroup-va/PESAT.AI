@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight, Zap } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import Image from "next/image";
 import { navLinks } from "@/components/home/data";
 
 const solutionLinks = [
@@ -25,14 +26,13 @@ export function Footer({ onStartWizard }: { onStartWizard?: () => void }) {
       <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white">
-                <Zap className="h-5 w-5 fill-white" />
-              </span>
-              <span className="text-base font-semibold tracking-tight text-foreground">
-                Pesat<span className="text-foreground-subtle">.AI</span>
-              </span>
-            </div>
+            <Image
+              src="/images/Pesat.AI logo.png"
+              alt="Pesat.AI"
+              width={500}
+              height={422}
+              className="h-9 w-auto object-contain"
+            />
             <p className="mt-4 max-w-xs text-sm leading-7 text-foreground-muted">
               AI Revenue System untuk bisnis Indonesia. Ubah masalah jadi solusi AI yang nyata, terukur, dan terpakai.
             </p>

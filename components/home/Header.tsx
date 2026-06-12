@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Menu, X, Zap } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
+import Image from "next/image";
 import { ThemeToggle } from "@/components/home/ThemeToggle";
 import { navLinks } from "@/components/home/data";
 
@@ -40,13 +41,15 @@ export function Header({ onStartWizard }: { onStartWizard?: () => void }) {
         }`}
       >
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-[0_10px_24px_-10px_rgba(99,102,241,0.7)]">
-              <Zap className="h-5 w-5 fill-white" />
-            </span>
-            <span className="text-base font-semibold tracking-tight text-foreground">
-              Pesat<span className="text-foreground-subtle">.AI</span>
-            </span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/images/Pesat.AI logo.png"
+              alt="Pesat.AI"
+              width={500}
+              height={422}
+              className="h-9 w-auto object-contain"
+              priority
+            />
           </Link>
 
           <div className="hidden items-center gap-1 lg:flex">
