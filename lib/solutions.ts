@@ -1,10 +1,10 @@
-import type { ChallengeId, DetailId, PesatSolution } from "@/lib/types";
+import type { ChallengeId, DetailId, FrictionSourceId, PesatSolution } from "@/lib/types";
 
 export const CHALLENGE_LABELS: Record<ChallengeId, string> = {
-  revenue: "Omzet stagnan — lead banyak tapi closing rendah",
+  revenue: "Omzet tidak naik padahal lead ada",
   cost: "Biaya operasional membengkak tanpa sadar",
-  fraud: "Ada celah yang belum terlihat sampai rugi besar",
-  cash_stock: "Kas & stok sering 'meleset' dari prediksi",
+  fraud: "Ada celah yang baru ketahuan setelah rugi",
+  cash_stock: "Kas & stok sering meleset dari prediksi",
   reporting: "Keputusan penting selalu telat karena data belum siap",
   brand_trust: "Brand sulit ditemukan & dipercaya pelanggan baru"
 };
@@ -136,75 +136,171 @@ export type QualityQuestion = {
   options: Array<{ id: string; label: string; note?: string; emoji?: string }>;
 };
 
+export type QualityQuestionOption = QualityQuestion["options"][number];
+
 export const QUALITY_QUESTIONS: QualityQuestion[] = [
   {
-    id: "s1",
-    eyebrow: "01 / Situasi terberat",
-    title: "Dalam 90 hari terakhir, mana yang PALING sering membuat Anda menarik nafas panjang di malam hari?",
-    note: "Pilih satu yang paling mengganggu tidur Anda.",
+    id: "q1",
+    eyebrow: "01 / Diagnosa awal",
+    title: "Dalam 90 hari terakhir, di mana tim Anda paling sering kehabisan waktu atau tertinggal dari kompetitor?",
+    note: "Pilih satu yang paling sering membuat keputusan bisnis menjadi lambat atau mahal.",
     options: [
-      { id: "revenue", label: "Omzet stuck — padahal lead banyak, closing-nya tidak naik", note: "Sales cycle panjang, follow-up hilang, repeat order rendah", emoji: "📉" },
-      { id: "cost", label: "Biaya operasional membengkak tanpa sadar", note: "Admin manual, duplikasi kerja, bottleneck tidak terlihat", emoji: "💸" },
-      { id: "fraud", label: "Ada celah yang baru ketahuan setelah rugi besar", note: "Transaksi aneh, approval dilewati, data tidak sinkron", emoji: "🚨" },
-      { id: "cash_stock", label: "Kas & stok sering 'meleset' dari prediksi", note: "Modal tertahan, stockout mendadak, cashflow gelap", emoji: "📊" },
-      { id: "reporting", label: "Keputusan penting selalu telat karena data belum siap", note: "Laporan manual, meeting tanpa action, no BI dashboard", emoji: "⏱️" },
-      { id: "brand_trust", label: "Brand sulit ditemukan & dipercaya pelanggan baru", note: "Google page 2, review tidak terbaca, AI search tidak muncul", emoji: "🔍" }
+      { id: "revenue", label: "Omzet tidak naik padahal lead ada", note: "Follow-up buyar, peluang tidak tertutup, repeat order tidak terjaga", emoji: "📉" },
+      { id: "cost", label: "Biaya operasional membengkak tanpa sadar", note: "Banyak pekerjaan manual berulang yang tidak terlihat sebagai biaya", emoji: "💸" },
+      { id: "fraud", label: "Ada celah yang baru ketahuan setelah rugi", note: "Anomali terlewat, approval tidak terlacak, data tidak sinkron", emoji: "🚨" },
+      { id: "cash_stock", label: "Kas & stok sering meleset dari prediksi", note: "Keputusan reaktif, modal tertahan, stockout mendadak", emoji: "📊" },
+      { id: "reporting", label: "Keputusan penting selalu telat karena data belum siap", note: "Laporan manual, meeting tanpa action, tidak ada single source of truth", emoji: "⏱️" },
+      { id: "brand_trust", label: "Brand sulit ditemukan & dipercaya pelanggan baru", note: "Google page 2, review tidak terbaca, AI search tidak menjelaskan brand Anda", emoji: "🔍" }
     ]
   },
   {
-    id: "s2",
-    eyebrow: "02 / Metric yang paling serah MERAH",
-    title: "Jika bisnis Anda punya 'dashboard nyawa' yang update real-time, metric mana yang paling sering warna MERAH?",
-    note: "Bayangkan satu angka yang kalau hijau, bisnis Anda tenang.",
+    id: "q2",
+    eyebrow: "02 / Titik bocor terbesar",
+    title: "Jika bisnis Anda punya satu dashboard yang update real-time, angka mana yang paling sering berwarna merah?",
+    note: "Pilih metrik yang paling mengganggu tidur Anda — satu yang kalau hijau, bisnis terasa jauh lebih tenang.",
     options: [
-      { id: "follow_up", label: "Lead conversion rate", note: "Banyak chat masuk, tapi yang di-follow-up & closing sedikit", emoji: "🎯" },
-      { id: "repeat_order", label: "Repeat purchase rate", note: "Pelanggan lama jarang beli lagi, tidak ada sistem trigger", emoji: "🔄" },
-      { id: "pricing", label: "Margin per transaksi", note: "Harga sulit adjust, kompetitor lebih gesit", emoji: "💰" },
-      { id: "lead_quality", label: "Lead quality score", note: "Lead banyak tapi kualitas campur, sales buang waktu", emoji: "⭐" },
-      { id: "admin_cost", label: "Jam kerja manual per transaksi", note: "Admin terlalu banyak input manual, error sering", emoji: "⏳" },
-      { id: "manual_docs", label: "Dokumen processing time", note: "Dokumen perlu input ulang, verifikasi lambat", emoji: "📄" },
-      { id: "invoice_ap", label: "Invoice & AP turnaround", note: "Invoice/AP makan waktu, cashflow tersendat", emoji: "🧾" },
-      { id: "process_waste", label: "Process efficiency", note: "Bottleneck proses tidak terlihat, waste tersembunyi", emoji: "⚙️" },
-      { id: "transaction_anomaly", label: "Anomaly detection speed", note: "Transaksi aneh terlambat terlihat, kerugian membesar", emoji: "🔍" },
-      { id: "data_leak", label: "Data governance score", note: "Akses/data sulit diawasi, compliance risk", emoji: "🔒" },
-      { id: "approval_gap", label: "Approval compliance rate", note: "Approval rawan dilewati, tanpa audit trail", emoji: "✅" },
-      { id: "cashflow_blind", label: "Cashflow predictability", note: "Cashflow sulit diprediksi, keputusan reaktif", emoji: "💵" },
-      { id: "stockout", label: "Stock availability rate", note: "Stok habis mendadak, kehilangan sales", emoji: "📦" },
-      { id: "overstock", label: "Inventory turnover", note: "Modal tertahan di stok lambat, ROI turun", emoji: "📉" },
-      { id: "slow_reports", label: "Report generation speed", note: "Laporan telat selesai, keputusan telat", emoji: "📈" },
-      { id: "no_bi", label: "BI readiness score", note: "Belum ada BI dashboard, keputusan dalam kegelapan", emoji: "🖥️" },
-      { id: "manual_meetings", label: "Meeting action rate", note: "Meeting banyak tanpa action jelas, waktu terbuang", emoji: "🗣️" },
-      { id: "google_visibility", label: "Google ranking visibility", note: "Sulit unggul di Google, traffic organik rendah", emoji: "🌐" },
-      { id: "ai_search", label: "AI search presence", note: "Belum siap muncul di AI search, peluang hilang", emoji: "🤖" },
-      { id: "review_sentiment", label: "Review sentiment score", note: "Review dan sentimen tidak terbaca, trust rendah", emoji: "💬" }
+      { id: "follow_up", label: "Lead conversion rate rendah", note: "Banyak chat masuk, tapi sedikit yang di-follow-up sampai closing" },
+      { id: "repeat_order", label: "Repeat purchase rate jatuh", note: "Pelanggan lama jarang beli lagi, tidak ada sistem trigger otomatis" },
+      { id: "pricing", label: "Margin per transaksi menipis", note: "Harga sulit adjust, kompetitor lebih gesit, diskon tidak terukur" },
+      { id: "lead_quality", label: "Lead quality score campur", note: "Lead banyak tapi kualitas rendah, sales buang waktu banyak" },
+      { id: "admin_cost", label: "Jam kerja manual per transaksi tinggi", note: "Admin terlalu banyak input manual, error sering terjadi" },
+      { id: "manual_docs", label: "Dokumen processing time lambat", note: "Dokumen perlu input ulang, verifikasi lama, approval macet" },
+      { id: "invoice_ap", label: "Invoice & AP turnaround panjang", note: "Invoice/AP makan waktu, cashflow tersendat" },
+      { id: "process_waste", label: "Process efficiency rendah", note: "Bottleneck tidak terlihat, waste tersembunyi di tiap departemen" },
+      { id: "transaction_anomaly", label: "Anomali transaksi terlambat terdeteksi", note: "Pola mencurigakan baru ketahuan setelah kerugian membesar" },
+      { id: "data_leak", label: "Data governance lemah", note: "Akses/data sulit diawasi, compliance risk meningkat" },
+      { id: "approval_gap", label: "Approval compliance rate rendah", note: "Approval rawan dilewati, tidak ada audit trail yang kuat" },
+      { id: "cashflow_blind", label: "Cashflow predictability rendah", note: "Sulit prediksi kas, keputusan selalu reaktif" },
+      { id: "stockout", label: "Stock availability rate jatuh", note: "Stok habis mendadak, kehilangan sales berulang" },
+      { id: "overstock", label: "Inventory turnover lambat", note: "Modal tertahan di stok, ROI turun, barang expired" },
+      { id: "slow_reports", label: "Report generation speed lambat", note: "Laporan telat selesai, keputusan penting terhambat" },
+      { id: "no_bi", label: "BI readiness score rendah", note: "Belum ada dashboard, setiap tim punya versi data sendiri" },
+      { id: "manual_meetings", label: "Meeting action rate rendah", note: "Meeting banyak tanpa action jelas, waktu terbuang sia-sia" },
+      { id: "google_visibility", label: "Google ranking visibility rendah", note: "Sulit unggul di Google, traffic organik tidak bertumbuh" },
+      { id: "ai_search", label: "AI search presence lemah", note: "Brand belum siap muncul di jawaban AI seperti ChatGPT/Perplexity" },
+      { id: "review_sentiment", label: "Review sentiment score tidak terbaca", note: "Review dan komplain tidak teridentifikasi, trust tidak terjaga" }
     ]
   },
   {
-    id: "s3",
-    eyebrow: "03 / Intensitas masalah",
-    title: "Seberapa sering tim Anda 'membuat keputusan dalam kegelapan' karena datanya tidak real-time?",
-    note: "Kejujuran di sini membantu kami menentukan urgency solusi.",
+    id: "q3",
+    eyebrow: "03 / Seberapa dalam masalahnya",
+    title: "Seberapa sering masalah ini membuat tim Anda bekerja lebih keras untuk hasil yang sama?",
+    note: "Kejujuran di sini menentukan urgency dan bentuk solusi yang paling cocok.",
     options: [
-      { id: "revenue", label: "Jarang — data cukup, tapi action-nya lambat", note: "Kami punya data, tapi tidak ada yang otomasi", emoji: "🟢" },
-      { id: "hours", label: "1-2 kali seminggu — ada data tapi telat", note: "Decision maker sering 'nebak' karena report belum keluar", emoji: "🟡" },
-      { id: "risk", label: "Beberapa kali seminggu — data tidak konsisten", note: "Setiap tim punya versi data sendiri, trust rendah", emoji: "🟠" },
-      { id: "cash", label: "Hampir setiap hari — kami butuh prediksi", note: "Keputusan penting selalu terburu-buru dan reaktif", emoji: "🔴" },
-      { id: "trust", label: "Setiap hari — kami benar-benar butuh co-pilot", note: "Bisnis sudah besar, tapi operasional masih manual", emoji: "🔥" }
+      { id: "mild", label: "Jarang — maksimal 1-2 kali sebulan", note: "Masih bisa ditangani manual, tapi mulai mengganggu skalabilitas", emoji: "🟢" },
+      { id: "weekly", label: "1-2 kali seminggu", note: "Ada proses yang seharusnya otomatis, tapi masih dikerjakan manual", emoji: "🟡" },
+      { id: "often", label: "Hampir setiap hari", note: "Tim sudah sibuk mengejar operasional, bukan fokus pada pertumbuhan", emoji: "🟠" },
+      { id: "critical", label: "Setiap hari, dan sudah menghambat pertumbuhan", note: "Keputusan penting tertunda, peluang hilang, biaya membengkak", emoji: "🔴" }
     ]
   },
   {
-    id: "s4",
-    eyebrow: "04 / Prioritas AI",
-    title: "Jika Anda punya 'Co-pilot AI' yang bekerja 24/7, tugas PERTAMA apa yang Anda suruh dia tangani ESOK HARI?",
-    note: "Ini membantu kami menentukan use case dengan ROI tercepat untuk Anda.",
+    id: "q4",
+    eyebrow: "04 / Akar masalah",
+    title: "Mana yang PALING banyak menghabiskan waktu tim Anda saat ini?",
+    note: "Pilih satu sumber gesekan yang paling dominan. Ini membantu kami menemukan quick win tercepat.",
     options: [
-      { id: "dfy", label: "Follow-up & closing otomatis", note: "AI yang follow-up lead, jadwalkan meeting, & naikkan conversion", emoji: "🤝" },
-      { id: "diy", label: "Prediksi cashflow & stok", note: "AI yang prediksi kebutuhan kas & stok sebelum habis", emoji: "📊" },
-      { id: "hybrid", label: "Deteksi anomali & fraud", note: "AI yang pantau transaksi real-time & flag yang mencurigakan", emoji: "🛡️" },
-      { id: "starting", label: "Report & dashboard otomatis", note: "AI yang buat laporan harian & KPI dashboard tanpa manual", emoji: "📈" }
+      { id: "duplicate_data", label: "Input data berulang di banyak tempat", note: "Contoh: data WhatsApp diinput ulang ke spreadsheet, invoice ke sistem lain", emoji: "🔄" },
+      { id: "manual_reports", label: "Membuat laporan manual", note: "Data dari banyak sumber digabungkan dengan copy-paste setiap periode", emoji: "📑" },
+      { id: "delayed_response", label: "Follow-up & response lambat", note: "Tim tidak sempat membalas cepat, peluang hilang ke kompetitor", emoji: "⏳" },
+      { id: "human_error", label: "Kesalahan manusia yang berulang", note: "Salah input, salah hitung, salah file — memakan waktu perbaikan", emoji: "⚠️" },
+      { id: "approval_bottleneck", label: "Approval macet atau tidak terlacak", note: "Keputusan tertahan karena menunggu orang, tanpa visibility", emoji: "🚧" },
+      { id: "knowledge_silo", label: "Pengetahuan hanya ada di kepala karyawan", note: "SOP tidak tertulis, onboarding lama, risiko jika karyawan keluar", emoji: "🧠" }
     ]
+  },
+  {
+    id: "q5",
+    eyebrow: "05 / Cara kerja sama",
+    title: "Kalau kami menyiapkan solusi AI untuk tim Anda, model kerja sama mana yang paling realistis saat ini?",
+    note: "Ini menentukan kecepatan implementasi dan level keterlibatan tim Anda.",
+    options: [
+      { id: "dfy", label: "Pesat.AI jalankan penuh", note: "Kami butuh hasil cepat, tim fokus pada bisnis inti", emoji: "🚀" },
+      { id: "hybrid", label: "Pesat.AI setup, tim internal lanjutkan", note: "Tim ingin belajar sambil jalan agar bisa mandiri", emoji: "🤝" },
+      { id: "diy", label: "Tim internal eksekusi dengan blueprint", note: "Kami punya kapasitas teknis, butuh arsitektur & pendampingan", emoji: "🛠️" },
+      { id: "starting", label: "Mulai dari pilot kecil dulu", note: "Kami baru mulai dengan AI, ingin bukti dampak dulu sebelum perluas", emoji: "🧪" }
+    ]
+  },
+  {
+    id: "q6",
+    eyebrow: "06 / Konteks tambahan (opsional)",
+    title: "Apakah ada tantangan operasional atau pekerjaan berulang yang ingin Anda ceritakan lebih detail?",
+    note: "Semakin spesifik, semakin tajam diagnosis dan rekomendasi yang kami susun.",
+    options: []
   }
 ];
+
+export const FRICTION_SOURCES: Record<FrictionSourceId, { label: string; note: string }> = {
+  duplicate_data: { label: "Input data berulang di banyak tempat", note: "Data WhatsApp diinput ulang ke spreadsheet, invoice ke sistem lain" },
+  manual_reports: { label: "Membuat laporan manual", note: "Data dari banyak sumber digabungkan dengan copy-paste setiap periode" },
+  delayed_response: { label: "Follow-up & response lambat", note: "Tim tidak sempat membalas cepat, peluang hilang ke kompetitor" },
+  human_error: { label: "Kesalahan manusia yang berulang", note: "Salah input, salah hitung, salah file — memakan waktu perbaikan" },
+  approval_bottleneck: { label: "Approval macet atau tidak terlacak", note: "Keputusan tertahan karena menunggu orang, tanpa visibility" },
+  knowledge_silo: { label: "Pengetahuan hanya ada di kepala karyawan", note: "SOP tidak tertulis, onboarding lama, risiko jika karyawan keluar" }
+};
+
+export const LOADING_INSIGHTS = [
+  {
+    id: "manual_cost",
+    text: "Tim dengan proses manual tinggi rata-rata kehilangan puluhan jam kerja setiap bulan — bukan karena tim malas, melainkan karena sistemnya belum terotomatisasi.",
+    source: "McKinsey Global Institute",
+    durationMs: 5500
+  },
+  {
+    id: "hidden_cost",
+    text: "Sebagian besar perusahaan tidak menyadari biaya tersembunyi dari pekerjaan berulang: duplikasi input, koreksi error, dan waktu menunggu approval.",
+    source: "Deloitte Digital Transformation",
+    durationMs: 6000
+  },
+  {
+    id: "decision_speed",
+    text: "Automasi bukan hanya menghemat biaya. Perusahaan yang bisa mengambil keputusan berbasis data real-time bergerak 5-10x lebih cepat dari kompetitor yang masih menunggu laporan manual.",
+    source: "MIT Sloan Management Review",
+    durationMs: 6000
+  },
+  {
+    id: "follow_up_leak",
+    text: "Rata-rata 50-70% lead tidak di-follow-up lebih dari dua kali. Padahal penjualan sering terjadi bukan di lead pertama, melainkan di follow-up ketiga atau keempat.",
+    source: "HubSpot Sales Research",
+    durationMs: 6000
+  },
+  {
+    id: "knowledge_risk",
+    text: "Pengetahuan yang hanya tinggal di kepala karyawan adalah aset tak terlihat yang paling berisiko. Saat mereka keluar, proses bisnis bisa terhenti berbulan-bulan.",
+    source: "IBM Knowledge Retention Study",
+    durationMs: 5500
+  },
+  {
+    id: "ai_decision",
+    text: "AI terbaik bukan pengganti manusia, melainkan co-pilot operasional: menangkap sinyal yang terlewat, mengingatkan prioritas, dan memberi tim lebih banyak waktu untuk berpikir strategis.",
+    source: "Pesat.AI Operational Framework",
+    durationMs: 5500
+  },
+  {
+    id: "fraud_pattern",
+    text: "Fraud jarang terlihat sebagai satu kejadian besar. Polanya biasanya muncul dari anomali kecil yang tidak dipantau — hingga akhirnya kerugiannya terlalu besar untuk diabaikan.",
+    source: "ACFE Global Fraud Study",
+    durationMs: 6000
+  },
+  {
+    id: "cashflow_prediction",
+    text: "Perusahaan yang memprediksi cashflow lebih awal bisa mengurangi modal tertahan hingga 20-30%, karena mereka membeli stok pada waktu yang tepat, bukan karena panik.",
+    source: "McKinsey Supply Chain Analytics",
+    durationMs: 6000
+  },
+  {
+    id: "reporting_momentum",
+    text: "Laporan yang lambat membuat keputusan penting diambil saat momentum sudah lewat. Bisnis yang cepat bukan yang punya data paling banyak, melainkan yang bisa bertindak paling cepat.",
+    source: "Gartner Analytics & BI Guidance",
+    durationMs: 6000
+  },
+  {
+    id: "brand_trust",
+    text: "Trust sekarang dibentuk di Google, review, konten, dan jawaban AI search — sebelum pelanggan pernah bicara dengan sales Anda.",
+    source: "Google Search Central & AI Search Behavior",
+    durationMs: 5500
+  }
+];
+
+export type LoadingInsight = (typeof LOADING_INSIGHTS)[number];
 
 // Map quality question S2 option IDs to ChallengeId for backwards compatibility
 export const DETAIL_TO_CHALLENGE: Record<DetailId, ChallengeId> = {

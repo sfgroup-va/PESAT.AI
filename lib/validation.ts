@@ -1,4 +1,4 @@
-import type { AdoptionId, ChallengeId, ContactData, DetailId, ImpactId, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, ContactData, DetailId, FrictionSourceId, ImpactId, WizardAnswers } from "@/lib/types";
 
 const challengeIds = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"] as const satisfies readonly ChallengeId[];
 const detailIds = [
@@ -23,14 +23,23 @@ const detailIds = [
   "ai_search",
   "review_sentiment"
 ] as const satisfies readonly DetailId[];
-const impactIds = ["revenue", "hours", "risk", "cash", "trust"] as const satisfies readonly ImpactId[];
+const impactIds = ["mild", "weekly", "often", "critical"] as const satisfies readonly ImpactId[];
+const frictionSourceIds = [
+  "duplicate_data",
+  "manual_reports",
+  "delayed_response",
+  "human_error",
+  "approval_bottleneck",
+  "knowledge_silo"
+] as const satisfies readonly FrictionSourceId[];
 const adoptionIds = ["dfy", "diy", "hybrid", "starting"] as const satisfies readonly AdoptionId[];
 const eventTypes = ["screen_view", "click"] as const;
-const eventScreens = ["hero", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "result", "admin"] as const;
+const eventScreens = ["hero", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate", "admin"] as const;
 
 const challengeSet = new Set<string>(challengeIds);
 const detailSet = new Set<string>(detailIds);
 const impactSet = new Set<string>(impactIds);
+const frictionSourceSet = new Set<string>(frictionSourceIds);
 const adoptionSet = new Set<string>(adoptionIds);
 const eventTypeSet = new Set<string>(eventTypes);
 const eventScreenSet = new Set<string>(eventScreens);
@@ -79,12 +88,15 @@ function uniqueAllowed<T extends string>(value: unknown, allowed: Set<string>, m
 export function sanitizeAnswers(value: unknown): WizardAnswers {
   const input = typeof value === "object" && value ? (value as Record<string, unknown>) : {};
   const impactLevel = typeof input.impactLevel === "string" && impactSet.has(input.impactLevel) ? (input.impactLevel as ImpactId) : "";
+  const frictionSource =
+    typeof input.frictionSource === "string" && frictionSourceSet.has(input.frictionSource) ? (input.frictionSource as FrictionSourceId) : "";
   const adoptionStyle = typeof input.adoptionStyle === "string" && adoptionSet.has(input.adoptionStyle) ? (input.adoptionStyle as AdoptionId) : "";
 
   return {
     mainChallenges: uniqueAllowed<ChallengeId>(input.mainChallenges, challengeSet, 2),
     detailChallenges: uniqueAllowed<DetailId>(input.detailChallenges, detailSet, 8),
     impactLevel,
+    frictionSource,
     adoptionStyle,
     detailNote: sanitizeWordLimitedText(input.detailNote, 1000)
   };
@@ -95,6 +107,7 @@ export function validateCompleteAnswers(answers: WizardAnswers) {
     answers.mainChallenges.length === 0 ? "mainChallenges" : "",
     answers.detailChallenges.length === 0 ? "detailChallenges" : "",
     !answers.impactLevel ? "impactLevel" : "",
+    !answers.frictionSource ? "frictionSource" : "",
     !answers.adoptionStyle ? "adoptionStyle" : ""
   ].filter(Boolean);
 

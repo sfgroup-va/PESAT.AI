@@ -22,13 +22,21 @@ export type DetailId =
   | "ai_search"
   | "review_sentiment";
 
-export type ImpactId = "revenue" | "hours" | "risk" | "cash" | "trust";
+export type ImpactId = "mild" | "weekly" | "often" | "critical";
+export type FrictionSourceId =
+  | "duplicate_data"
+  | "manual_reports"
+  | "delayed_response"
+  | "human_error"
+  | "approval_bottleneck"
+  | "knowledge_silo";
 export type AdoptionId = "dfy" | "diy" | "hybrid" | "starting";
 
 export type WizardAnswers = {
   mainChallenges: ChallengeId[];
   detailChallenges: DetailId[];
   impactLevel: ImpactId | "";
+  frictionSource: FrictionSourceId | "";
   adoptionStyle: AdoptionId | "";
   detailNote?: string;
 };
@@ -94,6 +102,38 @@ export type DiagnosisPack = {
   firstStep: string;
 };
 
+export type EfficiencyMetric = {
+  label: string;
+  before: string;
+  after: string;
+  impact: string;
+  impactType: "positive" | "negative";
+  description: string;
+};
+
+export type HiddenCost = {
+  id: string;
+  label: string;
+  monthlyEstimate: number;
+  description: string;
+};
+
+export type Finding = {
+  title: string;
+  finding: string;
+  impact: string;
+  risk: string;
+  solution: string;
+  potential: string;
+};
+
+export type BeforeAfterMetric = {
+  label: string;
+  beforeValue: number;
+  afterValue: number;
+  unit: "%" | "Rp" | "count";
+};
+
 export type GeneratedResult = {
   sessionId: string;
   headline: string;
@@ -113,6 +153,10 @@ export type GeneratedResult = {
   solutionCards?: SolutionCard[];
   impactRanges: ImpactRanges;
   chart: Array<{ name: string; before: number; after: number }>;
+  efficiencyMetrics: EfficiencyMetric[];
+  hiddenCosts: HiddenCost[];
+  findings: Finding[];
+  beforeAfterMetrics: BeforeAfterMetric[];
   persisted?: boolean;
   llmFallback?: boolean;
 };

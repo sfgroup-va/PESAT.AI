@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, X, Sparkles, TrendingUp, Shield, Clock, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, X, Sparkles, TrendingUp, Shield, Clock, Zap, Search, AlertTriangle, TrendingDown, Brain } from "lucide-react";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
 import { CtaBand } from "@/components/home/CtaBand";
@@ -16,32 +16,35 @@ import { Testimonial } from "@/components/home/sections/Testimonial";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { CHALLENGE_LABELS, TRANSITION_FACTS, QUALITY_QUESTIONS, DETAIL_TO_CHALLENGE } from "@/lib/solutions";
+import { CHALLENGE_LABELS, TRANSITION_FACTS, QUALITY_QUESTIONS, DETAIL_TO_CHALLENGE, FRICTION_SOURCES, LOADING_INSIGHTS } from "@/lib/solutions";
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
-import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, FrictionSourceId, WizardAnswers } from "@/lib/types";
 
 const initialAnswers: WizardAnswers = {
   mainChallenges: [],
   detailChallenges: [],
   impactLevel: "",
+  frictionSource: "",
   adoptionStyle: ""
 };
 
-type Step = "hero" | "s1" | "s2" | "s3" | "s4" | "s5" | "s6" | "s7" | "s8";
+type Step = "hero" | "q1" | "q2" | "q3" | "q4" | "q5" | "q6" | "review" | "loading" | "result" | "leadGate";
 
-const STEP_ORDER: Step[] = ["hero", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"];
+const STEP_ORDER: Step[] = ["hero", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate"];
 
 const STEP_PROGRESS: Record<Step, number> = {
   hero: 0,
-  s1: 15,
-  s2: 35,
-  s3: 55,
-  s4: 75,
-  s5: 85,
-  s6: 95,
-  s7: 100,
-  s8: 100
+  q1: 12,
+  q2: 25,
+  q3: 38,
+  q4: 50,
+  q5: 62,
+  q6: 75,
+  review: 85,
+  loading: 90,
+  result: 100,
+  leadGate: 100
 };
 
 const DETAIL_NOTE_WORD_LIMIT = 1000;
@@ -78,6 +81,45 @@ const OPTIONAL_DISCOVERY_QUESTIONS: Array<{
   }
 ];
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function useLoadingSequence(insights: typeof LOADING_INSIGHTS, onComplete: () => void) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    if (!insights.length) {
+      onComplete();
+      return;
+    }
+    let cancelled = false;
+
+    const run = async () => {
+      for (let i = 0; i < insights.length; i++) {
+        if (cancelled) return;
+        setActiveIndex(i);
+        setIsVisible(true);
+        await wait(insights[i].durationMs);
+
+        if (i < insights.length - 1) {
+          setIsVisible(false);
+          await wait(600);
+        }
+      }
+      if (!cancelled) onComplete();
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [insights, onComplete]);
+
+  return { activeInsight: insights[activeIndex], isVisible };
+}
+
 export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   const cfg = landing ?? DEFAULT_LANDING_CONFIG;
   const [step, setStep] = useState<Step>("hero");
@@ -91,7 +133,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   const [resultError, setResultError] = useState("");
   const [discoveryError, setDiscoveryError] = useState("");
   const [discoveryNotice, setDiscoveryNotice] = useState("");
-  const [loadingFact, setLoadingFact] = useState<{ text: string; source: string } | null>(null);
+  const [transitionFact, setTransitionFact] = useState<{ text: string; source: string } | null>(null);
 
   const detailNoteWordCount = useMemo(() => countWords(detailNote), [detailNote]);
 
@@ -115,8 +157,8 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     }
   }, [step, track]);
 
-  // Name + a usable WhatsApp number are required before generating the result.
-  const canGenerate = Boolean(contact.name && contact.name.trim()) && hasUsableWhatsAppNumber(contact.wa || "");
+  // Contact is only required for the lead gate discovery submission, not for generating the result.
+  const canSubmitDiscovery = Boolean(contact.name && contact.name.trim()) && hasUsableWhatsAppNumber(contact.wa || "");
 
   async function saveSession(nextAnswers = answers, nextContact = contact, completed = false) {
     const activeSessionId = sessionId || crypto.randomUUID();
@@ -134,7 +176,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   async function startWizard() {
     const activeSessionId = await saveSession();
     await track("click", "hero", { cta: "Buktikan Sendiri dalam 5 Menit" }, activeSessionId);
-    setStep("s1");
+    setStep("q1");
   }
 
   function selectChallenge(id: ChallengeId) {
@@ -152,11 +194,18 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     }));
   }
 
+  function selectFrictionSource(id: FrictionSourceId) {
+    setAnswers((current) => ({
+      ...current,
+      frictionSource: current.frictionSource === id ? "" : id
+    }));
+  }
+
   function advanceWithFact(currentStep: Step, nextStep: Step) {
-    const isFirstTransition = currentStep === "s1";
-    setLoadingFact({ text: isFirstTransition ? fact.first : fact.second, source: fact.source });
+    const isFirstTransition = currentStep === "q1";
+    setTransitionFact({ text: isFirstTransition ? fact.first : fact.second, source: fact.source });
     setTimeout(() => {
-      setLoadingFact(null);
+      setTransitionFact(null);
       setStep(nextStep);
     }, 2400);
   }
@@ -172,10 +221,6 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   }
 
   async function generateResult() {
-    if (!canGenerate) {
-      setResultError("Mohon isi Nama Anda dan Nomor WhatsApp yang valid agar hasil bisa disusun.");
-      return;
-    }
     setIsLoading(true);
     setResultError("");
     const nextAnswers = { ...answers, detailNote };
@@ -195,11 +240,11 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
         throw new Error("Format hasil belum valid.");
       }
       setResult(data);
-      setStep("s7");
+      setStep("result");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Hasil belum bisa dibuat.";
       setResultError(`${message} Silakan coba lagi.`);
-      void track("click", "s6", { error: "result_generation_failed", message });
+      void track("click", "loading", { error: "result_generation_failed", message });
     } finally {
       setIsLoading(false);
     }
@@ -226,12 +271,16 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     const shareUrl = `${window.location.origin}/result/${activeResult.sessionId}`;
     if (activeResult.persisted) {
       await navigator.clipboard.writeText(shareUrl);
-      await track("click", "s7", { cta: "Copy Link" }, activeResult.sessionId);
+      await track("click", "result", { cta: "Copy Link" }, activeResult.sessionId);
     }
   }
 
   async function submitDiscovery(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canSubmitDiscovery) {
+      setDiscoveryError("Mohon isi Nama Anda dan Nomor WhatsApp yang valid untuk melanjutkan.");
+      return;
+    }
     setIsLoading(true);
     setDiscoveryError("");
     setDiscoveryNotice("");
@@ -259,12 +308,12 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       if (!data.persisted) {
         setDiscoveryNotice("Discovery request belum tersimpan ke DB karena Supabase belum tersambung. WhatsApp tetap dibuka.");
       }
-      await track("click", "s8", { cta: "Submit Discovery Call", persisted: Boolean(data.persisted) }, result?.sessionId || sessionId);
+      await track("click", "leadGate", { cta: "Submit Discovery Call", persisted: Boolean(data.persisted) }, result?.sessionId || sessionId);
       window.location.href = data.whatsappUrl;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Discovery call belum bisa diproses.";
       setDiscoveryError(`${message} Periksa data dan coba lagi.`);
-      void track("click", "s8", { error: "discovery_request_failed", message }, result?.sessionId || sessionId);
+      void track("click", "leadGate", { error: "discovery_request_failed", message }, result?.sessionId || sessionId);
     } finally {
       setIsLoading(false);
     }
@@ -274,6 +323,14 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     void track("click", "hero", { cta: "schedule_discovery" });
     void startWizard();
   };
+
+  function goToReview() {
+    setStep("review");
+  }
+
+  function startLoadingSequence() {
+    setStep("loading");
+  }
 
   const progress = STEP_PROGRESS[step];
 
@@ -296,11 +353,11 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
         </>
       ) : (
         <section className="fixed inset-0 z-20 overflow-y-auto bg-surface">
-          <div className={`mx-auto flex min-h-screen w-full flex-col px-5 py-5 sm:px-8 ${step === "s7" ? "max-w-5xl" : "max-w-3xl"}`}>
+          <div className={`mx-auto flex min-h-screen w-full flex-col px-5 py-5 sm:px-8 ${step === "result" ? "max-w-5xl" : "max-w-3xl"}`}>
             {/* Header */}
             <div className="mb-6 flex items-center justify-between">
               <button
-                onClick={() => (step === "s1" ? setStep("hero") : setStep(previousStep(step)))}
+                onClick={() => (step === "q1" ? setStep("hero") : setStep(previousStep(step)))}
                 className="grid h-11 w-11 place-items-center rounded-full border border-neutral-200 text-neutral-900 transition hover:bg-neutral-50"
                 aria-label="Kembali"
               >
@@ -314,23 +371,18 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
 
             {/* Progress Bar */}
             <div className="mb-8 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
-              <div
-                className="h-full rounded-full bg-neutral-950 transition-all duration-700 ease-out"
-                style={{ width: `${progress}%` }}
-              />
+              <div className="h-full rounded-full bg-neutral-950 transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
             </div>
 
-            {/* Loading Fact Overlay */}
-            {loadingFact && (
+            {/* Transition Fact Overlay */}
+            {transitionFact && (
               <div className="flex flex-1 flex-col items-center justify-center pb-8 text-center">
                 <div className="mb-8 inline-flex h-16 w-16 animate-pulse items-center justify-center rounded-2xl bg-neutral-950 text-white">
                   <Sparkles className="h-8 w-8" />
                 </div>
                 <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Insight singkat</p>
-                <h2 className="max-w-xl text-3xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-4xl">
-                  {loadingFact.text}
-                </h2>
-                <p className="mt-6 text-sm font-medium text-neutral-500">Sumber: {loadingFact.source}</p>
+                <h2 className="max-w-xl text-3xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-4xl">{transitionFact.text}</h2>
+                <p className="mt-6 text-sm font-medium text-neutral-500">Sumber: {transitionFact.source}</p>
                 <div className="mt-8 flex gap-1">
                   {[0, 1, 2].map((i) => (
                     <div key={i} className="h-2 w-2 animate-bounce rounded-full bg-neutral-400" style={{ animationDelay: `${i * 150}ms` }} />
@@ -339,15 +391,11 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
               </div>
             )}
 
-            {!loadingFact && (
+            {!transitionFact && (
               <>
-                {/* S1: Quality Question 1 — Main Challenge */}
-                {step === "s1" && (
-                  <QualityQuestionShell
-                    eyebrow={QUALITY_QUESTIONS[0].eyebrow}
-                    title={QUALITY_QUESTIONS[0].title}
-                    note={QUALITY_QUESTIONS[0].note}
-                  >
+                {/* Q1: Main Challenge */}
+                {step === "q1" && (
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[0].eyebrow} title={QUALITY_QUESTIONS[0].title} note={QUALITY_QUESTIONS[0].note}>
                     <div className="grid gap-3">
                       {QUALITY_QUESTIONS[0].options.map((option) => (
                         <QualityChoiceButton
@@ -360,27 +408,16 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         />
                       ))}
                     </div>
-                    <PrimaryAction
-                      disabled={!answers.mainChallenges[0]}
-                      onClick={() => advanceWithFact("s1", "s2")}
-                      label="Lanjut"
-                    />
+                    <PrimaryAction disabled={!answers.mainChallenges[0]} onClick={() => advanceWithFact("q1", "q2")} label="Lanjut" />
                   </QualityQuestionShell>
                 )}
 
-                {/* S2: Quality Question 2 — Detail Challenge */}
-                {step === "s2" && (
-                  <QualityQuestionShell
-                    eyebrow={QUALITY_QUESTIONS[1].eyebrow}
-                    title={QUALITY_QUESTIONS[1].title}
-                    note={QUALITY_QUESTIONS[1].note}
-                  >
+                {/* Q2: Detail Challenge */}
+                {step === "q2" && (
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[1].eyebrow} title={QUALITY_QUESTIONS[1].title} note={QUALITY_QUESTIONS[1].note}>
                     <div className="grid gap-3">
                       {QUALITY_QUESTIONS[1].options
-                        .filter((option) => {
-                          const challengeForDetail = DETAIL_TO_CHALLENGE[option.id as DetailId];
-                          return challengeForDetail === answers.mainChallenges[0];
-                        })
+                        .filter((option) => DETAIL_TO_CHALLENGE[option.id as DetailId] === answers.mainChallenges[0])
                         .map((option) => (
                           <QualityChoiceButton
                             key={option.id}
@@ -392,21 +429,13 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                           />
                         ))}
                     </div>
-                    <PrimaryAction
-                      disabled={!answers.detailChallenges[0]}
-                      onClick={() => advanceWithFact("s2", "s3")}
-                      label="Lanjut"
-                    />
+                    <PrimaryAction disabled={!answers.detailChallenges[0]} onClick={() => advanceWithFact("q2", "q3")} label="Lanjut" />
                   </QualityQuestionShell>
                 )}
 
-                {/* S3: Quality Question 3 — Impact Level */}
-                {step === "s3" && (
-                  <QualityQuestionShell
-                    eyebrow={QUALITY_QUESTIONS[2].eyebrow}
-                    title={QUALITY_QUESTIONS[2].title}
-                    note={QUALITY_QUESTIONS[2].note}
-                  >
+                {/* Q3: Impact Level */}
+                {step === "q3" && (
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[2].eyebrow} title={QUALITY_QUESTIONS[2].title} note={QUALITY_QUESTIONS[2].note}>
                     <div className="grid gap-3">
                       {QUALITY_QUESTIONS[2].options.map((option) => (
                         <QualityChoiceButton
@@ -419,23 +448,34 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         />
                       ))}
                     </div>
-                    <PrimaryAction
-                      disabled={!answers.impactLevel}
-                      onClick={() => setStep("s4")}
-                      label="Lanjut"
-                    />
+                    <PrimaryAction disabled={!answers.impactLevel} onClick={() => setStep("q4")} label="Lanjut" />
                   </QualityQuestionShell>
                 )}
 
-                {/* S4: Quality Question 4 — Adoption Style */}
-                {step === "s4" && (
-                  <QualityQuestionShell
-                    eyebrow={QUALITY_QUESTIONS[3].eyebrow}
-                    title={QUALITY_QUESTIONS[3].title}
-                    note={QUALITY_QUESTIONS[3].note}
-                  >
+                {/* Q4: Friction Source */}
+                {step === "q4" && (
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[3].eyebrow} title={QUALITY_QUESTIONS[3].title} note={QUALITY_QUESTIONS[3].note}>
                     <div className="grid gap-3">
-                      {QUALITY_QUESTIONS[3].options.map((option) => (
+                      {Object.entries(FRICTION_SOURCES).map(([id, source]) => (
+                        <QualityChoiceButton
+                          key={id}
+                          active={answers.frictionSource === id}
+                          onClick={() => selectFrictionSource(id as FrictionSourceId)}
+                          label={source.label}
+                          note={source.note}
+                          emoji={frictionEmoji(id as FrictionSourceId)}
+                        />
+                      ))}
+                    </div>
+                    <PrimaryAction disabled={!answers.frictionSource} onClick={() => setStep("q5")} label="Lanjut" />
+                  </QualityQuestionShell>
+                )}
+
+                {/* Q5: Adoption Style */}
+                {step === "q5" && (
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[4].eyebrow} title={QUALITY_QUESTIONS[4].title} note={QUALITY_QUESTIONS[4].note}>
+                    <div className="grid gap-3">
+                      {QUALITY_QUESTIONS[4].options.map((option) => (
                         <QualityChoiceButton
                           key={option.id}
                           active={answers.adoptionStyle === option.id}
@@ -446,86 +486,61 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         />
                       ))}
                     </div>
-                    <PrimaryAction
-                      disabled={!answers.adoptionStyle}
-                      onClick={() => setStep("s5")}
-                      label="Review jawaban"
-                    />
+                    <PrimaryAction disabled={!answers.adoptionStyle} onClick={() => setStep("q6")} label="Lanjut" />
                   </QualityQuestionShell>
                 )}
 
-                {/* S5: Review */}
-                {step === "s5" && (
-                  <QualityQuestionShell eyebrow="05 / Review" title="Cek sebentar. Apakah ini sudah pas?">
-                    <ReviewRow
-                      label="Situasi terberat"
-                      value={CHALLENGE_LABELS[answers.mainChallenges[0] || "revenue"]}
-                      onEdit={() => setStep("s1")}
-                    />
-                    <ReviewRow
-                      label="Metric merah"
-                      value={
-                        QUALITY_QUESTIONS[1].options.find((o) => o.id === answers.detailChallenges[0])?.label || "-"
-                      }
-                      onEdit={() => setStep("s2")}
-                    />
-                    <ReviewRow
-                      label="Intensitas masalah"
-                      value={QUALITY_QUESTIONS[2].options.find((o) => o.id === answers.impactLevel)?.label || "-"}
-                      onEdit={() => setStep("s3")}
-                    />
-                    <ReviewRow
-                      label="Prioritas AI"
-                      value={QUALITY_QUESTIONS[3].options.find((o) => o.id === answers.adoptionStyle)?.label || "-"}
-                      onEdit={() => setStep("s4")}
-                    />
-                    <PrimaryAction onClick={() => setStep("s6")} label="Sudah Pas" />
-                  </QualityQuestionShell>
-                )}
-
-                {/* S6: Contact */}
-                {step === "s6" && (
-                  <QualityQuestionShell
-                    eyebrow="06 / Data Anda"
-                    title="Ke mana hasil & rencana ini kami kirim?"
-                    note="Nama dan WhatsApp wajib agar kami bisa menyusun hasil dan mengirim rincian rencananya ke Anda."
-                  >
-                    <ContactFields contact={contact} setContact={setContact} />
-                    <label className="mt-4 block">
-                      <span className="mb-2 block text-sm font-semibold text-neutral-500">
-                        Ceritakan tantangan Anda (opsional, tapi membuat hasil jauh lebih spesifik)
-                      </span>
+                {/* Q6: Optional Detail Note */}
+                {step === "q6" && (
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[5].eyebrow} title={QUALITY_QUESTIONS[5].title} note={QUALITY_QUESTIONS[5].note}>
+                    <label className="block">
                       <textarea
                         value={detailNote}
                         onChange={(event) => handleDetailNoteChange(event.target.value)}
-                        rows={4}
+                        rows={5}
                         className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
-                        placeholder="Contoh: penjualan banyak lewat WhatsApp, tapi follow-up sering telat dan pelanggan lama jarang beli lagi..."
+                        placeholder="Contoh: tim kami masih input data manual dari WhatsApp ke spreadsheet setiap hari, sales sering telat follow-up lead, dan laporan mingguan baru jadi hari Selasa padahal meeting direksi hari Senin pagi..."
                       />
                       <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
-                        <span>Semakin detail konteks Anda, semakin spesifik hasil dan rencana yang kami susun.</span>
+                        <span>Semakin spesifik, semakin tajam diagnosis dan rekomendasi yang kami susun.</span>
                         <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
                       </div>
                     </label>
-                    <PrimaryAction
-                      onClick={generateResult}
-                      label={isLoading ? "Menyusun hasil & rencana..." : "Susun Hasil & Rencana Saya"}
-                      disabled={isLoading || !canGenerate}
-                      loading={isLoading}
-                    />
-                    {!canGenerate ? (
-                      <p className="mt-3 text-xs text-neutral-400">Isi Nama Anda dan Nomor WhatsApp yang valid untuk melanjutkan.</p>
-                    ) : null}
-                    {resultError ? (
-                      <p className="mt-4 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold leading-6 text-red-700">
-                        {resultError}
-                      </p>
-                    ) : null}
+                    <PrimaryAction onClick={goToReview} label="Lanjut ke Review" />
                   </QualityQuestionShell>
                 )}
 
-                {/* S7: Result */}
-                {step === "s7" && result && (
+                {/* Review */}
+                {step === "review" && (
+                  <QualityQuestionShell eyebrow="07 / Review" title="Cek sebentar. Apakah ini sudah pas?">
+                    <ReviewRow label="Situasi terberat" value={CHALLENGE_LABELS[answers.mainChallenges[0] || "revenue"]} onEdit={() => setStep("q1")} />
+                    <ReviewRow
+                      label="Titik bocor terbesar"
+                      value={QUALITY_QUESTIONS[1].options.find((o) => o.id === answers.detailChallenges[0])?.label || "-"}
+                      onEdit={() => setStep("q2")}
+                    />
+                    <ReviewRow label="Intensitas masalah" value={QUALITY_QUESTIONS[2].options.find((o) => o.id === answers.impactLevel)?.label || "-"} onEdit={() => setStep("q3")} />
+                    <ReviewRow label="Sumber gesekan terbesar" value={answers.frictionSource ? FRICTION_SOURCES[answers.frictionSource].label : "-"} onEdit={() => setStep("q4")} />
+                    <ReviewRow label="Cara kerja sama" value={QUALITY_QUESTIONS[4].options.find((o) => o.id === answers.adoptionStyle)?.label || "-"} onEdit={() => setStep("q5")} />
+                    <ReviewRow label="Konteks tambahan" value={detailNote ? `${detailNote.slice(0, 60)}${detailNote.length > 60 ? "..." : ""}` : "-"} onEdit={() => setStep("q6")} />
+                    <PrimaryAction onClick={startLoadingSequence} label="Sudah Pas — Susun Diagnosis" />
+                  </QualityQuestionShell>
+                )}
+
+                {/* Loading Sequence */}
+                {step === "loading" && (
+                  <>
+                    <LoadingSequence onComplete={generateResult} />
+                    {resultError ? (
+                      <p className="mt-6 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-center text-sm font-semibold leading-6 text-red-700">
+                        {resultError}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+
+                {/* Result */}
+                {step === "result" && result && (
                   <div className="pb-10">
                     <ResultPanel
                       result={result}
@@ -537,21 +552,35 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                       onDetailNoteBlur={saveResultDetailNote}
                       onShare={() => copyResultLink(result)}
                       onPdf={async () => {
-                        await track("click", "s7", { cta: "Export PDF" }, result.sessionId);
+                        await track("click", "result", { cta: "Export PDF" }, result.sessionId);
                         await downloadPdf();
                       }}
                       onDiscovery={async () => {
                         await saveResultDetailNote(detailNote);
-                        void track("click", "s7", { cta: "Discovery Call" }, result.sessionId);
-                        setStep("s8");
+                        void track("click", "result", { cta: "Discovery Call" }, result.sessionId);
+                        setStep("leadGate");
                       }}
                     />
                   </div>
                 )}
 
-                {/* S8: Discovery */}
-                {step === "s8" && result && (
-                  <QualityQuestionShell eyebrow="08 / Discovery call" title="Diskusikan solusi khusus untuk bisnis dan budget Anda.">
+                {/* Lead Gate */}
+                {step === "leadGate" && result && (
+                  <QualityQuestionShell eyebrow="11 / Simpan Laporan Lengkap" title="Dapatkan PDF + roadmap + strategy call 30 menit">
+                    <div className="mb-6 rounded-[1.35rem] border border-neutral-200 bg-neutral-50 p-5">
+                      <p className="text-sm font-semibold text-neutral-500">Nilai yang Anda dapatkan:</p>
+                      <ul className="mt-3 space-y-2 text-sm font-medium text-neutral-700">
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald-600" /> PDF laporan lengkap (10-12 halaman)
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald-600" /> Implementation roadmap 90 hari
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald-600" /> 30 menit strategy call dengan tim operasional Pesat.AI
+                        </li>
+                      </ul>
+                    </div>
                     <form onSubmit={submitDiscovery} className="grid gap-4">
                       <ContactFields contact={contact} setContact={setContact} />
                       <input
@@ -559,7 +588,8 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
                         placeholder="Konteks budget atau target bisnis"
                       />
-                      <PrimaryAction type="submit" label={isLoading ? "Menyimpan..." : "Ya, Saya Mau Discovery Call"} loading={isLoading} disabled={isLoading} />
+                      <PrimaryAction type="submit" label={isLoading ? "Menyimpan..." : "Kirim Laporan & Jadwalkan Strategy Call"} loading={isLoading} disabled={isLoading} />
+                      {!canSubmitDiscovery ? <p className="text-xs text-neutral-400">Isi Nama Anda dan Nomor WhatsApp yang valid untuk melanjutkan.</p> : null}
                       {discoveryError ? <p className="text-sm font-semibold leading-6 text-red-700">{discoveryError}</p> : null}
                       {discoveryNotice ? <p className="text-sm font-semibold text-amber-700">{discoveryNotice}</p> : null}
                     </form>
@@ -572,6 +602,47 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       )}
     </main>
   );
+}
+
+function LoadingSequence({ onComplete }: { onComplete: () => void }) {
+  // Deterministic first-four selection keeps the component pure and avoids impure Math.random during render.
+  const insights = useMemo(() => LOADING_INSIGHTS.slice(0, 4), []);
+  const { activeInsight, isVisible } = useLoadingSequence(insights, onComplete);
+
+  if (!activeInsight) return null;
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center pb-8 text-center">
+      <div className="mb-8 inline-flex h-20 w-20 items-center justify-center rounded-full border-2 border-neutral-200">
+        <div className="h-16 w-16 animate-spin rounded-full border-2 border-neutral-950 border-t-transparent" />
+      </div>
+
+      <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Analisis konsultan sedang berjalan</p>
+
+      <div className="min-h-[180px] max-w-2xl transition-opacity duration-500" style={{ opacity: isVisible ? 1 : 0 }}>
+        <h2 className="text-3xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-4xl">{activeInsight.text}</h2>
+        <p className="mt-6 text-sm font-medium text-neutral-500">Sumber: {activeInsight.source}</p>
+      </div>
+
+      <div className="mt-10 flex gap-2">
+        {insights.map((_, i) => (
+          <div key={i} className={`h-2 rounded-full transition-all duration-500 ${i === insights.indexOf(activeInsight) ? "w-8 bg-neutral-950" : "w-2 bg-neutral-300"}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function frictionEmoji(id: FrictionSourceId): string {
+  const map: Record<FrictionSourceId, string> = {
+    duplicate_data: "🔄",
+    manual_reports: "📑",
+    delayed_response: "⏳",
+    human_error: "⚠️",
+    approval_bottleneck: "🚧",
+    knowledge_silo: "🧠"
+  };
+  return map[id];
 }
 
 function countWords(value: string): number {
@@ -709,7 +780,7 @@ function ContactFields({ contact, setContact, optional = false }: { contact: Con
   );
 }
 
-/* ─── Result Panel (WOW upgrade) ─── */
+/* ─── Result Panel (redesigned report) ─── */
 
 function ResultPanel({
   result,
@@ -735,10 +806,16 @@ function ResultPanel({
   onDiscovery: () => void | Promise<void>;
 }) {
   const [monthlyRevenue, setMonthlyRevenue] = useState(500000000); // default 500jt
+  const [monthlyCost, setMonthlyCost] = useState(80_000_000); // default 80jt
   const impactPercent = parseImpactPercent(result.impactCards);
+  const isRevenueCluster = result.efficiencyMetrics.some((m) => m.label.toLowerCase().includes("lead") || m.label.toLowerCase().includes("revenue"));
 
   const projectedGain = Math.round(monthlyRevenue * (impactPercent / 100));
   const annualGain = projectedGain * 12;
+  const projectedCostSaving = Math.round(monthlyCost * (impactPercent / 100));
+  const annualCostSaving = projectedCostSaving * 12;
+
+  const hiddenCostTotal = result.hiddenCosts.reduce((sum, cost) => sum + cost.monthlyEstimate, 0);
 
   return (
     <div>
@@ -746,18 +823,54 @@ function ResultPanel({
         {/* Executive Summary Hero */}
         <div className="mb-6 flex items-center gap-2 text-sm font-semibold text-neutral-500">
           <BarChart3 className="h-4 w-4" />
-          Hasil Mini Session Pesat.AI
+          Diagnosis Operasional Bisnis Anda
         </div>
 
         <h2 className="text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-5xl">{result.headline}</h2>
         <p className="mt-5 text-lg leading-8 text-neutral-600">{result.subheadline}</p>
 
-        {/* Before → After → Lift Cards */}
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
-          <BeforeAfterCard label="Before" value={`Rp ${formatRupiah(Math.round(monthlyRevenue))}`} icon={<Clock className="h-5 w-5" />} tone="muted" />
-          <BeforeAfterCard label="After AI" value={`Rp ${formatRupiah(Math.round(monthlyRevenue + projectedGain))}`} icon={<TrendingUp className="h-5 w-5" />} tone="highlight" />
-          <BeforeAfterCard label="Potensi Lift" value={`+${impactPercent}%`} icon={<Zap className="h-5 w-5" />} tone="accent" />
-        </div>
+        {/* Before → After → Savings/Lift Cards */}
+        {isRevenueCluster ? (
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <BeforeAfterCard label="Before" value={`Rp ${formatRupiah(monthlyRevenue)}`} icon={<Clock className="h-5 w-5" />} tone="muted" />
+            <BeforeAfterCard label="After AI" value={`Rp ${formatRupiah(monthlyRevenue + projectedGain)}`} icon={<TrendingUp className="h-5 w-5" />} tone="highlight" />
+            <BeforeAfterCard label="Potensi Pertumbuhan" value={`+${impactPercent}%`} icon={<Zap className="h-5 w-5" />} tone="accent" />
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <BeforeAfterCard label="Biaya Sekarang" value={`Rp ${formatRupiah(monthlyCost)}`} icon={<Clock className="h-5 w-5" />} tone="muted" />
+            <BeforeAfterCard label="Biaya Setelah AI" value={`Rp ${formatRupiah(monthlyCost - projectedCostSaving)}`} icon={<TrendingDown className="h-5 w-5" />} tone="highlight" />
+            <BeforeAfterCard label="Potensi Penghematan" value={`Rp ${formatRupiah(projectedCostSaving)}/bulan`} icon={<Zap className="h-5 w-5" />} tone="accent" />
+          </div>
+        )}
+
+        {/* Efficiency Metrics */}
+        {result.efficiencyMetrics.length ? (
+          <div className="mt-8">
+            <h3 className="text-2xl font-semibold">Efisiensi yang bisa diukur</h3>
+            <p className="mt-2 text-sm leading-6 text-neutral-500">Perbandingan Before vs After AI untuk metrik kunci bisnis Anda.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {result.efficiencyMetrics.map((metric) => (
+                <div key={metric.label} className="rounded-[1.35rem] border border-neutral-200 p-5">
+                  <p className="text-sm font-semibold text-neutral-500">{metric.label}</p>
+                  <div className="mt-3 flex items-end justify-between">
+                    <div>
+                      <p className="text-xs text-neutral-400">Before</p>
+                      <p className="text-lg font-semibold text-neutral-950">{metric.before}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-neutral-300" />
+                    <div className="text-right">
+                      <p className="text-xs text-neutral-400">After AI</p>
+                      <p className="text-lg font-semibold text-emerald-600">{metric.after}</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold text-emerald-700">{metric.impact}</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-500">{metric.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {/* Diagnosis */}
         {result.diagnosis ? (
@@ -770,6 +883,45 @@ function ResultPanel({
                 <p className="mt-2 text-xs font-semibold text-neutral-400">Sumber: {result.rootCause.source}</p>
               </div>
             ) : null}
+          </div>
+        ) : null}
+
+        {/* Hidden Cost Radar */}
+        {result.hiddenCosts.length ? (
+          <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Biaya Tersembunyi yang Sering Diabaikan</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {result.hiddenCosts.map((cost) => (
+                <div key={cost.id} className="rounded-[1.25rem] bg-neutral-50 p-5">
+                  <p className="text-base font-semibold text-neutral-950">{cost.label}</p>
+                  <p className="mt-2 text-2xl font-semibold text-neutral-950">Rp {formatRupiah(cost.monthlyEstimate)}/bulan</p>
+                  <p className="mt-2 text-sm leading-6 text-neutral-500">{cost.description}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 rounded-[1.25rem] bg-neutral-950 p-5 text-white">
+              <p className="text-sm text-neutral-400">Total biaya tersembunyi yang teridentifikasi</p>
+              <p className="mt-1 text-3xl font-semibold">Rp {formatRupiah(hiddenCostTotal)}/bulan</p>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Before vs After Visual */}
+        {result.beforeAfterMetrics.length ? (
+          <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Before vs After</p>
+            <div className="mt-5 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={result.beforeAfterMetrics} layout="vertical" margin={{ left: 24 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="beforeValue" name="Before" fill="#d4d4d4" radius={[0, 8, 8, 0]} />
+                  <Bar dataKey="afterValue" name="After AI" fill="#111111" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         ) : null}
 
@@ -788,6 +940,34 @@ function ResultPanel({
           </div>
         ) : null}
 
+        {/* Finding Cards */}
+        {result.findings.length ? (
+          <div className="mt-8">
+            <h3 className="text-2xl font-semibold">Temuan Konsultan</h3>
+            <p className="mt-2 text-sm leading-6 text-neutral-500">Insight spesifik berbasis jawaban Anda.</p>
+            <div className="mt-4 grid gap-4">
+              {result.findings.map((finding, index) => (
+                <div key={finding.title} className="rounded-[1.35rem] border border-neutral-200 p-6">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-white text-lg font-bold">{index + 1}</div>
+                    <h4 className="text-lg font-semibold text-neutral-950">{finding.title}</h4>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FindingBlock icon={<Search className="h-4 w-4" />} title="Temuan" text={finding.finding} />
+                    <FindingBlock icon={<AlertTriangle className="h-4 w-4" />} title="Dampak" text={finding.impact} />
+                    <FindingBlock icon={<TrendingDown className="h-4 w-4" />} title="Risiko" text={finding.risk} />
+                    <FindingBlock icon={<Brain className="h-4 w-4" />} title="Solusi Terukur" text={finding.solution} />
+                  </div>
+                  <div className="mt-4 rounded-[1rem] bg-emerald-50 p-4">
+                    <p className="text-sm font-semibold text-emerald-800">📈 Potensi Hasil</p>
+                    <p className="mt-1 text-sm leading-6 text-emerald-700">{finding.potential}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {/* Impact Cards */}
         <div className="mt-8 grid gap-3 sm:grid-cols-3">
           {result.impactCards.map((card) => (
@@ -799,13 +979,13 @@ function ResultPanel({
           ))}
         </div>
 
-        {/* Bar Chart */}
+        {/* Legacy Bar Chart */}
         <div className="mt-8 h-64 rounded-[1.35rem] border border-neutral-200 p-4">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={result.chart}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" tickLine={false} axisLine={false} />
-              <YAxis hide domain={[0, 100]} />
+              <YAxis hide />
               <Tooltip />
               <Bar dataKey="before" fill="#d4d4d4" radius={[8, 8, 0, 0]} />
               <Bar dataKey="after" fill="#111111" radius={[8, 8, 0, 0]} />
@@ -828,33 +1008,39 @@ function ResultPanel({
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Kalkulator ROI</p>
           <p className="mt-2 text-sm leading-6 text-neutral-500">Geser untuk melihat potensi impact di bisnis Anda.</p>
           <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-neutral-700">Omzet bulanan (Rp)</label>
+            <label className="mb-2 block text-sm font-semibold text-neutral-700">
+              {isRevenueCluster ? "Omzet bulanan (Rp)" : "Biaya operasional manual/bulan (Rp)"}
+            </label>
             <input
               type="range"
               min="10000000"
               max="5000000000"
               step="50000000"
-              value={monthlyRevenue}
-              onChange={(e) => setMonthlyRevenue(Number(e.target.value))}
+              value={isRevenueCluster ? monthlyRevenue : monthlyCost}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (isRevenueCluster) setMonthlyRevenue(value);
+                else setMonthlyCost(value);
+              }}
               className="w-full accent-neutral-950"
             />
             <div className="mt-2 flex justify-between text-sm font-semibold text-neutral-600">
               <span>Rp 10jt</span>
-              <span className="text-lg text-neutral-950">Rp {formatRupiah(monthlyRevenue)}</span>
+              <span className="text-lg text-neutral-950">Rp {formatRupiah(isRevenueCluster ? monthlyRevenue : monthlyCost)}</span>
               <span>Rp 5M</span>
             </div>
           </div>
           <div className="mt-5 rounded-[1.35rem] bg-neutral-950 p-5 text-white">
-            <p className="text-sm text-neutral-400">Potensi tambahan per tahun</p>
-            <p className="mt-1 text-3xl font-semibold">Rp {formatRupiah(annualGain)}</p>
+            <p className="text-sm text-neutral-400">{isRevenueCluster ? "Potensi tambahan per tahun" : "Potensi penghematan per tahun"}</p>
+            <p className="mt-1 text-3xl font-semibold">Rp {formatRupiah(isRevenueCluster ? annualGain : annualCostSaving)}</p>
             <p className="mt-2 text-xs text-neutral-500">Estimasi berbasis benchmark industri. Angka final setelah discovery.</p>
           </div>
         </div>
 
-        {/* Promise */}
+        {/* Solusi Terukur (formerly Janji Terukur) */}
         {result.promise?.statement ? (
           <div className="mt-8 rounded-[1.35rem] bg-neutral-950 p-6 text-white">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Janji terukur</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Solusi Terukur</p>
             <p className="mt-3 text-xl font-semibold leading-8">{result.promise.statement}</p>
             {result.promise.measuredBy?.length ? (
               <div className="mt-5">
@@ -902,12 +1088,10 @@ function ResultPanel({
             {result.solutionCards?.map((card, index) => (
               <div
                 key={card.name}
-                className="group relative overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white p-5 transition-all duration-300 hover:shadow-lg hover:border-neutral-300"
+                className="group relative overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white p-5 transition-all duration-300 hover:border-neutral-300 hover:shadow-lg"
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-white text-lg font-bold">
-                    {index + 1}
-                  </div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-lg font-bold text-white">{index + 1}</div>
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="text-lg font-semibold text-neutral-950">{card.name}</h4>
@@ -928,11 +1112,12 @@ function ResultPanel({
                   </div>
                 </div>
               </div>
-            )) ?? result.solutionsText.map((solution) => (
-              <div key={solution} className="rounded-[1.35rem] border border-neutral-200 p-5 text-base leading-7 text-neutral-700">
-                {solution}
-              </div>
-            ))}
+            )) ??
+              result.solutionsText.map((solution) => (
+                <div key={solution} className="rounded-[1.35rem] border border-neutral-200 p-5 text-base leading-7 text-neutral-700">
+                  {solution}
+                </div>
+              ))}
           </div>
         </div>
 
@@ -1002,7 +1187,7 @@ function ResultPanel({
               onBlur={(event) => void onDetailNoteBlur(event.target.value)}
               rows={5}
               className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
-              placeholder="Contoh: proses sales kami banyak lewat WhatsApp, tapi follow-up sering hilang..."
+              placeholder="Contoh: proses sales kami banyak lewat WhatsApp, tapi follow-up sering hilang dan pelanggan lama jarang beli lagi..."
             />
             <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
               <span>Anda bisa cerita bebas soal proses, volume, bottleneck, atau kebiasaan operasional yang sekarang paling terasa.</span>
@@ -1046,11 +1231,23 @@ function ResultPanel({
           Export PDF
         </button>
         <button onClick={onDiscovery} className="min-h-12 rounded-full bg-neutral-950 px-5 text-sm font-semibold text-white transition hover:bg-black">
-          Ya, Saya Mau Discovery Call
+          Simpan Laporan & Jadwalkan Strategy Call
         </button>
       </div>
       {!result.persisted ? <p className="mt-3 text-xs text-neutral-400">Share link membutuhkan Supabase agar hasil bisa dibuka ulang.</p> : null}
       {result.llmFallback ? <p className="mt-3 text-xs text-neutral-400">Mode fallback aktif karena OpenAI belum tersedia atau gagal merespons.</p> : null}
+    </div>
+  );
+}
+
+function FindingBlock({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <div className="rounded-[1rem] bg-neutral-50 p-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-neutral-700">
+        {icon}
+        {title}
+      </div>
+      <p className="text-sm leading-6 text-neutral-600">{text}</p>
     </div>
   );
 }
@@ -1065,7 +1262,10 @@ function BeforeAfterCard({ label, value, icon, tone }: { label: string; value: s
   };
   return (
     <div className={`rounded-[1.35rem] p-5 ${toneStyles[tone]}`}>
-      <div className="flex items-center gap-2 text-sm font-semibold opacity-70">{icon}{label}</div>
+      <div className="flex items-center gap-2 text-sm font-semibold opacity-70">
+        {icon}
+        {label}
+      </div>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
     </div>
   );
@@ -1082,11 +1282,7 @@ function ImpactBadge({ badge }: { badge: string }) {
     "high-impact": "🎯 High Impact",
     strategic: "🧭 Strategic"
   };
-  return (
-    <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${styles[badge] || styles["high-impact"]}`}>
-      {labels[badge] || badge}
-    </span>
-  );
+  return <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${styles[badge] || styles["high-impact"]}`}>{labels[badge] || badge}</span>;
 }
 
 function ConfidenceBadge({ score }: { score: number }) {
@@ -1108,8 +1304,7 @@ function formatRupiah(value: number): string {
 }
 
 function parseImpactPercent(cards: Array<{ title: string; value: string }>): number {
-  // Try to find the highest percentage in impact cards
-  let maxPercent = 20; // default
+  let maxPercent = 20;
   for (const card of cards) {
     const match = card.value.match(/(\d+)-?(\d+)?%?/);
     if (match) {

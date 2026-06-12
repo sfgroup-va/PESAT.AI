@@ -35,7 +35,8 @@ try {
   const answers = sanitizeAnswers({
     mainChallenges: ["revenue", "fraud", "cost", "fake"],
     detailChallenges: ["follow_up", "follow_up", "repeat_order", "pricing", "lead_quality", "admin_cost", "manual_docs", "invoice_ap", "process_waste", "fake"],
-    impactLevel: "revenue",
+    impactLevel: "critical",
+    frictionSource: "delayed_response",
     adoptionStyle: "dfy",
     detailNote: thousandWordNote
   });
@@ -43,7 +44,7 @@ try {
   assert.deepEqual(answers.detailChallenges, ["follow_up", "repeat_order", "pricing", "lead_quality", "admin_cost", "manual_docs", "invoice_ap", "process_waste"]);
   assert.equal(answers.detailNote.split(/\s+/).length, 1000);
   assert.deepEqual(validateCompleteAnswers(answers), { ok: true, missing: [] });
-  assert.deepEqual(validateCompleteAnswers(sanitizeAnswers({})).missing, ["mainChallenges", "detailChallenges", "impactLevel", "adoptionStyle"]);
+  assert.deepEqual(validateCompleteAnswers(sanitizeAnswers({})).missing, ["mainChallenges", "detailChallenges", "impactLevel", "frictionSource", "adoptionStyle"]);
   assert.equal(sanitizeWordLimitedText("  satu dua tiga  ", 2), "satu dua");
 
   const contact = sanitizeContact({
@@ -81,7 +82,7 @@ try {
   const event = sanitizeEventPayload({
     sessionId: "session-1",
     type: "click",
-    screen: "s7",
+    screen: "result",
     metadata: {
       "bad key!": "value",
       nested: { no: true },
@@ -92,7 +93,7 @@ try {
     }
   });
   assert.equal(event.type, "click");
-  assert.equal(event.screen, "s7");
+  assert.equal(event.screen, "result");
   assert.equal(event.metadata.badkey, "value");
   assert.equal(event.metadata.okNumber, 12);
   assert.equal(event.metadata.okBool, true);

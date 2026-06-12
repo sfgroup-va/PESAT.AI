@@ -46,7 +46,7 @@ const resultNormalizerTest = read("scripts/test-result-normalizer.mjs");
 const qualityGate = read("scripts/quality-gate.mjs");
 const goLiveAudit = read("scripts/go-live-audit.ps1");
 
-const solutionIds = [...solutions.matchAll(/\{\s*id:\s*"([^"]+)"/g)].map((match) => match[1]);
+const solutionIds = [...solutions.matchAll(/\{\s*id:\s*"(ai_[^"]+)",\s*name:/g)].map((match) => match[1]);
 const uniqueSolutionIds = new Set(solutionIds);
 const challengeKeys = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"];
 const routeFiles = [
@@ -87,14 +87,14 @@ check("hero rolling lines complete", [
   "Membangun dashboard Business Intelligence dalam hitungan hari",
   "Meningkatkan brand trust di Google & AI search"
 ].every((line) => homeData.includes(line)));
-check("wizard screens present", ["s1", "fact1", "s2", "fact2", "s3", "s4", "s5", "s6", "s7", "s8"].every((step) => experience.includes(`"${step}"`)));
+check("wizard screens present", ["hero", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate"].every((step) => experience.includes(`"${step}"`)));
 check("WhatsApp target configured", read("app/api/discovery/route.ts").includes("6281290401240"));
 check("API smoke validates WhatsApp target and message", smokeApi.includes("discoveryWhatsappTargetOk") && smokeApi.includes("discoveryWhatsappMessageOk") && smokeApi.includes("Perusahaan: Test Co"));
 check("share and PDF controls exist", experience.includes("Copy Link") && experience.includes("Export PDF") && packageJson.dependencies.jspdf);
 check("Recharts dependency exists", Boolean(packageJson.dependencies.recharts));
 check("Supabase schema tables exist", ["public.sessions", "public.events", "public.discovery_requests"].every((table) => schema.includes(table)));
 check("Supabase RLS enabled", ["alter table public.sessions enable row level security", "alter table public.events enable row level security", "alter table public.discovery_requests enable row level security"].every((line) => schema.includes(line)));
-check("Supabase event constraints match app events", schema.includes("type in ('screen_view', 'click')") && schema.includes("'hero', 's1', 'fact1'"));
+check("Supabase event constraints match app events", schema.includes("type in ('screen_view', 'click')") && schema.includes("'hero', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'review', 'loading', 'result', 'leadGate', 'admin'"));
 check("Supabase discovery WA constraint exists", schema.includes("regexp_replace(wa") && schema.includes("between 9 and 16"));
 check("Supabase admin time indexes exist", ["events_created_at_idx", "sessions_created_at_idx", "sessions_updated_at_idx", "discovery_requests_created_at_idx"].every((indexName) => schema.includes(indexName)));
 check("Supabase schema has executable coverage", supabaseSchemaTest.includes("sessions_set_updated_at") && supabaseSchemaTest.includes("events_screen_type_idx") && packageJson.scripts["test:supabase-schema"]);

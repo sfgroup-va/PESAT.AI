@@ -65,7 +65,7 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
                 headline: "string",
                 subheadline: "string",
                 diagnosis: "string (cermin masalah spesifik klien, pakai userSignals bila ada)",
-                promiseStatement: "string (janji terukur + jujur)",
+                promiseStatement: "string (solusi terukur + jujur)",
                 costOfInaction: "string (konsekuensi jujur bila dibiarkan)",
                 firstStep: "string (langkah pertama sesuai adoptionStyle)",
                 impactCards: [{ title: "string", value: "string", description: "string" }],

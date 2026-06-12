@@ -47,7 +47,8 @@ try {
     const selected = selectSolutions({
       mainChallenges: [challenge],
       detailChallenges: [],
-      impactLevel: "revenue",
+      impactLevel: "critical",
+      frictionSource: "delayed_response",
       adoptionStyle: "dfy"
     }).map((solution) => solution.id);
 
@@ -70,6 +71,7 @@ try {
       mainChallenges: [testCase.main],
       detailChallenges: [testCase.detail],
       impactLevel: "",
+      frictionSource: "",
       adoptionStyle: ""
     }).map((solution) => solution.id);
 
@@ -82,33 +84,38 @@ try {
   const combined = selectSolutions({
     mainChallenges: ["revenue", "cost"],
     detailChallenges: [],
-    impactLevel: "revenue",
+    impactLevel: "critical",
+    frictionSource: "delayed_response",
     adoptionStyle: "dfy"
   }).map((solution) => solution.id);
   assert.deepEqual(combined, expectedPrimary.revenue, "secondary challenge must not push result over max 4 solutions");
   assert.equal(new Set(combined).size, combined.length, "selected solutions must be unique");
 
-  assert.deepEqual(calculateImpactRanges({ mainChallenges: ["revenue"], detailChallenges: [], impactLevel: "", adoptionStyle: "" }), {
+  assert.deepEqual(calculateImpactRanges({ mainChallenges: ["revenue"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }), {
     revenueIncrease: "10-30%",
     hoursSaved: "20-60 jam/bulan"
   });
-  assert.deepEqual(calculateImpactRanges({ mainChallenges: ["cost"], detailChallenges: [], impactLevel: "", adoptionStyle: "" }), {
+  assert.deepEqual(calculateImpactRanges({ mainChallenges: ["cost"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }), {
     costReduction: "8-22%",
     hoursSaved: "20-60 jam/bulan"
   });
-  assert.deepEqual(calculateImpactRanges({ mainChallenges: ["fraud", "brand_trust"], detailChallenges: [], impactLevel: "", adoptionStyle: "" }), {
+  assert.deepEqual(calculateImpactRanges({ mainChallenges: ["fraud", "brand_trust"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }), {
     riskReduction: "15-45%",
     trustLift: "15-35% peningkatan trust signal",
     hoursSaved: "20-60 jam/bulan"
   });
 
-  assert.deepEqual(buildChart({ mainChallenges: ["fraud"], detailChallenges: [], impactLevel: "risk", adoptionStyle: "dfy" }), [
-    { name: "Sekarang", before: 35, after: 35 },
-    { name: "Sesudah AI", before: 35, after: 67 }
-  ]);
+  const chart = buildChart({ mainChallenges: ["fraud"], detailChallenges: [], impactLevel: "critical", frictionSource: "transaction_anomaly", adoptionStyle: "dfy" });
+  assert.equal(chart.length, 2);
+  assert.equal(chart[0].name, "Before");
+  assert.ok(chart[0].before > 0);
+  assert.equal(chart[0].after, 0);
+  assert.equal(chart[1].name, "After AI");
+  assert.ok(chart[1].after > 0);
+  assert.equal(chart[1].before, 0);
 
   // The diagnosis pack must produce a measurable, honest, source-backed promise.
-  const diagnosisAnswers = { mainChallenges: ["revenue"], detailChallenges: ["follow_up", "repeat_order"], impactLevel: "revenue", adoptionStyle: "starting", detailNote: "" };
+  const diagnosisAnswers = { mainChallenges: ["revenue"], detailChallenges: ["follow_up", "repeat_order"], impactLevel: "critical", frictionSource: "delayed_response", adoptionStyle: "starting", detailNote: "" };
   const diagnosisSolutions = selectSolutions(diagnosisAnswers);
   const pack = buildDiagnosisPack(diagnosisAnswers, diagnosisSolutions, calculateImpactRanges(diagnosisAnswers));
   assert.ok(pack.diagnosis.includes("follow-up lead lambat"), "diagnosis must reflect the client's specific detail challenges");
@@ -130,7 +137,7 @@ try {
   assert.ok(signals.some((signal) => /chat/i.test(signal)), "should capture cadence-style signals like chat per day");
   assert.deepEqual(extractUserSignals(""), [], "empty note must not fabricate signals");
   assert.deepEqual(extractUserSignals("Kami hanya ingin lebih efisien tanpa menyebut angka."), [], "qualitative-only notes must not invent signals");
-  assert.ok(buildCostOfInaction({ mainChallenges: ["cost"], detailChallenges: [], impactLevel: "", adoptionStyle: "" }).length > 0, "cost of inaction must be present");
+  assert.ok(buildCostOfInaction({ mainChallenges: ["cost"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }).length > 0, "cost of inaction must be present");
 
   console.log(JSON.stringify({ ok: true, checked: "rule-engine", challenges: Object.keys(expectedPrimary).length, solutions: AVAILABLE_SOLUTIONS.length }, null, 2));
 } finally {

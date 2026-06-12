@@ -26,7 +26,7 @@ for (const column of ["company_name text not null", "name text not null", "wa te
   has(column);
 }
 
-for (const screen of ["'hero'", "'s1'", "'fact1'", "'s2'", "'fact2'", "'s3'", "'s4'", "'s5'", "'s6'", "'s7'", "'s8'", "'result'", "'admin'"]) {
+for (const screen of ["'hero'", "'q1'", "'q2'", "'q3'", "'q4'", "'q5'", "'q6'", "'review'", "'loading'", "'result'", "'leadGate'", "'admin'"]) {
   has(screen);
 }
 

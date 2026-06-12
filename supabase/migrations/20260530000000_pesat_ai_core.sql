@@ -17,7 +17,7 @@ create table if not exists public.events (
   type text not null check (type in ('screen_view', 'click')),
   screen text check (
     screen is null
-    or screen in ('hero', 's1', 'fact1', 's2', 'fact2', 's3', 's4', 's5', 's6', 's7', 's8', 'result', 'admin')
+    or screen in ('hero', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'review', 'loading', 'result', 'leadGate', 'admin')
   ),
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
