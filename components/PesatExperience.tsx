@@ -16,11 +16,21 @@ import { Testimonial } from "@/components/home/sections/Testimonial";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { CHALLENGE_LABELS, TRANSITION_FACTS, QUALITY_QUESTIONS, DETAIL_TO_CHALLENGE, FRICTION_SOURCES, LOADING_INSIGHTS } from "@/lib/solutions";
+import {
+  CHALLENGE_LABELS,
+  TRANSITION_FACTS,
+  QUALITY_QUESTIONS,
+  DETAIL_TO_CHALLENGE,
+  FRICTION_SOURCES,
+  LOADING_INSIGHTS,
+  DETAIL_FOLLOW_UPS,
+  FRICTION_FOLLOW_UPS,
+  STACK_FOLLOW_UP
+} from "@/lib/solutions";
 import { ImpactComparisonChart } from "@/components/ImpactComparisonChart";
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
-import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, FrictionSourceId, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, ContactData, ContextAnswerKey, DetailId, GeneratedResult, ImpactId, FrictionSourceId, WizardAnswers } from "@/lib/types";
 
 const initialAnswers: WizardAnswers = {
   mainChallenges: [],
@@ -199,6 +209,16 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     setAnswers((current) => ({
       ...current,
       frictionSource: current.frictionSource === id ? "" : id
+    }));
+  }
+
+  function setContextAnswer(key: ContextAnswerKey, value: string) {
+    setAnswers((current) => ({
+      ...current,
+      contextAnswers: {
+        ...current.contextAnswers,
+        [key]: current.contextAnswers?.[key] === value ? undefined : value
+      }
     }));
   }
 
@@ -413,7 +433,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                   </QualityQuestionShell>
                 )}
 
-                {/* Q2: Detail Challenge */}
+                {/* Q2: Detail Challenge + adaptive follow-ups */}
                 {step === "q2" && (
                   <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[1].eyebrow} title={QUALITY_QUESTIONS[1].title} note={QUALITY_QUESTIONS[1].note}>
                     <div className="grid gap-3">
@@ -430,7 +450,48 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                           />
                         ))}
                     </div>
-                    <PrimaryAction disabled={!answers.detailChallenges[0]} onClick={() => advanceWithFact("q2", "q3")} label="Lanjut" />
+
+                    {answers.detailChallenges[0] && DETAIL_FOLLOW_UPS[answers.detailChallenges[0]] && (
+                      <div className="mt-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                        <FollowUpShell eyebrow={DETAIL_FOLLOW_UPS[answers.detailChallenges[0]]!.eyebrow} title={DETAIL_FOLLOW_UPS[answers.detailChallenges[0]]!.title}>
+                          <div className="grid gap-3">
+                            {DETAIL_FOLLOW_UPS[answers.detailChallenges[0]]!.options.map((option) => (
+                              <QualityChoiceButton
+                                key={option.id}
+                                active={answers.contextAnswers?.detailNumeric === option.id}
+                                onClick={() => setContextAnswer("detailNumeric", option.id)}
+                                label={option.label}
+                                note={option.note}
+                              />
+                            ))}
+                          </div>
+                        </FollowUpShell>
+                      </div>
+                    )}
+
+                    {answers.detailChallenges[0] && (
+                      <div className="mt-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                        <FollowUpShell eyebrow={STACK_FOLLOW_UP.eyebrow} title={STACK_FOLLOW_UP.title}>
+                          <div className="grid gap-3">
+                            {STACK_FOLLOW_UP.options.map((option) => (
+                              <QualityChoiceButton
+                                key={option.id}
+                                active={answers.contextAnswers?.currentStack === option.id}
+                                onClick={() => setContextAnswer("currentStack", option.id)}
+                                label={option.label}
+                                note={option.note}
+                              />
+                            ))}
+                          </div>
+                        </FollowUpShell>
+                      </div>
+                    )}
+
+                    <PrimaryAction
+                      disabled={!answers.detailChallenges[0] || !answers.contextAnswers?.detailNumeric || !answers.contextAnswers?.currentStack}
+                      onClick={() => advanceWithFact("q2", "q3")}
+                      label="Lanjut"
+                    />
                   </QualityQuestionShell>
                 )}
 
@@ -453,7 +514,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                   </QualityQuestionShell>
                 )}
 
-                {/* Q4: Friction Source */}
+                {/* Q4: Friction Source + adaptive follow-up */}
                 {step === "q4" && (
                   <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[3].eyebrow} title={QUALITY_QUESTIONS[3].title} note={QUALITY_QUESTIONS[3].note}>
                     <div className="grid gap-3">
@@ -468,7 +529,30 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         />
                       ))}
                     </div>
-                    <PrimaryAction disabled={!answers.frictionSource} onClick={() => setStep("q5")} label="Lanjut" />
+
+                    {answers.frictionSource && FRICTION_FOLLOW_UPS[answers.frictionSource] && (
+                      <div className="mt-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                        <FollowUpShell eyebrow={FRICTION_FOLLOW_UPS[answers.frictionSource].eyebrow} title={FRICTION_FOLLOW_UPS[answers.frictionSource].title}>
+                          <div className="grid gap-3">
+                            {FRICTION_FOLLOW_UPS[answers.frictionSource].options.map((option) => (
+                              <QualityChoiceButton
+                                key={option.id}
+                                active={answers.contextAnswers?.frictionChannel === option.id}
+                                onClick={() => setContextAnswer("frictionChannel", option.id)}
+                                label={option.label}
+                                note={option.note}
+                              />
+                            ))}
+                          </div>
+                        </FollowUpShell>
+                      </div>
+                    )}
+
+                    <PrimaryAction
+                      disabled={!answers.frictionSource || !answers.contextAnswers?.frictionChannel}
+                      onClick={() => setStep("q5")}
+                      label="Lanjut"
+                    />
                   </QualityQuestionShell>
                 )}
 
@@ -522,6 +606,27 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                     />
                     <ReviewRow label="Intensitas masalah" value={QUALITY_QUESTIONS[2].options.find((o) => o.id === answers.impactLevel)?.label || "-"} onEdit={() => setStep("q3")} />
                     <ReviewRow label="Sumber gesekan terbesar" value={answers.frictionSource ? FRICTION_SOURCES[answers.frictionSource].label : "-"} onEdit={() => setStep("q4")} />
+                    {answers.contextAnswers?.frictionChannel && answers.frictionSource && (
+                      <ReviewRow
+                        label="Channel/akar gesekan"
+                        value={FRICTION_FOLLOW_UPS[answers.frictionSource].options.find((o) => o.id === answers.contextAnswers?.frictionChannel)?.label || "-"}
+                        onEdit={() => setStep("q4")}
+                      />
+                    )}
+                    {answers.contextAnswers?.detailNumeric && answers.detailChallenges[0] && (
+                      <ReviewRow
+                        label="Skala/detail masalah"
+                        value={DETAIL_FOLLOW_UPS[answers.detailChallenges[0]]?.options.find((o) => o.id === answers.contextAnswers?.detailNumeric)?.label || "-"}
+                        onEdit={() => setStep("q2")}
+                      />
+                    )}
+                    {answers.contextAnswers?.currentStack && (
+                      <ReviewRow
+                        label="Stack operasional"
+                        value={STACK_FOLLOW_UP.options.find((o) => o.id === answers.contextAnswers?.currentStack)?.label || "-"}
+                        onEdit={() => setStep("q2")}
+                      />
+                    )}
                     <ReviewRow label="Cara kerja sama" value={QUALITY_QUESTIONS[4].options.find((o) => o.id === answers.adoptionStyle)?.label || "-"} onEdit={() => setStep("q5")} />
                     <ReviewRow label="Konteks tambahan" value={detailNote ? `${detailNote.slice(0, 60)}${detailNote.length > 60 ? "..." : ""}` : "-"} onEdit={() => setStep("q6")} />
                     <PrimaryAction onClick={startLoadingSequence} label="Sudah Pas — Susun Diagnosis" />
@@ -691,6 +796,16 @@ function QualityQuestionShell({ eyebrow, title, note, children }: { eyebrow: str
       <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">{eyebrow}</p>
       <h2 className="mb-4 text-3xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-5xl">{title}</h2>
       {note ? <p className="mb-8 text-base font-medium leading-7 text-neutral-500">{note}</p> : <div className="mb-6" />}
+      {children}
+    </div>
+  );
+}
+
+function FollowUpShell({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">{eyebrow}</p>
+      <h3 className="mb-4 text-xl font-semibold leading-snug text-neutral-950 sm:text-2xl">{title}</h3>
       {children}
     </div>
   );

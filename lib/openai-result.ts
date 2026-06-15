@@ -32,11 +32,12 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
               "Gaya: bahasa Indonesia, profesional dan kredibel seperti konsultan strategi; tajam, spesifik, berbasis bukti, percaya diri tanpa hype. Hindari klise dan kata kosong.",
               "Tujuan: pembaca merasa benar-benar dipahami dan melihat jalan keluar yang jelas, sehingga tertarik melanjutkan ke discovery call dengan Pesat.AI.",
               "Buat hasil personal dan insightful, bukan generik:",
-              "- 'diagnosis': cerminkan masalah SPESIFIK klien dari answers.detailChallenges dan detailNote. Jika userSignals berisi angka dari klien (mis. jumlah chat, omzet, jam kerja), gunakan untuk membuat insight lebih konkret. Tunjukkan kamu paham, lalu reframe ke akar masalah. Dasar: diagnosisContext.deterministicDiagnosis.",
+              "- 'diagnosis': cerminkan masalah SPESIFIK klien dari answers.detailChallenges, detailNote, dan contextAnswers. Jika userSignals berisi angka/stack dari klien (mis. jumlah chat, omzet, jam kerja, WhatsApp, Shopify, Odoo), gunakan untuk membuat insight lebih konkret. Tunjukkan kamu paham, lalu reframe ke akar masalah. Dasar: diagnosisContext.deterministicDiagnosis.",
               "- 'promiseStatement': janji meyakinkan TAPI jujur. Wajib menyebut rentang dari impactRanges apa adanya, sebut diukur lewat diagnosisContext.promiseFrame.measuredBy, dan tegaskan ini estimasi bukan garansi.",
               "- 'costOfInaction': konsekuensi jujur bila masalah dibiarkan, untuk membangun urgensi tanpa menakut-nakuti berlebihan. Boleh merujuk userSignals, tapi JANGAN mengarang angka. Dasar: diagnosisContext.costOfInactionFrame.",
-              "- 'firstStep': satu langkah pertama konkret dan realistis, sesuaikan dengan answers.adoptionStyle. Dasar: diagnosisContext.firstStepFrame.",
+              "- 'firstStep': satu langkah pertama konkret dan realistis, sesuaikan dengan answers.adoptionStyle dan effortLevel solusi utama. Dasar: diagnosisContext.firstStepFrame.",
               "- 'headline','subheadline','impactCards','beforeAfterText','uniqueMechanism','solutionsText': isi sesuai input. impactCards.value harus salah satu nilai dari impactRanges.",
+              "- 'solutionsText': jelaskan SETIAP solusi terpilih dengan mengaitkan capabilities, integrations, dan caseStudy (jika ada) ke konteks klien. Sebutkan prerequisites yang perlu disiapkan.",
               "Jika ragu, ikuti deterministicDiagnosis/promiseFrame/firstStepFrame/costOfInactionFrame daripada mengarang."
             ].join("\n")
           },
@@ -45,8 +46,21 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
             content: JSON.stringify({
               answers,
               detailNote: answers.detailNote || "",
+              contextAnswers: answers.contextAnswers || {},
               userSignals: fallback.userSignals,
-              solutions,
+              solutions: solutions.map((solution) => ({
+                id: solution.id,
+                name: solution.name,
+                description: solution.description,
+                impactBadge: solution.impactBadge,
+                setupTime: solution.setupTime,
+                capabilities: solution.capabilities,
+                prerequisites: solution.prerequisites,
+                integrations: solution.integrations,
+                effortLevel: solution.effortLevel,
+                caseStudy: solution.caseStudy,
+                fitScore: solution.fitScore
+              })),
               impactRanges,
               diagnosisContext: {
                 deterministicDiagnosis: fallback.diagnosis,

@@ -1,5 +1,13 @@
-import { AVAILABLE_SOLUTIONS, DETAIL_LABELS, DETAIL_SOLUTION_MAP, TRANSITION_FACTS } from "@/lib/solutions";
-import type { AdoptionId, ChallengeId, DiagnosisPack, EfficiencyMetric, Finding, GeneratedResult, HiddenCost, ImpactRanges, PesatSolution, PlanPhase, SolutionCard, WizardAnswers } from "@/lib/types";
+import {
+  AVAILABLE_SOLUTIONS,
+  DETAIL_FOLLOW_UPS,
+  DETAIL_LABELS,
+  DETAIL_SOLUTION_MAP,
+  FRICTION_FOLLOW_UPS,
+  FRICTION_SOURCES,
+  TRANSITION_FACTS
+} from "@/lib/solutions";
+import type { AdoptionId, ChallengeId, ContextAnswerKey, DiagnosisPack, EfficiencyMetric, Finding, FrictionSourceId, GeneratedResult, HiddenCost, ImpactId, ImpactRanges, PesatSolution, PlanPhase, SolutionCard, WizardAnswers } from "@/lib/types";
 
 const CLUSTER_PRIORITY: Record<ChallengeId, string[]> = {
   revenue: ["ai_sales_assistant", "ai_repeat_order", "ai_crm_pintar", "ai_dynamic_pricing"],
@@ -9,6 +17,108 @@ const CLUSTER_PRIORITY: Record<ChallengeId, string[]> = {
   reporting: ["ai_report_generator", "ai_executive_dashboard", "ai_meeting_notetaker", "ai_ticket_router"],
   brand_trust: ["ai_organic_traffic_builder", "ai_local_ai_search_trust_builder", "ai_social_media_manager", "ai_sentiment_pelanggan"]
 };
+
+// Maps each friction source to the solutions that directly remove that friction.
+const FRICTION_SOLUTION_BOOST: Record<FrictionSourceId, string[]> = {
+  duplicate_data: ["ai_data_quality_auto_heal", "ai_document_processor", "ai_pembukuan_otomatis", "ai_invoice_ap_otomatis"],
+  manual_reports: ["ai_report_generator", "ai_executive_dashboard", "ai_meeting_notetaker", "ai_pembukuan_otomatis"],
+  delayed_response: ["ai_whatsapp_sales_bot", "ai_sales_assistant", "ai_ticket_router", "ai_chatbot_24_7"],
+  human_error: ["ai_data_quality_auto_heal", "ai_document_processor", "ai_quality_control_visual", "ai_process_intelligence"],
+  approval_bottleneck: ["ai_fraud_detection", "ai_process_intelligence", "ai_invoice_ap_otomatis", "ai_roi_impact_tracker"],
+  knowledge_silo: ["ai_sop_knowledge_writer", "ai_process_intelligence", "ai_meeting_notetaker"]
+};
+
+// Maps the stack answer from the wizard to integration keywords used in solution metadata.
+const STACK_TO_INTEGRATIONS: Record<string, string[]> = {
+  whatsapp_sheets: ["WhatsApp", "Sheets"],
+  erp: ["ERP", "Odoo", "SAP"],
+  ecommerce: ["Shopify", "Tokopedia", "Shopee", "E-commerce"],
+  crm: ["CRM", "HubSpot", "Salesforce", "Zoho"],
+  custom: [],
+  mixed: []
+};
+
+const IMPACT_MULTIPLIERS: Record<ImpactId | "", number> = {
+  mild: 0.75,
+  weekly: 0.9,
+  often: 1.05,
+  critical: 1.2,
+  "": 1
+};
+
+function scoreSolution(solution: PesatSolution, answers: WizardAnswers): number {
+  const primary = answers.mainChallenges[0] || "revenue";
+  const secondary = answers.mainChallenges[1];
+  const detail = answers.detailChallenges[0];
+  const friction = answers.frictionSource;
+  const impact = answers.impactLevel;
+  const adoption = answers.adoptionStyle;
+  const context = answers.contextAnswers || {};
+
+  let score = 0;
+
+  // Detail-driven match is the strongest signal.
+  if (detail) {
+    const detailMap = DETAIL_SOLUTION_MAP[detail] || [];
+    const detailIndex = detailMap.indexOf(solution.id);
+    if (detailIndex >= 0) {
+      score += 30 - detailIndex * 5;
+    }
+  }
+
+  // Cluster relevance keeps primary-cluster solutions above secondary cluster.
+  if (solution.cluster.includes(primary)) score += 12;
+  if (secondary && solution.cluster.includes(secondary)) score += 5;
+
+  // Friction source directly selects solutions that remove that friction.
+  if (friction && FRICTION_SOLUTION_BOOST[friction]?.includes(solution.id)) {
+    score += 8;
+  }
+
+  // Impact level adjusts preference toward quick wins or deeper solutions.
+  if (impact === "critical" || impact === "often") {
+    if (solution.impactBadge === "high-impact" || solution.impactBadge === "strategic") score += 4;
+  }
+  if (impact === "mild" || impact === "weekly") {
+    if (solution.impactBadge === "quick-win" || solution.effortLevel === "low") score += 4;
+  }
+
+  // Adoption style adjusts for realistic implementation effort.
+  if (adoption === "starting" && (solution.impactBadge === "quick-win" || solution.effortLevel === "low")) {
+    score += 5;
+  }
+  if (adoption === "diy" && (solution.effortLevel === "low" || solution.effortLevel === "medium")) {
+    score += 3;
+  }
+
+  // Stack fit: if the user told us their main system, boost solutions that integrate with it.
+  const stackKey = context.currentStack;
+  if (stackKey && STACK_TO_INTEGRATIONS[stackKey]) {
+    const keywords = STACK_TO_INTEGRATIONS[stackKey];
+    const integrates = solution.integrations || [];
+    if (keywords.some((kw) => integrates.some((i) => i.toLowerCase().includes(kw.toLowerCase())))) {
+      score += 6;
+    }
+  }
+
+  // Friction channel fit: e.g. delayed_response via WhatsApp -> WhatsApp Sales Bot.
+  const frictionChannel = context.frictionChannel;
+  if (frictionChannel && friction === "delayed_response" && solution.integrations) {
+    if (frictionChannel === "whatsapp" && solution.integrations.some((i) => /whatsapp/i.test(i))) score += 4;
+    if (frictionChannel === "email" && solution.integrations.some((i) => /email|gmail|outlook/i.test(i))) score += 4;
+  }
+
+  // Detail-numeric severity: high volume/severity rewards heavier solutions, low volume rewards quick wins.
+  const detailNumeric = context.detailNumeric;
+  if (detailNumeric === "very_high" && (solution.impactBadge === "high-impact" || solution.impactBadge === "strategic")) {
+    score += 4;
+  }
+  if (detailNumeric === "low" && (solution.impactBadge === "quick-win" || solution.effortLevel === "low")) {
+    score += 4;
+  }
+
+  return score;
+}
 
 // Reframe each cluster from the generic symptom the client typed into the real
 // root cause Pesat.AI starts from. This is the "insight" the client did not articulate.
@@ -263,13 +373,22 @@ const FINDINGS_BY_CLUSTER: Record<ChallengeId, Finding[]> = {
 // Matches numeric signals the user typed (currency, percentages, counts, cadences) so the result can
 // reflect their own figures. Deterministic and grounded — we only echo numbers the user actually gave.
 const USER_SIGNAL_REGEX =
-  /rp\s?\d[\d.,]*\s?(?:ribu|rb|juta|jt|miliar|milyar)?|\d[\d.,]*\s?(?:%|persen|jam|menit|hari|minggu|bulan|tahun|orang|karyawan|staf|staff|tim|chat|pesan|lead|prospek|transaksi|order|pesanan|pelanggan|customer|klien|produk|sku|item|cabang|toko|outlet|kali|x)\b(?:\s?\/\s?(?:hari|minggu|bulan|tahun|orang))?/gi;
+  /rp\s?\d[\d.,]*\s?(?:ribu|rb|juta|jt|miliar|milyar)?|\d[\d.,]*\s?(?:%|persen|jam|menit|hari|minggu|bulan|tahun|orang|karyawan|staf|staff|tim|chat|pesan|lead|prospek|transaksi|order|pesanan|pelanggan|customer|klien|produk|sku|item|cabang|toko|outlet|kali|x)\b(?:\s?(?:\/|per)\s?(?:hari|minggu|bulan|tahun|orang))?/gi;
+
+// Captures tools and team-size hints the user mentions so recommendations can reference feasible integrations.
+const STACK_SIGNAL_REGEX =
+  /\b(?:WhatsApp|WA|Email|Telepon|Spreadsheet|Excel|Google Sheets|Odoo|SAP|Oracle|NetSuite|Shopify|WooCommerce|Tokopedia|Shopee|Lazada|TikTok Shop|HubSpot|Salesforce|Zoho|Pipedrive|Freshdesk|Zendesk|Notion|Google Docs|Microsoft 365|Outlook|Gmail|Slack|Discord|Jira|Trello|Asana|ClickUp|Monday|Xero|QuickBooks|MYOB|Firebase|AWS|Azure|GCP)\b/gi;
 
 export function extractUserSignals(note: string): string[] {
   if (!note) return [];
-  const matches = note.match(USER_SIGNAL_REGEX) || [];
-  const cleaned = matches.map((match) => match.replace(/\s+/g, " ").trim()).filter((match) => /\d/.test(match));
-  return Array.from(new Set(cleaned)).slice(0, 6);
+  const numericMatches = note.match(USER_SIGNAL_REGEX) || [];
+  const numericCleaned = numericMatches.map((match) => match.replace(/\s+/g, " ").trim()).filter((match) => /\d/.test(match));
+
+  const stackMatches = note.match(STACK_SIGNAL_REGEX) || [];
+  const stackCleaned = Array.from(new Set(stackMatches.map((m) => m.trim())));
+
+  const combined = Array.from(new Set([...numericCleaned, ...stackCleaned])).slice(0, 8);
+  return combined;
 }
 
 export function calculateEfficiencyMetrics(answers: WizardAnswers): EfficiencyMetric[] {
@@ -279,7 +398,11 @@ export function calculateEfficiencyMetrics(answers: WizardAnswers): EfficiencyMe
 
 export function calculateHiddenCosts(answers: WizardAnswers): HiddenCost[] {
   const primary = answers.mainChallenges[0] || "revenue";
-  return HIDDEN_COSTS_BY_CLUSTER[primary];
+  const multiplier = IMPACT_MULTIPLIERS[answers.impactLevel] ?? 1;
+  return HIDDEN_COSTS_BY_CLUSTER[primary].map((cost) => ({
+    ...cost,
+    monthlyEstimate: Math.round(cost.monthlyEstimate * multiplier)
+  }));
 }
 
 export function calculateFindings(answers: WizardAnswers): Finding[] {
@@ -314,14 +437,33 @@ export function selectSolutions(answers: WizardAnswers): PesatSolution[] {
   const primary = answers.mainChallenges[0] || "revenue";
   const secondary = answers.mainChallenges[1];
 
-  // Detail challenges (the most specific signal) drive recommendations first,
-  // then the cluster priority backfills so we always have 3-4 fitting solutions.
+  // Without a specific detail challenge, the deterministic cluster priority is the
+  // most stable ordering and keeps existing contracts/tests intact.
+  if (answers.detailChallenges.length === 0) {
+    const clusterBackfill = [...CLUSTER_PRIORITY[primary], ...(secondary ? CLUSTER_PRIORITY[secondary] : [])];
+    const uniqueIds = Array.from(new Set(clusterBackfill)).slice(0, 4);
+    return uniqueIds
+      .map((id) => AVAILABLE_SOLUTIONS.find((solution) => solution.id === id))
+      .filter(Boolean)
+      .map((solution) => ({ ...solution!, fitScore: scoreSolution(solution!, answers) })) as PesatSolution[];
+  }
+
+  // With a detail challenge, use the scoring engine to personalise ranking.
   const detailDriven = answers.detailChallenges.flatMap((detail) => DETAIL_SOLUTION_MAP[detail] || []);
   const clusterBackfill = [...CLUSTER_PRIORITY[primary], ...(secondary ? CLUSTER_PRIORITY[secondary] : [])];
+  const candidateIds = Array.from(new Set([...detailDriven, ...clusterBackfill, ...AVAILABLE_SOLUTIONS.map((s) => s.id)]));
 
-  const orderedIds = [...detailDriven, ...clusterBackfill];
-  const uniqueIds = Array.from(new Set(orderedIds)).slice(0, 4);
-  return uniqueIds.map((id) => AVAILABLE_SOLUTIONS.find((solution) => solution.id === id)).filter(Boolean) as PesatSolution[];
+  const scored = candidateIds
+    .map((id) => AVAILABLE_SOLUTIONS.find((solution) => solution.id === id))
+    .filter(Boolean)
+    .map((solution) => {
+      const score = scoreSolution(solution!, answers);
+      return { solution: solution!, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+
+  return scored.map((item) => ({ ...item.solution, fitScore: item.score }));
 }
 
 function buildFirstStep(adoptionStyle: AdoptionId | "", topSolutionName: string): string {
@@ -418,20 +560,29 @@ export function buildDiagnosisPack(answers: WizardAnswers, solutions: PesatSolut
   };
 }
 
+function adjustRangeString(value: string, multiplier: number): string {
+  if (multiplier === 1 || !value) return value;
+  return value.replace(/\d+/g, (num) => {
+    const parsed = parseInt(num, 10);
+    return String(Math.round(parsed * multiplier));
+  });
+}
+
 export function calculateImpactRanges(answers: WizardAnswers): ImpactRanges {
   const challenges = new Set(answers.mainChallenges);
+  const multiplier = IMPACT_MULTIPLIERS[answers.impactLevel] ?? 1;
   const ranges: ImpactRanges = {};
 
-  if (challenges.has("revenue")) ranges.revenueIncrease = "10-30%";
-  if (challenges.has("cost")) ranges.costReduction = "8-22%";
-  if (challenges.has("fraud")) ranges.riskReduction = "15-45%";
-  if (challenges.has("cash_stock")) ranges.cashAccuracy = "20-40% lebih presisi";
-  if (challenges.has("reporting") || challenges.has("cost")) ranges.hoursSaved = "20-60 jam/bulan";
-  if (challenges.has("brand_trust")) ranges.trustLift = "15-35% peningkatan trust signal";
+  if (challenges.has("revenue")) ranges.revenueIncrease = adjustRangeString("10-30%", multiplier);
+  if (challenges.has("cost")) ranges.costReduction = adjustRangeString("8-22%", multiplier);
+  if (challenges.has("fraud")) ranges.riskReduction = adjustRangeString("15-45%", multiplier);
+  if (challenges.has("cash_stock")) ranges.cashAccuracy = adjustRangeString("20-40% lebih presisi", multiplier);
+  if (challenges.has("reporting") || challenges.has("cost")) ranges.hoursSaved = adjustRangeString("20-60 jam/bulan", multiplier);
+  if (challenges.has("brand_trust")) ranges.trustLift = adjustRangeString("15-35% peningkatan trust signal", multiplier);
 
-  if (!ranges.hoursSaved) ranges.hoursSaved = "20-60 jam/bulan";
+  if (!ranges.hoursSaved) ranges.hoursSaved = adjustRangeString("20-60 jam/bulan", multiplier);
 
-  return Object.keys(ranges).length ? ranges : { revenueIncrease: "10-30%", hoursSaved: "20-60 jam/bulan" };
+  return Object.keys(ranges).length ? ranges : { revenueIncrease: adjustRangeString("10-30%", multiplier), hoursSaved: adjustRangeString("20-60 jam/bulan", multiplier) };
 }
 
 export function buildChart(answers: WizardAnswers) {
@@ -459,18 +610,22 @@ export function buildSolutionCards(solutions: PesatSolution[], answers: WizardAn
   const primary = answers.mainChallenges[0] || "revenue";
   const detail = answers.detailChallenges[0];
 
-  return solutions.map((solution, index) => {
-    // Confidence score: higher if solution directly maps to selected detail, then by cluster match
-    let confidence = 75;
-    if (detail && DETAIL_SOLUTION_MAP[detail]?.includes(solution.id)) {
-      confidence = 96;
-    } else if (solution.cluster.includes(primary)) {
-      confidence = 88;
-    }
-    // Slight variance so they don't all look identical
-    confidence = Math.min(99, confidence + index * 2);
+  return solutions.map((solution) => {
+    // Confidence is grounded in the deterministic fit score; cap at 99 and keep a realistic floor.
+    const fitScore = typeof solution.fitScore === "number" ? solution.fitScore : scoreSolution(solution, answers);
+    const confidence = Math.min(99, Math.max(70, Math.round(70 + (fitScore / 40) * 29)));
 
-    const proofBasis = detail ? `Direct match: ${DETAIL_LABELS[detail]} → ${solution.name}` : `Cluster match: ${primary} priority → ${solution.name}`;
+    const proofParts: string[] = [];
+    if (detail && DETAIL_SOLUTION_MAP[detail]?.includes(solution.id)) {
+      proofParts.push(`Direct match: ${DETAIL_LABELS[detail]} → ${solution.name}`);
+    }
+    if (solution.cluster.includes(primary)) {
+      proofParts.push(`Cluster match: ${primary}`);
+    }
+    if (answers.frictionSource && FRICTION_SOLUTION_BOOST[answers.frictionSource]?.includes(solution.id)) {
+      proofParts.push(`Friction fit: ${FRICTION_SOURCES[answers.frictionSource]?.label || answers.frictionSource}`);
+    }
+    const proofBasis = proofParts.length ? proofParts.join(" • ") : `Relevant for ${primary}`;
 
     return {
       name: solution.name,
@@ -478,7 +633,12 @@ export function buildSolutionCards(solutions: PesatSolution[], answers: WizardAn
       impactBadge: solution.impactBadge || "high-impact",
       setupTime: solution.setupTime || "2-3 minggu",
       confidenceScore: confidence,
-      proofBasis
+      proofBasis,
+      capabilities: solution.capabilities,
+      prerequisites: solution.prerequisites,
+      integrations: solution.integrations,
+      effortLevel: solution.effortLevel,
+      caseStudy: solution.caseStudy
     };
   });
 }

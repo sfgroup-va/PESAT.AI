@@ -1,4 +1,4 @@
-import type { AdoptionId, ChallengeId, ContactData, DetailId, FrictionSourceId, ImpactId, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, ContactData, ContextAnswerKey, DetailId, FrictionSourceId, ImpactId, WizardAnswers } from "@/lib/types";
 
 const challengeIds = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"] as const satisfies readonly ChallengeId[];
 const detailIds = [
@@ -41,6 +41,7 @@ const detailSet = new Set<string>(detailIds);
 const impactSet = new Set<string>(impactIds);
 const frictionSourceSet = new Set<string>(frictionSourceIds);
 const adoptionSet = new Set<string>(adoptionIds);
+const contextAnswerKeys = new Set<string>(["detailNumeric", "frictionChannel", "currentStack"] satisfies ContextAnswerKey[]);
 const eventTypeSet = new Set<string>(eventTypes);
 const eventScreenSet = new Set<string>(eventScreens);
 
@@ -92,13 +93,23 @@ export function sanitizeAnswers(value: unknown): WizardAnswers {
     typeof input.frictionSource === "string" && frictionSourceSet.has(input.frictionSource) ? (input.frictionSource as FrictionSourceId) : "";
   const adoptionStyle = typeof input.adoptionStyle === "string" && adoptionSet.has(input.adoptionStyle) ? (input.adoptionStyle as AdoptionId) : "";
 
+  const rawContext = typeof input.contextAnswers === "object" && input.contextAnswers ? (input.contextAnswers as Record<string, unknown>) : {};
+  const contextAnswers: Partial<Record<ContextAnswerKey, string>> = {};
+  for (const key of contextAnswerKeys) {
+    const value = rawContext[key];
+    if (typeof value === "string") {
+      contextAnswers[key as ContextAnswerKey] = sanitizeText(value, 120);
+    }
+  }
+
   return {
     mainChallenges: uniqueAllowed<ChallengeId>(input.mainChallenges, challengeSet, 2),
     detailChallenges: uniqueAllowed<DetailId>(input.detailChallenges, detailSet, 8),
     impactLevel,
     frictionSource,
     adoptionStyle,
-    detailNote: sanitizeWordLimitedText(input.detailNote, 1000)
+    detailNote: sanitizeWordLimitedText(input.detailNote, 1000),
+    contextAnswers: Object.keys(contextAnswers).length > 0 ? contextAnswers : undefined
   };
 }
 

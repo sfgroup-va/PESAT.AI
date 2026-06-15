@@ -32,6 +32,8 @@ export type FrictionSourceId =
   | "knowledge_silo";
 export type AdoptionId = "dfy" | "diy" | "hybrid" | "starting";
 
+export type ContextAnswerKey = "detailNumeric" | "frictionChannel" | "currentStack";
+
 export type WizardAnswers = {
   mainChallenges: ChallengeId[];
   detailChallenges: DetailId[];
@@ -39,6 +41,7 @@ export type WizardAnswers = {
   frictionSource: FrictionSourceId | "";
   adoptionStyle: AdoptionId | "";
   detailNote?: string;
+  contextAnswers?: Partial<Record<ContextAnswerKey, string>>;
 };
 
 export type ContactData = {
@@ -55,6 +58,17 @@ export type PesatSolution = {
   description: string;
   setupTime?: string;
   impactBadge?: "quick-win" | "high-impact" | "strategic";
+  capabilities?: string[];
+  prerequisites?: string[];
+  integrations?: string[];
+  idealFor?: string[];
+  effortLevel?: "low" | "medium" | "high";
+  caseStudy?: {
+    clientType: string;
+    outcome: string;
+    timeframe: string;
+  };
+  fitScore?: number;
 };
 
 export type ImpactRanges = {
@@ -93,6 +107,15 @@ export type SolutionCard = {
   setupTime: string;
   confidenceScore: number;
   proofBasis: string;
+  capabilities?: string[];
+  prerequisites?: string[];
+  integrations?: string[];
+  effortLevel?: "low" | "medium" | "high";
+  caseStudy?: {
+    clientType: string;
+    outcome: string;
+    timeframe: string;
+  };
 };
 
 export type DiagnosisPack = {

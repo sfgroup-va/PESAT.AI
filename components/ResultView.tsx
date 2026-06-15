@@ -316,8 +316,56 @@ export function ResultView({ sessionId }: { sessionId: string }) {
                       <h3 className="text-lg font-semibold">{card.name}</h3>
                       <ImpactBadge badge={card.impactBadge} />
                       <ConfidenceBadge score={card.confidenceScore} />
+                      {card.effortLevel ? <EffortBadge level={card.effortLevel} /> : null}
                     </div>
                     <p className="mt-1 text-sm leading-6 text-neutral-600">{card.description}</p>
+
+                    {card.capabilities?.length ? (
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Kemampuan</p>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {card.capabilities.map((cap) => (
+                            <span key={cap} className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700">
+                              {cap}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {card.integrations?.length ? (
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Integrasi umum</p>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {card.integrations.map((integration) => (
+                            <span key={integration} className="rounded-full border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-600">
+                              {integration}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {card.prerequisites?.length ? (
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Perlu disiapkan</p>
+                        <ul className="mt-1 list-inside list-disc text-xs leading-5 text-neutral-500">
+                          {card.prerequisites.map((pre) => (
+                            <li key={pre}>{pre}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+
+                    {card.caseStudy ? (
+                      <div className="mt-3 rounded-[1rem] bg-neutral-50 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Contoh kasus</p>
+                        <p className="mt-1 text-sm leading-5 text-neutral-700">
+                          <span className="font-semibold">{card.caseStudy.clientType}</span> — {card.caseStudy.outcome} ({card.caseStudy.timeframe})
+                        </p>
+                      </div>
+                    ) : null}
+
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-500">
                       <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1">
                         <Clock className="h-3 w-3" />
@@ -442,6 +490,16 @@ function ConfidenceBadge({ score }: { score: number }) {
       {score}% match
     </span>
   );
+}
+
+function EffortBadge({ level }: { level: "low" | "medium" | "high" }) {
+  const labels = { low: "Low effort", medium: "Medium effort", high: "High effort" };
+  const colors = {
+    low: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    medium: "bg-amber-50 text-amber-700 border-amber-200",
+    high: "bg-rose-50 text-rose-700 border-rose-200"
+  };
+  return <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${colors[level]}`}>{labels[level]}</span>;
 }
 
 /* ─── Utilities ─── */
