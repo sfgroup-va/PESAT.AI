@@ -38,24 +38,24 @@ export function normalizeModelPayload(
   const allowedImpactValues = new Set(Object.values(impactRanges).filter(Boolean));
   const solutionNames = solutions.map((solution) => solution.name.toLowerCase());
 
-  const cleanDiagnosis = cleanString(payload.diagnosis, 460);
+  const cleanDiagnosis = cleanString(payload.diagnosis, 360);
   const diagnosis = cleanDiagnosis && percentClaimsAllowed(cleanDiagnosis, allowedImpactValues) ? cleanDiagnosis : fallback.diagnosis ?? "";
 
-  const cleanPromise = cleanString(payload.promiseStatement, 380);
+  const cleanPromise = cleanString(payload.promiseStatement, 260);
   const promiseStatement = cleanPromise && percentClaimsAllowed(cleanPromise, allowedImpactValues) ? cleanPromise : fallback.promise?.statement ?? "";
 
-  const cleanCostOfInaction = cleanString(payload.costOfInaction, 380);
+  const cleanCostOfInaction = cleanString(payload.costOfInaction, 260);
   const costOfInaction = cleanCostOfInaction && percentClaimsAllowed(cleanCostOfInaction, allowedImpactValues) ? cleanCostOfInaction : fallback.costOfInaction ?? "";
 
-  const cleanFirstStep = cleanString(payload.firstStep, 380);
+  const cleanFirstStep = cleanString(payload.firstStep, 220);
   const firstStep = cleanFirstStep && percentClaimsAllowed(cleanFirstStep, allowedImpactValues) ? cleanFirstStep : fallback.firstStep ?? "";
 
   const impactCards = Array.isArray(payload.impactCards)
     ? payload.impactCards
         .map((card) => ({
-          title: cleanString(card?.title, 80),
-          value: cleanString(card?.value, 80),
-          description: cleanString(card?.description, 220)
+      title: cleanString(card?.title, 70),
+      value: cleanString(card?.value, 80),
+      description: cleanString(card?.description, 160)
         }))
         .filter((card) => card.title && card.description && allowedImpactValues.has(card.value))
         .slice(0, 3)
@@ -63,26 +63,26 @@ export function normalizeModelPayload(
 
   const beforeAfter =
     Array.isArray(payload.beforeAfterText) && payload.beforeAfterText.length === 2
-      ? ([cleanString(payload.beforeAfterText[0], 280), cleanString(payload.beforeAfterText[1], 280)] as [string, string])
+      ? ([cleanString(payload.beforeAfterText[0], 220), cleanString(payload.beforeAfterText[1], 220)] as [string, string])
       : fallback.beforeAfterText;
 
   const solutionsText = Array.isArray(payload.solutionsText)
     ? payload.solutionsText
-        .map((item) => cleanString(item, 320))
+        .map((item) => cleanString(item, 220))
         .filter((item) => solutionNames.some((name) => item.toLowerCase().includes(name)))
         .slice(0, solutions.length)
     : [];
 
   return {
-    headline: cleanString(payload.headline, 140) || fallback.headline,
-    subheadline: cleanString(payload.subheadline, 260) || fallback.subheadline,
+    headline: cleanString(payload.headline, 110) || fallback.headline,
+    subheadline: cleanString(payload.subheadline, 180) || fallback.subheadline,
     diagnosis,
     promiseStatement,
     costOfInaction,
     firstStep,
     impactCards: impactCards.length >= 2 ? impactCards : fallback.impactCards,
     beforeAfterText: beforeAfter[0] && beforeAfter[1] ? beforeAfter : fallback.beforeAfterText,
-    uniqueMechanism: cleanString(payload.uniqueMechanism, 420) || fallback.uniqueMechanism,
+    uniqueMechanism: cleanString(payload.uniqueMechanism, 260) || fallback.uniqueMechanism,
     solutionsText: solutionsText.length === solutions.length ? solutionsText : fallback.solutionsText
   };
 }

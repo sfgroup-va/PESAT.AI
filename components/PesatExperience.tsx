@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, X, Sparkles, TrendingUp, Shield, Clock, Zap, Search, AlertTriangle, TrendingDown, Brain } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Check, Download, ExternalLink, Loader2, X, Sparkles, Shield, Clock, Search, AlertTriangle, TrendingDown, Brain } from "lucide-react";
 import { Header } from "@/components/home/Header";
 import { Footer } from "@/components/home/Footer";
 import { CtaBand } from "@/components/home/CtaBand";
@@ -13,21 +13,37 @@ import { WhyPesat } from "@/components/home/sections/WhyPesat";
 import { Pricing } from "@/components/home/sections/Pricing";
 import { CaseStudies } from "@/components/home/sections/CaseStudies";
 import { Testimonial } from "@/components/home/sections/Testimonial";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { CHALLENGE_LABELS, TRANSITION_FACTS, QUALITY_QUESTIONS, DETAIL_TO_CHALLENGE, FRICTION_SOURCES, LOADING_INSIGHTS } from "@/lib/solutions";
+import { QUALITY_QUESTIONS, DETAIL_TO_CHALLENGE, buildSmartQuestionCopy, buildTransitionFact, pickLoadingInsights, type LoadingInsight } from "@/lib/solutions";
 import { ImpactComparisonChart } from "@/components/ImpactComparisonChart";
+import { StrategicSummary } from "@/components/report/StrategicSummary";
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
-import type { AdoptionId, ChallengeId, ContactData, DetailId, GeneratedResult, ImpactId, FrictionSourceId, WizardAnswers } from "@/lib/types";
+import {
+  ADOPTION_OPTIONS,
+  DEFAULT_CHALLENGE_BY_PATH,
+  FRICTION_OPTIONS,
+  IMPACT_OPTIONS,
+  INTAKE_PATH_OPTIONS,
+  getDetailOptionsForPath,
+  getOtherPlaceholder,
+  inferAdoptionFromText,
+  inferDetailFromText,
+  inferFrictionFromText,
+  inferImpactFromText,
+  inferIntakePathFromText
+} from "@/lib/wizard-flow";
+import type { AdoptionId, ContactData, DetailId, GeneratedResult, ImpactId, FrictionSourceId, IntakePathId, OtherAnswerKey, WizardAnswers } from "@/lib/types";
 
 const initialAnswers: WizardAnswers = {
+  intakePath: "",
   mainChallenges: [],
   detailChallenges: [],
   impactLevel: "",
   frictionSource: "",
-  adoptionStyle: ""
+  adoptionStyle: "",
+  otherAnswers: {}
 };
 
 type Step = "hero" | "q1" | "q2" | "q3" | "q4" | "q5" | "q6" | "review" | "loading" | "result" | "leadGate";
@@ -86,37 +102,38 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function useLoadingSequence(insights: typeof LOADING_INSIGHTS, onComplete: () => void) {
+function useLoadingSequence(insights: LoadingInsight[]) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     if (!insights.length) {
-      onComplete();
       return;
     }
     let cancelled = false;
 
     const run = async () => {
-      for (let i = 0; i < insights.length; i++) {
-        if (cancelled) return;
-        setActiveIndex(i);
-        setIsVisible(true);
-        await wait(insights[i].durationMs);
+      let index = 0;
 
-        if (i < insights.length - 1) {
-          setIsVisible(false);
-          await wait(600);
-        }
+      while (!cancelled) {
+        const insight = insights[index % insights.length];
+        if (cancelled) return;
+        setActiveIndex(index % insights.length);
+        setIsVisible(true);
+        await wait(insight.durationMs);
+        if (cancelled) return;
+
+        setIsVisible(false);
+        await wait(450);
+        index += 1;
       }
-      if (!cancelled) onComplete();
     };
 
     void run();
     return () => {
       cancelled = true;
     };
-  }, [insights, onComplete]);
+  }, [insights]);
 
   return { activeInsight: insights[activeIndex], isVisible };
 }
@@ -134,12 +151,11 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   const [resultError, setResultError] = useState("");
   const [discoveryError, setDiscoveryError] = useState("");
   const [discoveryNotice, setDiscoveryNotice] = useState("");
-  const [transitionFact, setTransitionFact] = useState<{ text: string; source: string } | null>(null);
+  const [transitionFact, setTransitionFact] = useState<{ text: string; source: string; nextStep: Step } | null>(null);
+  const [activeOtherField, setActiveOtherField] = useState<OtherAnswerKey | "">("");
 
   const detailNoteWordCount = useMemo(() => countWords(detailNote), [detailNote]);
-
-  const primaryChallenge = answers.mainChallenges[0] || "revenue";
-  const fact = TRANSITION_FACTS[primaryChallenge];
+  const smartQuestionCopy = useMemo(() => buildSmartQuestionCopy(answers), [answers]);
 
   const track = useCallback(
     async (type: "screen_view" | "click", screen: Step, metadata?: Record<string, unknown>, sessionIdOverride?: string) => {
@@ -157,6 +173,17 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       void track("screen_view", step);
     }
   }, [step, track]);
+
+  useEffect(() => {
+    if (!transitionFact) return;
+
+    const timeout = window.setTimeout(() => {
+      setStep(transitionFact.nextStep);
+      setTransitionFact(null);
+    }, 7200);
+
+    return () => window.clearTimeout(timeout);
+  }, [transitionFact]);
 
   // Contact is only required for the lead gate discovery submission, not for generating the result.
   const canSubmitDiscovery = Boolean(contact.name && contact.name.trim()) && hasUsableWhatsAppNumber(contact.wa || "");
@@ -180,35 +207,150 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     setStep("q1");
   }
 
-  function selectChallenge(id: ChallengeId) {
+  function setOtherAnswerValue(key: OtherAnswerKey, value: string) {
     setAnswers((current) => ({
       ...current,
-      mainChallenges: current.mainChallenges[0] === id ? [] : [id],
-      detailChallenges: []
+      otherAnswers: {
+        ...(current.otherAnswers || {}),
+        [key]: value
+      }
     }));
+  }
+
+  function updateAnswers(nextAnswers: WizardAnswers) {
+    setAnswers(nextAnswers);
+  }
+
+  function advanceWithFact(currentStep: "q1" | "q2", nextStep: Step, nextAnswers: WizardAnswers = answers) {
+    const fact = buildTransitionFact(nextAnswers, currentStep);
+    setTransitionFact({ text: fact.text, source: fact.source, nextStep });
+  }
+
+  function selectIntakePath(path: IntakePathId) {
+    const mappedChallenge = path === "other" ? [] : [DEFAULT_CHALLENGE_BY_PATH[path as Exclude<IntakePathId, "other">]];
+    const nextAnswers: WizardAnswers = {
+      ...answers,
+      intakePath: path,
+      mainChallenges: mappedChallenge,
+      detailChallenges: [],
+      otherAnswers: { ...(answers.otherAnswers || {}), mainChallenge: "" }
+    };
+    setActiveOtherField("");
+    updateAnswers(nextAnswers);
+    if (path !== "other") {
+      advanceWithFact("q1", "q2", nextAnswers);
+    }
+  }
+
+  function commitMainChallengeOther(value: string) {
+    const path = inferIntakePathFromText(value);
+    const nextAnswers: WizardAnswers = {
+      ...answers,
+      intakePath: path,
+      mainChallenges: [DEFAULT_CHALLENGE_BY_PATH[path]],
+      detailChallenges: [],
+      otherAnswers: { ...(answers.otherAnswers || {}), mainChallenge: value }
+    };
+    setActiveOtherField("");
+    updateAnswers(nextAnswers);
+    advanceWithFact("q1", "q2", nextAnswers);
   }
 
   function selectDetail(id: DetailId) {
+    const nextAnswers: WizardAnswers = {
+      ...answers,
+      mainChallenges: [DETAIL_TO_CHALLENGE[id]],
+      detailChallenges: [id],
+      otherAnswers: { ...(answers.otherAnswers || {}), detailChallenge: "" }
+    };
+    setActiveOtherField("");
+    updateAnswers(nextAnswers);
+    advanceWithFact("q2", "q3", nextAnswers);
+  }
+
+  function commitDetailOther(value: string) {
+    const inferred = inferDetailFromText(answers.intakePath || "", value);
+    const nextAnswers: WizardAnswers = {
+      ...answers,
+      mainChallenges: [inferred.challenge],
+      detailChallenges: [inferred.detail],
+      otherAnswers: { ...(answers.otherAnswers || {}), detailChallenge: value }
+    };
+    setActiveOtherField("");
+    updateAnswers(nextAnswers);
+    advanceWithFact("q2", "q3", nextAnswers);
+  }
+
+  function selectImpactLevel(id: ImpactId) {
+    setActiveOtherField("");
     setAnswers((current) => ({
       ...current,
-      detailChallenges: current.detailChallenges[0] === id ? [] : [id]
+      impactLevel: id,
+      otherAnswers: { ...(current.otherAnswers || {}), impactLevel: "" }
     }));
+    setStep("q4");
+  }
+
+  function commitImpactOther(value: string) {
+    const inferred = inferImpactFromText(value);
+    const nextAnswers: WizardAnswers = {
+      ...answers,
+      impactLevel: inferred,
+      otherAnswers: { ...(answers.otherAnswers || {}), impactLevel: value }
+    };
+    setActiveOtherField("");
+    updateAnswers(nextAnswers);
+    setStep("q4");
   }
 
   function selectFrictionSource(id: FrictionSourceId) {
+    setActiveOtherField("");
     setAnswers((current) => ({
       ...current,
-      frictionSource: current.frictionSource === id ? "" : id
+      frictionSource: id,
+      otherAnswers: { ...(current.otherAnswers || {}), frictionSource: "" }
     }));
+    setStep("q5");
   }
 
-  function advanceWithFact(currentStep: Step, nextStep: Step) {
-    const isFirstTransition = currentStep === "q1";
-    setTransitionFact({ text: isFirstTransition ? fact.first : fact.second, source: fact.source });
-    setTimeout(() => {
-      setTransitionFact(null);
-      setStep(nextStep);
-    }, 2400);
+  function commitFrictionOther(value: string) {
+    const inferred = inferFrictionFromText(value);
+    const nextAnswers: WizardAnswers = {
+      ...answers,
+      frictionSource: inferred,
+      otherAnswers: { ...(answers.otherAnswers || {}), frictionSource: value }
+    };
+    setActiveOtherField("");
+    updateAnswers(nextAnswers);
+    setStep("q5");
+  }
+
+  function selectAdoptionStyle(id: AdoptionId) {
+    setActiveOtherField("");
+    setAnswers((current) => ({
+      ...current,
+      adoptionStyle: id,
+      otherAnswers: { ...(current.otherAnswers || {}), adoptionStyle: "" }
+    }));
+    setStep("q6");
+  }
+
+  function commitAdoptionOther(value: string) {
+    const inferred = inferAdoptionFromText(value);
+    const nextAnswers: WizardAnswers = {
+      ...answers,
+      adoptionStyle: inferred,
+      otherAnswers: { ...(answers.otherAnswers || {}), adoptionStyle: value }
+    };
+    setActiveOtherField("");
+    updateAnswers(nextAnswers);
+    setStep("q6");
+  }
+
+  function skipTransitionFact() {
+    if (!transitionFact) return;
+    setStep(transitionFact.nextStep);
+    setTransitionFact(null);
   }
 
   function handleDetailNoteChange(value: string) {
@@ -292,6 +434,8 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       companyName: String(form.get("companyName") || contact.companyName || ""),
       name: String(form.get("name") || contact.name || ""),
       wa: String(form.get("wa") || contact.wa || ""),
+      employeeCount: String(form.get("employeeCount") || contact.employeeCount || ""),
+      yearlyRevenue: String(form.get("yearlyRevenue") || contact.yearlyRevenue || ""),
       budgetContext: String(form.get("budgetContext") || ""),
       message: combinedMessage,
       summary: result?.headline
@@ -331,9 +475,16 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
 
   function startLoadingSequence() {
     setStep("loading");
+    void generateResult();
   }
 
   const progress = STEP_PROGRESS[step];
+  const detailOptions = getDetailOptionsForPath(answers.intakePath || "");
+  const selectedPathLabel = answers.otherAnswers?.mainChallenge || INTAKE_PATH_OPTIONS.find((option) => option.id === answers.intakePath)?.label || "-";
+  const selectedDetailLabel = answers.otherAnswers?.detailChallenge || detailOptions.find((option) => option.id === answers.detailChallenges[0])?.label || "-";
+  const selectedImpactLabel = answers.otherAnswers?.impactLevel || IMPACT_OPTIONS.find((option) => option.id === answers.impactLevel)?.label || "-";
+  const selectedFrictionLabel = answers.otherAnswers?.frictionSource || FRICTION_OPTIONS.find((option) => option.id === answers.frictionSource)?.label || "-";
+  const selectedAdoptionLabel = answers.otherAnswers?.adoptionStyle || ADOPTION_OPTIONS.find((option) => option.id === answers.adoptionStyle)?.label || "-";
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
@@ -389,6 +540,9 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                     <div key={i} className="h-2 w-2 animate-bounce rounded-full bg-neutral-400" style={{ animationDelay: `${i * 150}ms` }} />
                   ))}
                 </div>
+                <button onClick={skipTransitionFact} className="mt-8 rounded-full border border-neutral-200 px-5 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50">
+                  Lanjut sekarang
+                </button>
               </div>
             )}
 
@@ -398,39 +552,51 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                 {step === "q1" && (
                   <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[0].eyebrow} title={QUALITY_QUESTIONS[0].title} note={QUALITY_QUESTIONS[0].note}>
                     <div className="grid gap-3">
-                      {QUALITY_QUESTIONS[0].options.map((option) => (
+                      {INTAKE_PATH_OPTIONS.map((option) => (
                         <QualityChoiceButton
                           key={option.id}
-                          active={answers.mainChallenges[0] === option.id}
-                          onClick={() => selectChallenge(option.id as ChallengeId)}
+                          active={option.id === "other" ? activeOtherField === "mainChallenge" || Boolean(answers.otherAnswers?.mainChallenge) : answers.intakePath === option.id}
+                          onClick={() => (option.id === "other" ? setActiveOtherField("mainChallenge") : selectIntakePath(option.id as IntakePathId))}
                           label={option.label}
                           note={option.note}
                           emoji={option.emoji}
                         />
                       ))}
                     </div>
-                    <PrimaryAction disabled={!answers.mainChallenges[0]} onClick={() => advanceWithFact("q1", "q2")} label="Lanjut" />
+                    {activeOtherField === "mainChallenge" ? (
+                      <OtherInlineInput
+                        value={answers.otherAnswers?.mainChallenge || ""}
+                        placeholder={getOtherPlaceholder("mainChallenge")}
+                        onChange={(value) => setOtherAnswerValue("mainChallenge", value)}
+                        onSubmit={commitMainChallengeOther}
+                      />
+                    ) : null}
                   </QualityQuestionShell>
                 )}
 
                 {/* Q2: Detail Challenge */}
                 {step === "q2" && (
-                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[1].eyebrow} title={QUALITY_QUESTIONS[1].title} note={QUALITY_QUESTIONS[1].note}>
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[1].eyebrow} title={smartQuestionCopy.q2.title} note={smartQuestionCopy.q2.note}>
                     <div className="grid gap-3">
-                      {QUALITY_QUESTIONS[1].options
-                        .filter((option) => DETAIL_TO_CHALLENGE[option.id as DetailId] === answers.mainChallenges[0])
-                        .map((option) => (
-                          <QualityChoiceButton
-                            key={option.id}
-                            active={answers.detailChallenges[0] === option.id}
-                            onClick={() => selectDetail(option.id as DetailId)}
-                            label={option.label}
-                            note={option.note}
-                            emoji={option.emoji}
-                          />
-                        ))}
+                      {detailOptions.map((option) => (
+                        <QualityChoiceButton
+                          key={option.id}
+                          active={option.id === "other" ? activeOtherField === "detailChallenge" || Boolean(answers.otherAnswers?.detailChallenge) : answers.detailChallenges[0] === option.id}
+                          onClick={() => (option.id === "other" ? setActiveOtherField("detailChallenge") : selectDetail(option.id as DetailId))}
+                          label={option.label}
+                          note={option.note}
+                          emoji={option.emoji}
+                        />
+                      ))}
                     </div>
-                    <PrimaryAction disabled={!answers.detailChallenges[0]} onClick={() => advanceWithFact("q2", "q3")} label="Lanjut" />
+                    {activeOtherField === "detailChallenge" ? (
+                      <OtherInlineInput
+                        value={answers.otherAnswers?.detailChallenge || ""}
+                        placeholder={getOtherPlaceholder("detailChallenge")}
+                        onChange={(value) => setOtherAnswerValue("detailChallenge", value)}
+                        onSubmit={commitDetailOther}
+                      />
+                    ) : null}
                   </QualityQuestionShell>
                 )}
 
@@ -438,37 +604,51 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                 {step === "q3" && (
                   <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[2].eyebrow} title={QUALITY_QUESTIONS[2].title} note={QUALITY_QUESTIONS[2].note}>
                     <div className="grid gap-3">
-                      {QUALITY_QUESTIONS[2].options.map((option) => (
+                      {IMPACT_OPTIONS.map((option) => (
                         <QualityChoiceButton
                           key={option.id}
-                          active={answers.impactLevel === option.id}
-                          onClick={() => setAnswers({ ...answers, impactLevel: option.id as ImpactId })}
+                          active={option.id === "other" ? activeOtherField === "impactLevel" || Boolean(answers.otherAnswers?.impactLevel) : answers.impactLevel === option.id}
+                          onClick={() => (option.id === "other" ? setActiveOtherField("impactLevel") : selectImpactLevel(option.id as ImpactId))}
                           label={option.label}
                           note={option.note}
                           emoji={option.emoji}
                         />
                       ))}
                     </div>
-                    <PrimaryAction disabled={!answers.impactLevel} onClick={() => setStep("q4")} label="Lanjut" />
+                    {activeOtherField === "impactLevel" ? (
+                      <OtherInlineInput
+                        value={answers.otherAnswers?.impactLevel || ""}
+                        placeholder={getOtherPlaceholder("impactLevel")}
+                        onChange={(value) => setOtherAnswerValue("impactLevel", value)}
+                        onSubmit={commitImpactOther}
+                      />
+                    ) : null}
                   </QualityQuestionShell>
                 )}
 
                 {/* Q4: Friction Source */}
                 {step === "q4" && (
-                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[3].eyebrow} title={QUALITY_QUESTIONS[3].title} note={QUALITY_QUESTIONS[3].note}>
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[3].eyebrow} title={smartQuestionCopy.q4.title} note={smartQuestionCopy.q4.note}>
                     <div className="grid gap-3">
-                      {Object.entries(FRICTION_SOURCES).map(([id, source]) => (
+                      {FRICTION_OPTIONS.map((option) => (
                         <QualityChoiceButton
-                          key={id}
-                          active={answers.frictionSource === id}
-                          onClick={() => selectFrictionSource(id as FrictionSourceId)}
-                          label={source.label}
-                          note={source.note}
-                          emoji={frictionEmoji(id as FrictionSourceId)}
+                          key={option.id}
+                          active={option.id === "other" ? activeOtherField === "frictionSource" || Boolean(answers.otherAnswers?.frictionSource) : answers.frictionSource === option.id}
+                          onClick={() => (option.id === "other" ? setActiveOtherField("frictionSource") : selectFrictionSource(option.id as FrictionSourceId))}
+                          label={option.label}
+                          note={option.note}
+                          emoji={option.emoji}
                         />
                       ))}
                     </div>
-                    <PrimaryAction disabled={!answers.frictionSource} onClick={() => setStep("q5")} label="Lanjut" />
+                    {activeOtherField === "frictionSource" ? (
+                      <OtherInlineInput
+                        value={answers.otherAnswers?.frictionSource || ""}
+                        placeholder={getOtherPlaceholder("frictionSource")}
+                        onChange={(value) => setOtherAnswerValue("frictionSource", value)}
+                        onSubmit={commitFrictionOther}
+                      />
+                    ) : null}
                   </QualityQuestionShell>
                 )}
 
@@ -476,34 +656,41 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                 {step === "q5" && (
                   <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[4].eyebrow} title={QUALITY_QUESTIONS[4].title} note={QUALITY_QUESTIONS[4].note}>
                     <div className="grid gap-3">
-                      {QUALITY_QUESTIONS[4].options.map((option) => (
+                      {ADOPTION_OPTIONS.map((option) => (
                         <QualityChoiceButton
                           key={option.id}
-                          active={answers.adoptionStyle === option.id}
-                          onClick={() => setAnswers({ ...answers, adoptionStyle: option.id as AdoptionId })}
+                          active={option.id === "other" ? activeOtherField === "adoptionStyle" || Boolean(answers.otherAnswers?.adoptionStyle) : answers.adoptionStyle === option.id}
+                          onClick={() => (option.id === "other" ? setActiveOtherField("adoptionStyle") : selectAdoptionStyle(option.id as AdoptionId))}
                           label={option.label}
                           note={option.note}
                           emoji={option.emoji}
                         />
                       ))}
                     </div>
-                    <PrimaryAction disabled={!answers.adoptionStyle} onClick={() => setStep("q6")} label="Lanjut" />
+                    {activeOtherField === "adoptionStyle" ? (
+                      <OtherInlineInput
+                        value={answers.otherAnswers?.adoptionStyle || ""}
+                        placeholder={getOtherPlaceholder("adoptionStyle")}
+                        onChange={(value) => setOtherAnswerValue("adoptionStyle", value)}
+                        onSubmit={commitAdoptionOther}
+                      />
+                    ) : null}
                   </QualityQuestionShell>
                 )}
 
                 {/* Q6: Optional Detail Note */}
                 {step === "q6" && (
-                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[5].eyebrow} title={QUALITY_QUESTIONS[5].title} note={QUALITY_QUESTIONS[5].note}>
+                  <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[5].eyebrow} title={smartQuestionCopy.q6.title} note={smartQuestionCopy.q6.note}>
                     <label className="block">
                       <textarea
                         value={detailNote}
                         onChange={(event) => handleDetailNoteChange(event.target.value)}
                         rows={5}
                         className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
-                        placeholder="Contoh: tim kami masih input data manual dari WhatsApp ke spreadsheet setiap hari, sales sering telat follow-up lead, dan laporan mingguan baru jadi hari Selasa padahal meeting direksi hari Senin pagi..."
+                        placeholder={smartQuestionCopy.q6.placeholder}
                       />
                       <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
-                        <span>Semakin spesifik, semakin tajam diagnosis dan rekomendasi yang kami susun.</span>
+                        <span>{smartQuestionCopy.q6.helper}</span>
                         <span>{detailNoteWordCount}/{DETAIL_NOTE_WORD_LIMIT} kata</span>
                       </div>
                     </label>
@@ -514,24 +701,20 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                 {/* Review */}
                 {step === "review" && (
                   <QualityQuestionShell eyebrow="07 / Review" title="Cek sebentar. Apakah ini sudah pas?">
-                    <ReviewRow label="Situasi terberat" value={CHALLENGE_LABELS[answers.mainChallenges[0] || "revenue"]} onEdit={() => setStep("q1")} />
-                    <ReviewRow
-                      label="Titik bocor terbesar"
-                      value={QUALITY_QUESTIONS[1].options.find((o) => o.id === answers.detailChallenges[0])?.label || "-"}
-                      onEdit={() => setStep("q2")}
-                    />
-                    <ReviewRow label="Intensitas masalah" value={QUALITY_QUESTIONS[2].options.find((o) => o.id === answers.impactLevel)?.label || "-"} onEdit={() => setStep("q3")} />
-                    <ReviewRow label="Sumber gesekan terbesar" value={answers.frictionSource ? FRICTION_SOURCES[answers.frictionSource].label : "-"} onEdit={() => setStep("q4")} />
-                    <ReviewRow label="Cara kerja sama" value={QUALITY_QUESTIONS[4].options.find((o) => o.id === answers.adoptionStyle)?.label || "-"} onEdit={() => setStep("q5")} />
+                    <ReviewRow label="Situasi terberat" value={selectedPathLabel} onEdit={() => setStep("q1")} />
+                    <ReviewRow label="Titik bocor terbesar" value={selectedDetailLabel} onEdit={() => setStep("q2")} />
+                    <ReviewRow label="Intensitas masalah" value={selectedImpactLabel} onEdit={() => setStep("q3")} />
+                    <ReviewRow label="Sumber gesekan terbesar" value={selectedFrictionLabel} onEdit={() => setStep("q4")} />
+                    <ReviewRow label="Cara kerja sama" value={selectedAdoptionLabel} onEdit={() => setStep("q5")} />
                     <ReviewRow label="Konteks tambahan" value={detailNote ? `${detailNote.slice(0, 60)}${detailNote.length > 60 ? "..." : ""}` : "-"} onEdit={() => setStep("q6")} />
-                    <PrimaryAction onClick={startLoadingSequence} label="Sudah Pas — Susun Diagnosis" />
+                    <PrimaryAction onClick={startLoadingSequence} label="Sudah Pas - Susun Diagnosis" />
                   </QualityQuestionShell>
                 )}
 
                 {/* Loading Sequence */}
                 {step === "loading" && (
                   <>
-                    <LoadingSequence onComplete={generateResult} />
+                    <LoadingSequence answers={answers} />
                     {resultError ? (
                       <p className="mt-6 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-center text-sm font-semibold leading-6 text-red-700">
                         {resultError}
@@ -605,10 +788,9 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   );
 }
 
-function LoadingSequence({ onComplete }: { onComplete: () => void }) {
-  // Deterministic first-four selection keeps the component pure and avoids impure Math.random during render.
-  const insights = useMemo(() => LOADING_INSIGHTS.slice(0, 4), []);
-  const { activeInsight, isVisible } = useLoadingSequence(insights, onComplete);
+function LoadingSequence({ answers }: { answers: WizardAnswers }) {
+  const insights = useMemo(() => pickLoadingInsights(answers), [answers]);
+  const { activeInsight, isVisible } = useLoadingSequence(insights);
 
   if (!activeInsight) return null;
 
@@ -619,6 +801,7 @@ function LoadingSequence({ onComplete }: { onComplete: () => void }) {
       </div>
 
       <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Analisis konsultan sedang berjalan</p>
+      <p className="mb-6 max-w-xl text-sm leading-6 text-neutral-500">Hasil mulai disusun sekarang juga dan akan muncul otomatis begitu siap.</p>
 
       <div className="min-h-[180px] max-w-2xl transition-opacity duration-500" style={{ opacity: isVisible ? 1 : 0 }}>
         <h2 className="text-3xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-4xl">{activeInsight.text}</h2>
@@ -632,18 +815,6 @@ function LoadingSequence({ onComplete }: { onComplete: () => void }) {
       </div>
     </div>
   );
-}
-
-function frictionEmoji(id: FrictionSourceId): string {
-  const map: Record<FrictionSourceId, string> = {
-    duplicate_data: "🔄",
-    manual_reports: "📑",
-    delayed_response: "⏳",
-    human_error: "⚠️",
-    approval_bottleneck: "🚧",
-    knowledge_silo: "🧠"
-  };
-  return map[id];
 }
 
 function countWords(value: string): number {
@@ -716,6 +887,40 @@ function QualityChoiceButton({ active, onClick, label, note, emoji }: { active: 
   );
 }
 
+function OtherInlineInput({
+  value,
+  placeholder,
+  onChange,
+  onSubmit
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onSubmit: (value: string) => void;
+}) {
+  return (
+    <label className="mt-4 block rounded-[1.35rem] border border-dashed border-neutral-300 bg-neutral-50 px-5 py-4">
+      <span className="mb-2 block text-sm font-semibold text-neutral-700">Tulis versi Anda sendiri. Tekan Enter untuk lanjut.</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={(event) => {
+          const nextValue = event.target.value.trim();
+          if (nextValue) onSubmit(nextValue);
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          const nextValue = event.currentTarget.value.trim();
+          if (nextValue) onSubmit(nextValue);
+        }}
+        className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 outline-none transition focus:border-neutral-900"
+        placeholder={placeholder}
+      />
+    </label>
+  );
+}
+
 function PrimaryAction({ label, onClick, disabled, loading, type = "button" }: { label: string; onClick?: () => void; disabled?: boolean; loading?: boolean; type?: "button" | "submit" }) {
   return (
     <button
@@ -771,6 +976,20 @@ function ContactFields({ contact, setContact, optional = false }: { contact: Con
         className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
         placeholder={`Nomor WhatsApp${optional ? " (opsional)" : ""}`}
       />
+      <input
+        name="employeeCount"
+        value={contact.employeeCount || ""}
+        onChange={(event) => setContact({ ...contact, employeeCount: event.target.value })}
+        className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+        placeholder="Jumlah karyawan"
+      />
+      <input
+        name="yearlyRevenue"
+        value={contact.yearlyRevenue || ""}
+        onChange={(event) => setContact({ ...contact, yearlyRevenue: event.target.value })}
+        className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+        placeholder="Yearly revenue"
+      />
       {optional ? (
         <label className="flex items-center gap-3 rounded-3xl border border-neutral-200 px-5 py-4 text-sm font-semibold text-neutral-700">
           <input type="checkbox" checked={Boolean(contact.followUpAllowed)} onChange={(event) => setContact({ ...contact, followUpAllowed: event.target.checked })} />
@@ -806,21 +1025,11 @@ function ResultPanel({
   onPdf: () => void | Promise<void>;
   onDiscovery: () => void | Promise<void>;
 }) {
-  const [monthlyRevenue, setMonthlyRevenue] = useState(500000000); // default 500jt
-  const [monthlyCost, setMonthlyCost] = useState(80_000_000); // default 80jt
-  const impactPercent = parseImpactPercent(result.impactCards);
-  const isRevenueCluster = result.efficiencyMetrics.some((m) => m.label.toLowerCase().includes("lead") || m.label.toLowerCase().includes("revenue"));
-
-  const projectedGain = Math.round(monthlyRevenue * (impactPercent / 100));
-  const annualGain = projectedGain * 12;
-  const projectedCostSaving = Math.round(monthlyCost * (impactPercent / 100));
-  const annualCostSaving = projectedCostSaving * 12;
-
   const hiddenCostTotal = result.hiddenCosts.reduce((sum, cost) => sum + cost.monthlyEstimate, 0);
 
   return (
     <div>
-      <div id="result-panel" className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-soft sm:p-8">
+      <div id="result-panel" className="rounded-[1.75rem] border border-[#e3d8ff] bg-white p-5 shadow-[0_28px_80px_-54px_rgba(91,33,182,0.45)] sm:p-8">
         {/* Executive Summary Hero */}
         <div className="mb-6 flex items-center gap-2 text-sm font-semibold text-neutral-500">
           <BarChart3 className="h-4 w-4" />
@@ -831,19 +1040,7 @@ function ResultPanel({
         <p className="mt-5 text-lg leading-8 text-neutral-600">{result.subheadline}</p>
 
         {/* Before → After → Savings/Lift Cards */}
-        {isRevenueCluster ? (
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <BeforeAfterCard label="Before" value={`Rp ${formatRupiah(monthlyRevenue)}`} icon={<Clock className="h-5 w-5" />} tone="muted" />
-            <BeforeAfterCard label="After AI" value={`Rp ${formatRupiah(monthlyRevenue + projectedGain)}`} icon={<TrendingUp className="h-5 w-5" />} tone="highlight" />
-            <BeforeAfterCard label="Potensi Pertumbuhan" value={`+${impactPercent}%`} icon={<Zap className="h-5 w-5" />} tone="accent" />
-          </div>
-        ) : (
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <BeforeAfterCard label="Biaya Sekarang" value={`Rp ${formatRupiah(monthlyCost)}`} icon={<Clock className="h-5 w-5" />} tone="muted" />
-            <BeforeAfterCard label="Biaya Setelah AI" value={`Rp ${formatRupiah(monthlyCost - projectedCostSaving)}`} icon={<TrendingDown className="h-5 w-5" />} tone="highlight" />
-            <BeforeAfterCard label="Potensi Penghematan" value={`Rp ${formatRupiah(projectedCostSaving)}/bulan`} icon={<Zap className="h-5 w-5" />} tone="accent" />
-          </div>
-        )}
+        <StrategicSummary result={result} />
 
         {/* Efficiency Metrics */}
         {result.efficiencyMetrics.length ? (
@@ -873,20 +1070,6 @@ function ResultPanel({
           </div>
         ) : null}
 
-        {/* Diagnosis */}
-        {result.diagnosis ? (
-          <div className="mt-8 rounded-[1.35rem] border border-neutral-200 bg-neutral-50 p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Diagnosa</p>
-            <p className="mt-3 text-lg font-medium leading-8 text-neutral-900">{result.diagnosis}</p>
-            {result.rootCause?.text ? (
-              <div className="mt-4 border-l-2 border-neutral-900 pl-4">
-                <p className="text-base leading-7 text-neutral-700">{result.rootCause.text}</p>
-                <p className="mt-2 text-xs font-semibold text-neutral-400">Sumber: {result.rootCause.source}</p>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
         {/* Hidden Cost Radar */}
         {result.hiddenCosts.length ? (
           <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
@@ -907,45 +1090,11 @@ function ResultPanel({
           </div>
         ) : null}
 
-        {/* Before vs After Visual */}
-        {result.beforeAfterMetrics.length ? (
-          <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Before vs After</p>
-            <div className="mt-5 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={result.beforeAfterMetrics} layout="vertical" margin={{ left: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="beforeValue" name="Before" fill="#d4d4d4" radius={[0, 8, 8, 0]} />
-                  <Bar dataKey="afterValue" name="After AI" fill="#111111" radius={[0, 8, 8, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        ) : null}
-
-        {/* User Signals */}
-        {result.userSignals?.length ? (
-          <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Sinyal dari bisnis Anda</p>
-            <p className="mt-2 text-sm leading-6 text-neutral-500">Angka yang Anda sebutkan, kami jadikan dasar agar analisis lebih konkret.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {result.userSignals.map((signal) => (
-                <span key={signal} className="rounded-full bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-800">
-                  {signal}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
         {/* Finding Cards */}
         {result.findings.length ? (
           <div className="mt-8">
-            <h3 className="text-2xl font-semibold">Temuan Konsultan</h3>
-            <p className="mt-2 text-sm leading-6 text-neutral-500">Insight spesifik berbasis jawaban Anda.</p>
+            <h3 className="text-2xl font-semibold">Yang Mungkin Belum Terlihat</h3>
+            <p className="mt-2 text-sm leading-6 text-neutral-500">Insight yang biasanya baru terasa setelah biaya, delay, atau peluang hilang mulai menumpuk.</p>
             <div className="mt-4 grid gap-4">
               {result.findings.map((finding, index) => (
                 <div key={finding.title} className="rounded-[1.35rem] border border-neutral-200 p-6">
@@ -969,82 +1118,27 @@ function ResultPanel({
           </div>
         ) : null}
 
-        {/* Impact Cards */}
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
-          {result.impactCards.map((card) => (
-            <div key={card.title} className="rounded-[1.35rem] border border-neutral-200 p-5">
-              <p className="text-sm font-semibold text-neutral-500">{card.title}</p>
-              <p className="mt-2 text-3xl font-semibold text-neutral-950">{card.value}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-500">{card.description}</p>
-            </div>
-          ))}
-        </div>
-
         {/* Impact Comparison */}
         <ImpactComparisonChart result={result} />
 
-        {/* Before / After Text */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {result.beforeAfterText.map((text, index) => (
-            <div key={text} className="rounded-[1.35rem] bg-neutral-50 p-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">{index === 0 ? "Before" : "After"}</p>
-              <p className="mt-3 text-base font-medium leading-7 text-neutral-800">{text}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* ROI Calculator */}
-        <div className="mt-8 rounded-[1.35rem] border border-neutral-200 bg-gradient-to-br from-white to-neutral-50 p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Kalkulator ROI</p>
-          <p className="mt-2 text-sm leading-6 text-neutral-500">Geser untuk melihat potensi impact di bisnis Anda.</p>
-          <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-neutral-700">
-              {isRevenueCluster ? "Omzet bulanan (Rp)" : "Biaya operasional manual/bulan (Rp)"}
-            </label>
-            <input
-              type="range"
-              min="10000000"
-              max="5000000000"
-              step="50000000"
-              value={isRevenueCluster ? monthlyRevenue : monthlyCost}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                if (isRevenueCluster) setMonthlyRevenue(value);
-                else setMonthlyCost(value);
-              }}
-              className="w-full accent-neutral-950"
-            />
-            <div className="mt-2 flex justify-between text-sm font-semibold text-neutral-600">
-              <span>Rp 10jt</span>
-              <span className="text-lg text-neutral-950">Rp {formatRupiah(isRevenueCluster ? monthlyRevenue : monthlyCost)}</span>
-              <span>Rp 5M</span>
-            </div>
-          </div>
-          <div className="mt-5 rounded-[1.35rem] bg-neutral-950 p-5 text-white">
-            <p className="text-sm text-neutral-400">{isRevenueCluster ? "Potensi tambahan per tahun" : "Potensi penghematan per tahun"}</p>
-            <p className="mt-1 text-3xl font-semibold">Rp {formatRupiah(isRevenueCluster ? annualGain : annualCostSaving)}</p>
-            <p className="mt-2 text-xs text-neutral-500">Estimasi berbasis benchmark industri. Angka final setelah discovery.</p>
-          </div>
-        </div>
-
         {/* Solusi Terukur (formerly Janji Terukur) */}
         {result.promise?.statement ? (
-          <div className="mt-8 rounded-[1.35rem] bg-neutral-950 p-6 text-white">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Solusi Terukur</p>
+          <div className="mt-8 rounded-[1.35rem] bg-[#2b1553] p-6 text-white">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#d7c9ff]">Solusi Terukur</p>
             <p className="mt-3 text-xl font-semibold leading-8">{result.promise.statement}</p>
             {result.promise.measuredBy?.length ? (
               <div className="mt-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Diukur lewat</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c4b5fd]">Diukur lewat</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {result.promise.measuredBy.map((metric) => (
-                    <span key={metric} className="rounded-full border border-neutral-700 px-3 py-1 text-sm text-neutral-200">
+                    <span key={metric} className="rounded-full border border-[#5b21b6] px-3 py-1 text-sm text-[#efe9ff]">
                       {metric}
                     </span>
                   ))}
                 </div>
               </div>
             ) : null}
-            {result.promise.disclaimer ? <p className="mt-5 text-xs leading-6 text-neutral-400">{result.promise.disclaimer}</p> : null}
+            {result.promise.disclaimer ? <p className="mt-5 text-xs leading-6 text-[#d7c9ff]">{result.promise.disclaimer}</p> : null}
           </div>
         ) : null}
 
@@ -1065,15 +1159,15 @@ function ResultPanel({
         ) : null}
 
         {/* Unique Mechanism */}
-        <div className="mt-8 rounded-[1.35rem] bg-neutral-950 p-6 text-white">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Unique mechanism</p>
+        <div className="mt-8 rounded-[1.35rem] bg-[linear-gradient(145deg,#4c1d95_0%,#7c3aed_100%)] p-6 text-white">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#efe9ff]">Kenapa solusi ini masuk akal</p>
           <p className="mt-3 text-xl font-semibold leading-8">{result.uniqueMechanism}</p>
         </div>
 
         {/* Solution Cards with Proof Trail */}
         <div className="mt-8">
           <h3 className="text-2xl font-semibold">Solusi yang paling relevan</h3>
-          <p className="mt-2 text-sm leading-6 text-neutral-500">Diurutkan berdasarkan match dengan profil bisnis Anda.</p>
+          <p className="mt-2 text-sm leading-6 text-neutral-500">Bukan semua dipasang sekaligus. Ini urutan solusi yang paling masuk akal untuk menutup bottleneck utama lebih dulu.</p>
           <div className="mt-4 grid gap-3">
             {result.solutionCards?.map((card, index) => (
               <div
@@ -1089,6 +1183,28 @@ function ResultPanel({
                       <ConfidenceBadge score={card.confidenceScore} />
                     </div>
                     <p className="mt-1 text-sm leading-6 text-neutral-600">{card.description}</p>
+                    {card.whyThisFits || card.expectedOutcome || card.watchout ? (
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        {card.whyThisFits ? (
+                          <div className="rounded-[1rem] bg-neutral-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Kenapa Ini</p>
+                            <p className="mt-2 text-sm leading-6 text-neutral-700">{card.whyThisFits}</p>
+                          </div>
+                        ) : null}
+                        {card.expectedOutcome ? (
+                          <div className="rounded-[1rem] bg-emerald-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Efek Cepat</p>
+                            <p className="mt-2 text-sm leading-6 text-emerald-900">{card.expectedOutcome}</p>
+                          </div>
+                        ) : null}
+                        {card.watchout ? (
+                          <div className="rounded-[1rem] bg-amber-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Yang Perlu Dijaga</p>
+                            <p className="mt-2 text-sm leading-6 text-amber-900">{card.watchout}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-500">
                       <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1">
                         <Clock className="h-3 w-3" />
@@ -1139,72 +1255,6 @@ function ResultPanel({
         ) : null}
 
         {/* Phone Mockup — Live Dashboard Preview */}
-        <div className="mt-8 overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-gradient-to-br from-white to-neutral-100 p-6">
-          <div className="mx-auto max-w-sm rounded-[1.6rem] border border-neutral-300 bg-white p-4 shadow-soft">
-            {/* Status bar notch */}
-            <div className="mb-4 flex justify-center">
-              <div className="h-2 w-20 rounded-full bg-neutral-200" />
-            </div>
-
-            {/* Dashboard header */}
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Pesat.AI</p>
-                <p className="text-sm font-semibold text-neutral-950">Dashboard Operasional</p>
-              </div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950 text-white">
-                <Sparkles className="h-4 w-4" />
-              </div>
-            </div>
-
-            {/* Main insight card */}
-            <div className="mb-3 rounded-2xl bg-neutral-950 p-3 text-white">
-              <p className="text-[10px] font-medium text-neutral-400">Diagnosis utama</p>
-              <p className="mt-1 text-xs font-semibold leading-5">{result.headline}</p>
-              {result.efficiencyMetrics[0] ? (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-lg font-semibold">{result.efficiencyMetrics[0].after}</span>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                    {result.efficiencyMetrics[0].impact}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Mini metric cards */}
-            <div className="grid grid-cols-2 gap-2">
-              {result.efficiencyMetrics.slice(1, 3).map((metric) => (
-                <div key={metric.label} className="rounded-2xl bg-neutral-50 p-3">
-                  <p className="text-[9px] font-medium text-neutral-500 leading-tight">{metric.label}</p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-950">{metric.after}</p>
-                  <p className="text-[9px] font-semibold text-emerald-600">{metric.impact}</p>
-                </div>
-              ))}
-              {result.hiddenCosts.length ? (
-                <div className="rounded-2xl bg-amber-50 p-3">
-                  <p className="text-[9px] font-medium text-amber-700 leading-tight">Biaya tersembunyi/bulan</p>
-                  <p className="mt-1 text-sm font-semibold text-amber-900">
-                    Rp {(result.hiddenCosts.reduce((sum, cost) => sum + cost.monthlyEstimate, 0) / 1_000_000).toFixed(0)}jt
-                  </p>
-                  <p className="text-[9px] font-semibold text-amber-700">teridentifikasi</p>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Quick wins */}
-            {result.solutionCards?.slice(0, 2).map((solution, index) => (
-              <div key={solution.name} className="mt-2 flex items-center gap-3 rounded-2xl border border-neutral-100 bg-white p-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-xs font-bold text-neutral-700">
-                  {index + 1}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-neutral-950">{solution.name}</p>
-                  <p className="text-[9px] text-neutral-500">{solution.setupTime}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       <section className="mt-6 rounded-[1.35rem] border border-neutral-200 bg-white p-5 shadow-soft sm:p-6">
@@ -1271,7 +1321,7 @@ function ResultPanel({
           <Download className="h-4 w-4" />
           Export PDF
         </button>
-        <button onClick={onDiscovery} className="min-h-12 rounded-full bg-neutral-950 px-5 text-sm font-semibold text-white transition hover:bg-black">
+        <button onClick={onDiscovery} className="min-h-12 rounded-full bg-[#4c1d95] px-5 text-sm font-semibold text-white transition hover:bg-[#3b1476]">
           Simpan Laporan & Jadwalkan Strategy Call
         </button>
       </div>
@@ -1294,23 +1344,6 @@ function FindingBlock({ icon, title, text }: { icon: React.ReactNode; title: str
 }
 
 /* ─── Helper Components ─── */
-
-function BeforeAfterCard({ label, value, icon, tone }: { label: string; value: string; icon: React.ReactNode; tone: "muted" | "highlight" | "accent" }) {
-  const toneStyles = {
-    muted: "bg-neutral-100 text-neutral-600",
-    highlight: "bg-neutral-950 text-white",
-    accent: "bg-emerald-600 text-white"
-  };
-  return (
-    <div className={`rounded-[1.35rem] p-5 ${toneStyles[tone]}`}>
-      <div className="flex items-center gap-2 text-sm font-semibold opacity-70">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-    </div>
-  );
-}
 
 function ImpactBadge({ badge }: { badge: string }) {
   const styles: Record<string, string> = {
@@ -1342,16 +1375,4 @@ function formatRupiah(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(0)}jt`;
   if (value >= 1000) return `${(value / 1000).toFixed(0)}rb`;
   return value.toString();
-}
-
-function parseImpactPercent(cards: Array<{ title: string; value: string }>): number {
-  let maxPercent = 20;
-  for (const card of cards) {
-    const match = card.value.match(/(\d+)-?(\d+)?%?/);
-    if (match) {
-      const val = parseInt(match[2] || match[1], 10);
-      if (val > maxPercent) maxPercent = val;
-    }
-  }
-  return maxPercent;
 }

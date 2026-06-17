@@ -1,5 +1,7 @@
 export type ChallengeId = "revenue" | "cost" | "fraud" | "cash_stock" | "reporting" | "brand_trust";
 
+export type IntakePathId = "sales" | "ops" | "cash_control" | "brand" | "other";
+
 export type DetailId =
   | "follow_up"
   | "repeat_order"
@@ -32,12 +34,18 @@ export type FrictionSourceId =
   | "knowledge_silo";
 export type AdoptionId = "dfy" | "diy" | "hybrid" | "starting";
 
+export type OtherAnswerKey = "mainChallenge" | "detailChallenge" | "impactLevel" | "frictionSource" | "adoptionStyle";
+
+export type OtherAnswers = Partial<Record<OtherAnswerKey, string>>;
+
 export type WizardAnswers = {
+  intakePath?: IntakePathId | "";
   mainChallenges: ChallengeId[];
   detailChallenges: DetailId[];
   impactLevel: ImpactId | "";
   frictionSource: FrictionSourceId | "";
   adoptionStyle: AdoptionId | "";
+  otherAnswers?: OtherAnswers;
   detailNote?: string;
 };
 
@@ -45,6 +53,8 @@ export type ContactData = {
   companyName?: string;
   name?: string;
   wa?: string;
+  employeeCount?: string;
+  yearlyRevenue?: string;
   followUpAllowed?: boolean;
 };
 
@@ -93,6 +103,9 @@ export type SolutionCard = {
   setupTime: string;
   confidenceScore: number;
   proofBasis: string;
+  whyThisFits?: string;
+  expectedOutcome?: string;
+  watchout?: string;
 };
 
 export type DiagnosisPack = {
@@ -136,6 +149,7 @@ export type BeforeAfterMetric = {
 
 export type GeneratedResult = {
   sessionId: string;
+  primaryChallenge: ChallengeId;
   headline: string;
   subheadline: string;
   diagnosis: string;

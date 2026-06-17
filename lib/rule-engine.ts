@@ -1,4 +1,4 @@
-import { AVAILABLE_SOLUTIONS, DETAIL_LABELS, DETAIL_SOLUTION_MAP, TRANSITION_FACTS } from "@/lib/solutions";
+import { AVAILABLE_SOLUTIONS, DETAIL_LABELS, DETAIL_SOLUTION_MAP, FRICTION_SOLUTION_MAP, FRICTION_SOURCES, TRANSITION_FACTS } from "@/lib/solutions";
 import type { AdoptionId, ChallengeId, DiagnosisPack, EfficiencyMetric, Finding, GeneratedResult, HiddenCost, ImpactRanges, PesatSolution, PlanPhase, SolutionCard, WizardAnswers } from "@/lib/types";
 
 const CLUSTER_PRIORITY: Record<ChallengeId, string[]> = {
@@ -37,6 +37,68 @@ const TIMEFRAME_BY_ADOPTION: Record<AdoptionId, string> = {
   hybrid: "8-12 minggu",
   diy: "8-14 minggu",
   starting: "sinyal awal 2-4 minggu, dampak terukur 10-14 minggu"
+};
+
+const IMPACT_RANGE_BY_LEVEL: Record<ChallengeId, Record<Exclude<WizardAnswers["impactLevel"], "">, string>> = {
+  revenue: {
+    mild: "5-12%",
+    weekly: "8-18%",
+    often: "12-26%",
+    critical: "18-35%"
+  },
+  cost: {
+    mild: "5-10%",
+    weekly: "8-15%",
+    often: "12-20%",
+    critical: "15-28%"
+  },
+  fraud: {
+    mild: "10-20%",
+    weekly: "15-30%",
+    often: "22-40%",
+    critical: "30-55%"
+  },
+  cash_stock: {
+    mild: "10-18% lebih presisi",
+    weekly: "15-25% lebih presisi",
+    often: "20-35% lebih presisi",
+    critical: "25-45% lebih presisi"
+  },
+  reporting: {
+    mild: "10-20 jam/bulan",
+    weekly: "15-35 jam/bulan",
+    often: "25-50 jam/bulan",
+    critical: "35-70 jam/bulan"
+  },
+  brand_trust: {
+    mild: "8-15% peningkatan trust signal",
+    weekly: "12-22% peningkatan trust signal",
+    often: "18-30% peningkatan trust signal",
+    critical: "25-40% peningkatan trust signal"
+  }
+};
+
+const IMPACT_CONTEXT: Record<Exclude<WizardAnswers["impactLevel"], "">, { diagnosis: string; action: string; cost: string }> = {
+  mild: {
+    diagnosis: "Masalah ini masih sporadis, jadi momen terbaiknya adalah menutup pola sebelum tim menganggapnya normal.",
+    action: "mulai dari pilot kecil yang paling gampang diukur agar baseline Anda rapi lebih dulu",
+    cost: "Kalau dibiarkan, kebocoran kecil ini pelan-pelan menjadi cara kerja baru yang makin sulit dibenahi saat volume naik."
+  },
+  weekly: {
+    diagnosis: "Masalah ini sudah berulang mingguan, artinya tim mulai kehilangan ritme meski dampaknya belum meledak setiap hari.",
+    action: "mulai dari quick win yang menghilangkan bottleneck mingguan paling mahal",
+    cost: "Karena sudah berulang mingguan, biaya dan frustrasi tim tidak lagi insidental; ia mulai menggerus margin dan fokus kerja."
+  },
+  often: {
+    diagnosis: "Masalah ini sudah hampir harian, jadi tim bukan hanya menanganinya, tetapi juga mulai membangun kebiasaan kerja di sekeliling masalah itu.",
+    action: "langsung rapikan alur yang paling sering memaksa tim kerja manual atau menunggu terlalu lama",
+    cost: "Semakin lama dibiarkan, tim akan terus bekerja lebih keras untuk hasil yang sama dan pertumbuhan terasa berat meski demand ada."
+  },
+  critical: {
+    diagnosis: "Masalah ini sudah harian dan langsung menahan pertumbuhan, jadi solusi awal harus terasa cepat dan terlihat di angka yang dipantau mingguan.",
+    action: "langsung menutup titik bocor yang paling cepat menghentikan delay, error, atau peluang hilang",
+    cost: "Karena sudah harian, setiap minggu yang lewat biasanya berarti peluang hilang, biaya tambahan, atau keputusan yang terus tertunda."
+  }
 };
 
 const PROMISE_DISCLAIMER =
@@ -148,6 +210,94 @@ const HIDDEN_COSTS_BY_CLUSTER: Record<ChallengeId, HiddenCost[]> = {
     { id: "ai_search_gap", label: "Tidak muncul di AI search", monthlyEstimate: 18000000, description: "Brand tidak masuk pertimbangan calon pelanggan modern" }
   ]
 };
+
+function lowerFirst(value: string): string {
+  return value ? value.charAt(0).toLowerCase() + value.slice(1) : value;
+}
+
+function getPrimaryChallenge(answers: WizardAnswers): ChallengeId {
+  return answers.mainChallenges[0] || "revenue";
+}
+
+function getPrimaryDetailLabel(answers: WizardAnswers): string {
+  const detail = answers.detailChallenges[0];
+  return detail ? DETAIL_LABELS[detail] : CLUSTER_REFRAME[getPrimaryChallenge(answers)];
+}
+
+function getFrictionLabel(answers: WizardAnswers): string {
+  return answers.frictionSource ? FRICTION_SOURCES[answers.frictionSource].label : "";
+}
+
+function getImpactLevel(answers: WizardAnswers): Exclude<WizardAnswers["impactLevel"], ""> {
+  return answers.impactLevel || "weekly";
+}
+
+function getImpactContext(answers: WizardAnswers) {
+  return IMPACT_CONTEXT[getImpactLevel(answers)];
+}
+
+function buildSignalSnippet(signals: string[]): string {
+  if (!signals.length) return "";
+  if (signals.length === 1) return `Anda bahkan menyebut angka seperti ${signals[0]}.`;
+  return `Anda bahkan menyebut sinyal seperti ${signals.slice(0, 2).join(" dan ")}.`;
+}
+
+function getImpactRangeText(primary: ChallengeId, impactRanges: ImpactRanges): string {
+  return (
+    {
+      revenue: impactRanges.revenueIncrease,
+      cost: impactRanges.costReduction,
+      fraud: impactRanges.riskReduction,
+      cash_stock: impactRanges.cashAccuracy,
+      reporting: impactRanges.hoursSaved,
+      brand_trust: impactRanges.trustLift
+    }[primary] || ""
+  );
+}
+
+function buildHeadline(answers: WizardAnswers): string {
+  const primary = getPrimaryChallenge(answers);
+  const detailLabel = lowerFirst(getPrimaryDetailLabel(answers));
+
+  switch (primary) {
+    case "revenue":
+      return `Lead ada, tapi revenue tetap bocor karena ${detailLabel}.`;
+    case "cost":
+      return `Biaya manual Anda naik diam-diam karena ${detailLabel}.`;
+    case "fraud":
+      return `Risiko operasional Anda membesar saat ${detailLabel} dibiarkan lewat.`;
+    case "cash_stock":
+      return `Kas dan stok meleset bukan karena kebetulan, tapi karena ${detailLabel}.`;
+    case "reporting":
+      return `Data Anda ada, tapi keputusan tetap telat karena ${detailLabel}.`;
+    case "brand_trust":
+      return `Brand Anda kalah lebih dulu saat ${detailLabel}.`;
+    default:
+      return HEADLINE_BY_CLUSTER[primary];
+  }
+}
+
+function buildSubheadline(answers: WizardAnswers, impactRanges: ImpactRanges, topSolutionName: string, userSignals: string[]): string {
+  const primary = getPrimaryChallenge(answers);
+  const detailLabel = lowerFirst(getPrimaryDetailLabel(answers));
+  const frictionLabel = lowerFirst(getFrictionLabel(answers));
+  const impactRange = getImpactRangeText(primary, impactRanges);
+  const signalSnippet = buildSignalSnippet(userSignals);
+  const impactLine = getImpactContext(answers).diagnosis;
+
+  const frictionSnippet = frictionLabel ? `Gesekan terbesar terlihat saat ${frictionLabel}.` : "";
+  const rangeSnippet = impactRange ? `Target realistis awalnya ada di kisaran ${impactRange}.` : "";
+
+  return [
+    `Diagnosis ini fokus pada ${detailLabel}, bukan sekadar gejala umum.`,
+    impactLine,
+    frictionSnippet,
+    signalSnippet,
+    rangeSnippet || `Quick win tercepatnya dimulai dari ${topSolutionName}.`
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 const FINDINGS_BY_CLUSTER: Record<ChallengeId, Finding[]> = {
   revenue: [
@@ -283,8 +433,28 @@ export function calculateHiddenCosts(answers: WizardAnswers): HiddenCost[] {
 }
 
 export function calculateFindings(answers: WizardAnswers): Finding[] {
-  const primary = answers.mainChallenges[0] || "revenue";
-  return FINDINGS_BY_CLUSTER[primary];
+  const primary = getPrimaryChallenge(answers);
+  const detailLabel = lowerFirst(getPrimaryDetailLabel(answers));
+  const frictionLabel = lowerFirst(getFrictionLabel(answers));
+  const signals = extractUserSignals(answers.detailNote || "");
+  const signalSnippet = buildSignalSnippet(signals);
+
+  return FINDINGS_BY_CLUSTER[primary].map((finding, index) => {
+    if (index > 0) return finding;
+
+    const contextLine = [
+      `Pilihan Anda menunjukkan masalah paling terasa ada di ${detailLabel}.`,
+      frictionLabel ? `Kebocoran terbesar muncul saat ${frictionLabel}.` : "",
+      signalSnippet
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return {
+      ...finding,
+      finding: `${contextLine} ${finding.finding}`.trim()
+    };
+  });
 }
 
 export function buildBeforeAfterMetrics(answers: WizardAnswers) {
@@ -307,34 +477,113 @@ export function buildBeforeAfterMetrics(answers: WizardAnswers) {
 }
 
 export function buildCostOfInaction(answers: WizardAnswers): string {
-  return COST_OF_INACTION[answers.mainChallenges[0] || "revenue"];
+  return `${COST_OF_INACTION[answers.mainChallenges[0] || "revenue"]} ${getImpactContext(answers).cost}`.trim();
+}
+
+function getSetupSpeedBonus(solution: PesatSolution): number {
+  const setup = (solution.setupTime || "").toLowerCase();
+  if (setup.includes("1 minggu")) return 8;
+  if (setup.includes("2 minggu")) return 5;
+  if (setup.includes("3 minggu")) return 2;
+  return 0;
+}
+
+function scoreSolution(
+  solution: PesatSolution,
+  answers: WizardAnswers,
+  detailDriven: string[],
+  frictionDriven: string[],
+  clusterBackfill: string[],
+  primary: ChallengeId,
+  secondary?: ChallengeId
+): number {
+  let score = 0;
+
+  const detailIndex = detailDriven.indexOf(solution.id);
+  if (detailIndex >= 0) score += 140 - detailIndex * 12;
+
+  const frictionIndex = frictionDriven.indexOf(solution.id);
+  if (frictionIndex >= 0) score += 95 - frictionIndex * 8;
+
+  const clusterIndex = clusterBackfill.indexOf(solution.id);
+  if (clusterIndex >= 0) score += 8 - clusterIndex;
+
+  if (solution.cluster.includes(primary)) score += 2;
+  if (secondary && solution.cluster.includes(secondary)) score += 1;
+
+  const impactLevel = getImpactLevel(answers);
+  if (impactLevel === "critical" || impactLevel === "often") {
+    if (solution.impactBadge === "quick-win") score += 16;
+    if (solution.impactBadge === "high-impact") score += 10;
+  }
+
+  switch (answers.adoptionStyle) {
+    case "starting":
+      if (solution.impactBadge === "quick-win") score += 18;
+      if (solution.impactBadge === "strategic") score -= 4;
+      score += getSetupSpeedBonus(solution);
+      break;
+    case "dfy":
+      if (solution.impactBadge === "high-impact") score += 8;
+      if (solution.impactBadge === "strategic") score += 4;
+      break;
+    case "diy":
+      if (solution.impactBadge === "strategic") score += 8;
+      if (solution.impactBadge === "quick-win") score += 3;
+      break;
+    case "hybrid":
+      if (solution.impactBadge === "high-impact") score += 5;
+      if (solution.impactBadge === "strategic") score += 5;
+      break;
+    default:
+      break;
+  }
+
+  return score;
 }
 
 export function selectSolutions(answers: WizardAnswers): PesatSolution[] {
   const primary = answers.mainChallenges[0] || "revenue";
   const secondary = answers.mainChallenges[1];
 
-  // Detail challenges (the most specific signal) drive recommendations first,
-  // then the cluster priority backfills so we always have 3-4 fitting solutions.
   const detailDriven = answers.detailChallenges.flatMap((detail) => DETAIL_SOLUTION_MAP[detail] || []);
+  const frictionDriven = answers.frictionSource ? FRICTION_SOLUTION_MAP[answers.frictionSource] || [] : [];
   const clusterBackfill = [...CLUSTER_PRIORITY[primary], ...(secondary ? CLUSTER_PRIORITY[secondary] : [])];
+  const orderedIds = [...detailDriven, ...frictionDriven, ...clusterBackfill];
+  const uniqueIds = Array.from(new Set(orderedIds));
+  const orderIndex = new Map(uniqueIds.map((id, index) => [id, index]));
 
-  const orderedIds = [...detailDriven, ...clusterBackfill];
-  const uniqueIds = Array.from(new Set(orderedIds)).slice(0, 4);
-  return uniqueIds.map((id) => AVAILABLE_SOLUTIONS.find((solution) => solution.id === id)).filter(Boolean) as PesatSolution[];
+  return uniqueIds
+    .map((id) => AVAILABLE_SOLUTIONS.find((solution) => solution.id === id))
+    .filter((solution): solution is PesatSolution => Boolean(solution))
+    .sort((left, right) => {
+      const leftScore = scoreSolution(left, answers, detailDriven, frictionDriven, clusterBackfill, primary, secondary);
+      const rightScore = scoreSolution(right, answers, detailDriven, frictionDriven, clusterBackfill, primary, secondary);
+      if (leftScore !== rightScore) return rightScore - leftScore;
+      return (orderIndex.get(left.id) || 0) - (orderIndex.get(right.id) || 0);
+    })
+    .slice(0, 4) as PesatSolution[];
 }
 
 function buildFirstStep(adoptionStyle: AdoptionId | "", topSolutionName: string): string {
+  const actionBias =
+    {
+      dfy: "bergerak cepat tanpa membebani tim Anda dengan setup teknis yang panjang",
+      diy: "membuat tim internal cepat paham alur eksekusinya, bukan hanya menerima daftar tools",
+      hybrid: "mendapat quick win sambil menyiapkan tim internal mengambil alih secara bertahap",
+      starting: "membuktikan dulu bahwa use case ini benar-benar relevan sebelum memperluas investasi"
+    }[adoptionStyle || "starting"];
+
   switch (adoptionStyle) {
     case "dfy":
-      return `Pesat.AI yang setup dan jalankan penuh. Langkah pertama: kami jalankan ${topSolutionName} sebagai pilot terukur, Anda cukup memantau hasilnya.`;
+      return `Pesat.AI yang setup dan jalankan penuh. Langkah pertama: kami jalankan ${topSolutionName} sebagai pilot terukur agar Anda bisa ${actionBias}.`;
     case "diy":
-      return `Tim internal Anda yang menjalankan. Langkah pertama: kami berikan blueprint ${topSolutionName} lengkap dengan metrik suksesnya, lalu tim Anda eksekusi dengan pendampingan.`;
+      return `Tim internal Anda yang menjalankan. Langkah pertama: kami berikan blueprint ${topSolutionName} lengkap dengan metrik suksesnya, lalu tim Anda eksekusi agar ${actionBias}.`;
     case "hybrid":
-      return `Kombinasi. Langkah pertama: Pesat.AI setup ${topSolutionName}, tim Anda ikut belajar prosesnya agar bisa lanjut mandiri.`;
+      return `Kombinasi. Langkah pertama: Pesat.AI setup ${topSolutionName}, tim Anda ikut belajar prosesnya agar ${actionBias}.`;
     case "starting":
     default:
-      return `Karena baru mulai dengan AI, jangan pasang semuanya sekaligus. Langkah pertama: satu pilot ${topSolutionName}, ukur selama 2 minggu, baru perluas setelah terbukti.`;
+      return `Karena baru mulai dengan AI, jangan pasang semuanya sekaligus. Langkah pertama: satu pilot ${topSolutionName}, ukur selama 2 minggu, lalu nilai apakah ia cukup kuat untuk ${actionBias}.`;
   }
 }
 
@@ -353,11 +602,13 @@ function capitalize(value: string): string {
 // A concrete, phased action plan built from the client's own selected solutions and adoption style.
 // Deterministic and fast (no LLM), so the result always carries a real plan instead of generic copy.
 export function buildActionPlan(answers: WizardAnswers, solutions: PesatSolution[], impactRanges: ImpactRanges): PlanPhase[] {
-  const primary = answers.mainChallenges[0] || "revenue";
+  const primary = getPrimaryChallenge(answers);
   const names = solutions.map((solution) => solution.name);
   const timeframes = PLAN_TIMEFRAMES[answers.adoptionStyle || "hybrid"];
   const measuredBy = MEASURED_BY[primary];
   const rangeText = Object.values(impactRanges).filter(Boolean).join(" dan ");
+  const frictionLabel = lowerFirst(getFrictionLabel(answers));
+  const impactAction = getImpactContext(answers).action;
 
   const phase1Solutions = names.slice(0, 1);
   const phase2Solutions = names.slice(1, Math.max(1, names.length - 1));
@@ -365,8 +616,8 @@ export function buildActionPlan(answers: WizardAnswers, solutions: PesatSolution
 
   const focus = [
     phase1Solutions.length
-      ? `Pasang ${phase1Solutions.join(" + ")} sebagai pilot terukur untuk dampak tercepat, tanpa merombak semuanya sekaligus.`
-      : "Mulai dari satu use case prioritas sebagai pilot terukur, tanpa merombak semuanya sekaligus.",
+      ? `Pasang ${phase1Solutions.join(" + ")} sebagai pilot terukur untuk ${impactAction}${frictionLabel ? `, terutama di ${frictionLabel}` : ""}, tanpa merombak semuanya sekaligus.`
+      : `Mulai dari satu use case prioritas sebagai pilot terukur untuk ${impactAction}, tanpa merombak semuanya sekaligus.`,
     phase2Solutions.length
       ? `Perluas ke ${phase2Solutions.join(" + ")} agar perbaikan menyebar ke proses harian tim.`
       : "Perkuat adopsi tim dan rapikan proses dari hasil pilot agar konsisten.",
@@ -391,11 +642,23 @@ export function buildActionPlan(answers: WizardAnswers, solutions: PesatSolution
 }
 
 export function buildDiagnosisPack(answers: WizardAnswers, solutions: PesatSolution[], impactRanges: ImpactRanges): DiagnosisPack {
-  const primary = answers.mainChallenges[0] || "revenue";
+  const primary = getPrimaryChallenge(answers);
   const detailLabels = answers.detailChallenges.map((detail) => DETAIL_LABELS[detail]).filter(Boolean);
   const labelText = detailLabels.length ? detailLabels.join(", ") : CLUSTER_REFRAME[primary];
+  const frictionLabel = getFrictionLabel(answers);
+  const signals = extractUserSignals(answers.detailNote || "");
+  const signalSnippet = buildSignalSnippet(signals);
+  const impactContext = getImpactContext(answers);
 
-  const diagnosis = `Dari jawaban Anda, titik bocor utamanya ada di: ${labelText}. Untuk bisnis seperti ini, akar masalahnya biasanya bukan sekadar masalah permukaan, melainkan ${CLUSTER_REFRAME[primary]}. Itu yang akan kita benahi lebih dulu, bukan menambah tools baru.`;
+  const diagnosis = [
+    `Titik bocor utamanya ada di ${labelText}.`,
+    frictionLabel ? `Yang paling menguras waktu tim sekarang terlihat saat ${lowerFirst(frictionLabel)}.` : "",
+    impactContext.diagnosis,
+    `Akar masalahnya bukan sekadar gejala permukaan, tetapi ${CLUSTER_REFRAME[primary]}.`,
+    signalSnippet
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const fact = TRANSITION_FACTS[primary];
   const rootCause = { text: fact.first, source: fact.source };
@@ -420,18 +683,19 @@ export function buildDiagnosisPack(answers: WizardAnswers, solutions: PesatSolut
 
 export function calculateImpactRanges(answers: WizardAnswers): ImpactRanges {
   const challenges = new Set(answers.mainChallenges);
+  const impactLevel = getImpactLevel(answers);
   const ranges: ImpactRanges = {};
 
-  if (challenges.has("revenue")) ranges.revenueIncrease = "10-30%";
-  if (challenges.has("cost")) ranges.costReduction = "8-22%";
-  if (challenges.has("fraud")) ranges.riskReduction = "15-45%";
-  if (challenges.has("cash_stock")) ranges.cashAccuracy = "20-40% lebih presisi";
-  if (challenges.has("reporting") || challenges.has("cost")) ranges.hoursSaved = "20-60 jam/bulan";
-  if (challenges.has("brand_trust")) ranges.trustLift = "15-35% peningkatan trust signal";
+  if (challenges.has("revenue")) ranges.revenueIncrease = IMPACT_RANGE_BY_LEVEL.revenue[impactLevel];
+  if (challenges.has("cost")) ranges.costReduction = IMPACT_RANGE_BY_LEVEL.cost[impactLevel];
+  if (challenges.has("fraud")) ranges.riskReduction = IMPACT_RANGE_BY_LEVEL.fraud[impactLevel];
+  if (challenges.has("cash_stock")) ranges.cashAccuracy = IMPACT_RANGE_BY_LEVEL.cash_stock[impactLevel];
+  if (challenges.has("reporting") || challenges.has("cost")) ranges.hoursSaved = IMPACT_RANGE_BY_LEVEL.reporting[impactLevel];
+  if (challenges.has("brand_trust")) ranges.trustLift = IMPACT_RANGE_BY_LEVEL.brand_trust[impactLevel];
 
-  if (!ranges.hoursSaved) ranges.hoursSaved = "20-60 jam/bulan";
+  if (!ranges.hoursSaved) ranges.hoursSaved = IMPACT_RANGE_BY_LEVEL.reporting[impactLevel];
 
-  return Object.keys(ranges).length ? ranges : { revenueIncrease: "10-30%", hoursSaved: "20-60 jam/bulan" };
+  return Object.keys(ranges).length ? ranges : { revenueIncrease: IMPACT_RANGE_BY_LEVEL.revenue[impactLevel], hoursSaved: IMPACT_RANGE_BY_LEVEL.reporting[impactLevel] };
 }
 
 export function buildChart(answers: WizardAnswers) {
@@ -483,9 +747,121 @@ export function buildSolutionCards(solutions: PesatSolution[], answers: WizardAn
   });
 }
 
-export function buildFallbackResult(sessionId: string, answers: WizardAnswers, solutions: PesatSolution[], impactRanges: ImpactRanges): GeneratedResult {
+function buildSolutionWhyThisFits(solution: PesatSolution, answers: WizardAnswers): string {
+  const detail = answers.detailChallenges[0];
+  const friction = answers.frictionSource;
+  const detailLabel = lowerFirst(getPrimaryDetailLabel(answers));
+  const frictionLabel = lowerFirst(getFrictionLabel(answers));
+
+  if (detail && DETAIL_SOLUTION_MAP[detail]?.includes(solution.id) && friction && FRICTION_SOLUTION_MAP[friction]?.includes(solution.id)) {
+    return `${solution.name} diprioritaskan karena ia langsung menyentuh ${detailLabel} dan sekaligus merapikan bottleneck di ${frictionLabel}.`;
+  }
+
+  if (detail && DETAIL_SOLUTION_MAP[detail]?.includes(solution.id)) {
+    return `${solution.name} diprioritaskan karena paling dekat dengan masalah inti yang Anda pilih, yaitu ${detailLabel}.`;
+  }
+
+  if (friction && FRICTION_SOLUTION_MAP[friction]?.includes(solution.id)) {
+    return `${solution.name} masuk prioritas karena sumber gesekan terbesarnya ada di ${frictionLabel}, bukan hanya di output akhirnya.`;
+  }
+
+  return `${solution.name} berfungsi sebagai lapisan kedua agar perbaikan tidak berhenti di satu bottleneck saja, tetapi ikut menstabilkan proses di belakangnya.`;
+}
+
+function buildSolutionExpectedOutcome(solution: PesatSolution, answers: WizardAnswers, impactRanges: ImpactRanges): string {
+  const primary = getPrimaryChallenge(answers);
+  const rangeText = getImpactRangeText(primary, impactRanges);
+  const metrics = MEASURED_BY[primary];
+
+  if (solution.impactBadge === "quick-win") {
+    return `Perubahan tercepat biasanya terasa di ${metrics[0]}. ${rangeText ? `Benchmark awalnya ada di kisaran ${rangeText}.` : ""}`.trim();
+  }
+
+  if (solution.impactBadge === "strategic") {
+    return `Solusi ini menjaga hasil supaya tidak balik lagi. Dampaknya biasanya terlihat lewat ${metrics[1] || metrics[0]} dan stabilitas ${metrics[2] || metrics[0]}.`;
+  }
+
+  return `Dampak yang paling cepat terlihat biasanya muncul di ${metrics[0]} dan ${metrics[1] || metrics[0]}. ${rangeText ? `Target awalnya ada di kisaran ${rangeText}.` : ""}`.trim();
+}
+
+function buildSolutionWatchout(answers: WizardAnswers): string {
+  const adoptionNote =
+    {
+      dfy: "Owner tim tetap perlu memberi akses data dan satu PIC keputusan agar implementasi tidak tertahan.",
+      hybrid: "Perlu satu PIC internal yang ikut belajar alur baru supaya hasilnya tidak kembali manual setelah setup awal.",
+      diy: "Perlu owner internal yang benar-benar punya waktu menjaga implementasi, bukan hanya menerima blueprint.",
+      starting: "Jaga scope tetap sempit dulu supaya pilot cepat terbukti dan tidak berubah jadi proyek transformasi besar."
+    }[answers.adoptionStyle || "starting"];
+
+  switch (answers.frictionSource) {
+    case "duplicate_data":
+      return `Efeknya tertahan jika sumber data utama masih terpencar di banyak spreadsheet atau chat. ${adoptionNote}`;
+    case "manual_reports":
+      return `Efeknya tertahan jika tim belum sepakat mana angka yang jadi source of truth. ${adoptionNote}`;
+    case "delayed_response":
+      return `Efeknya tertahan jika lead masih masuk ke banyak nomor atau tidak ada SLA respons yang jelas. ${adoptionNote}`;
+    case "human_error":
+      return `Efeknya tertahan jika format input dan aturan kerja tiap tim masih berbeda-beda. ${adoptionNote}`;
+    case "approval_bottleneck":
+      return `Efeknya tertahan jika rule approval dan siapa pengambil keputusan terakhir belum jelas. ${adoptionNote}`;
+    case "knowledge_silo":
+      return `Efeknya tertahan jika SOP, logika kerja, dan edge case masih hanya ada di kepala beberapa orang. ${adoptionNote}`;
+    default:
+      return adoptionNote;
+  }
+}
+
+function buildSmartSolutionCards(solutions: PesatSolution[], answers: WizardAnswers, impactRanges: ImpactRanges): SolutionCard[] {
   const primary = answers.mainChallenges[0] || "revenue";
-  const isRevenueCluster = primary === "revenue" || primary === "brand_trust";
+  const detail = answers.detailChallenges[0];
+  const friction = answers.frictionSource;
+
+  return solutions.map((solution, index) => {
+    let confidence = 76;
+    const detailMatch = Boolean(detail && DETAIL_SOLUTION_MAP[detail]?.includes(solution.id));
+    const frictionMatch = Boolean(friction && FRICTION_SOLUTION_MAP[friction]?.includes(solution.id));
+    const frictionSource = friction ? FRICTION_SOURCES[friction] : null;
+
+    if (detailMatch && frictionMatch) {
+      confidence = 98;
+    } else if (detailMatch) {
+      confidence = 94;
+    } else if (frictionMatch) {
+      confidence = 90;
+    } else if (solution.cluster.includes(primary)) {
+      confidence = 86;
+    }
+
+    if ((answers.impactLevel === "critical" || answers.impactLevel === "often") && solution.impactBadge === "quick-win") {
+      confidence += 1;
+    }
+
+    confidence = Math.min(99, confidence + index * 2);
+
+    const proofBasis = detailMatch
+      ? `Direct match: ${DETAIL_LABELS[detail!]} -> ${solution.name}`
+      : frictionMatch && frictionSource
+        ? `Workflow match: ${frictionSource.label} -> ${solution.name}`
+        : `Cluster match: ${primary} priority -> ${solution.name}`;
+
+    return {
+      name: solution.name,
+      description: solution.description,
+      impactBadge: solution.impactBadge || "high-impact",
+      setupTime: solution.setupTime || "2-3 minggu",
+      confidenceScore: confidence,
+      proofBasis,
+      whyThisFits: buildSolutionWhyThisFits(solution, answers),
+      expectedOutcome: buildSolutionExpectedOutcome(solution, answers, impactRanges),
+      watchout: buildSolutionWatchout(answers)
+    };
+  });
+}
+
+export function buildFallbackResult(sessionId: string, answers: WizardAnswers, solutions: PesatSolution[], impactRanges: ImpactRanges): GeneratedResult {
+  const primary = getPrimaryChallenge(answers);
+  const topSolutionName = solutions[0]?.name || "pilot prioritas";
+  const userSignals = extractUserSignals(answers.detailNote || "");
 
   const impactCards = Object.entries(impactRanges)
     .slice(0, 3)
@@ -501,35 +877,27 @@ export function buildFallbackResult(sessionId: string, answers: WizardAnswers, s
   const findings = calculateFindings(answers);
   const beforeAfterMetrics = buildBeforeAfterMetrics(answers);
 
-  const monthlyRevenue = isRevenueCluster ? 800_000_000 : 0;
-  const monthlyCost = isRevenueCluster ? 0 : 80_000_000;
-
-  const savingsLabel = isRevenueCluster ? `+Rp ${formatMoney(monthlyRevenue * 0.15)}/bulan` : `Rp ${formatMoney(monthlyCost * 0.28)}/bulan`;
-
   return {
     sessionId,
-    headline: HEADLINE_BY_CLUSTER[primary],
-    subheadline: `Dari diagnosis ini, kami mengidentifikasi potensi perbaikan operasional. ${
-      isRevenueCluster
-        ? `Revenue pipeline bisa lebih tertutup dengan lift yang terukur.`
-        : `Ada biaya tersembunyi sekitar ${savingsLabel} yang bisa dikurangi lewat otomasi.`
-    }`,
+    primaryChallenge: primary,
+    headline: buildHeadline(answers),
+    subheadline: buildSubheadline(answers, impactRanges, topSolutionName, userSignals),
     diagnosis: diagnosisPack.diagnosis,
     rootCause: diagnosisPack.rootCause,
     promise: diagnosisPack.promise,
     firstStep: diagnosisPack.firstStep,
     costOfInaction: buildCostOfInaction(answers),
-    userSignals: extractUserSignals(answers.detailNote || ""),
+    userSignals,
     plan: buildActionPlan(answers, solutions, impactRanges),
     impactCards,
     beforeAfterText: [
-      `Sebelum: proses masih manual, data tidak real-time, dan ${CLUSTER_REFRAME[primary]}.`,
-      `Sesudah: sinyal bisnis dipantau otomatis, ${MEASURED_BY[primary][0]} membaik, dan impact bisa dilacak per minggu.`
+      `Sebelum: tim masih mengandalkan proses manual dan keputusan datang setelah bottleneck terlanjur terasa di ${lowerFirst(getPrimaryDetailLabel(answers))}.`,
+      `Sesudah: ${topSolutionName} menutup titik bocor itu lebih cepat, lalu ${MEASURED_BY[primary][0]} bisa dipantau per minggu.`
     ],
-    uniqueMechanism: "Cara kerjanya seperti memasang co-pilot operasional: Pesat.AI membaca sinyal dari proses berjalan, memilih tindakan prioritas, lalu membantu tim mengeksekusi dan mengukur hasilnya.",
-    solutionsText: solutions.map((solution) => `${solution.name}: ${solution.description}`),
+    uniqueMechanism: `Pesat.AI tidak mulai dari tool, tetapi dari bottleneck. Kami tangkap sinyal, pilih quick win, lalu pasang sistem yang dampaknya bisa diukur tim Anda sendiri.`,
+    solutionsText: solutions.map((solution) => `${solution.name}: diprioritaskan karena paling cepat menutup bottleneck di ${lowerFirst(getPrimaryDetailLabel(answers))}.`),
     solutions,
-    solutionCards: buildSolutionCards(solutions, answers),
+    solutionCards: buildSmartSolutionCards(solutions, answers, impactRanges),
     impactRanges,
     chart: buildChart(answers),
     efficiencyMetrics,
@@ -538,11 +906,4 @@ export function buildFallbackResult(sessionId: string, answers: WizardAnswers, s
     beforeAfterMetrics,
     llmFallback: true
   };
-}
-
-function formatMoney(value: number): string {
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}M`;
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(0)}jt`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}rb`;
-  return value.toString();
 }

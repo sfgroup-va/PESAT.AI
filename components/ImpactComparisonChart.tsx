@@ -19,7 +19,7 @@ export function ImpactComparisonChart({ result }: { result: GeneratedResult }) {
     <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Perbandingan dampak</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Perubahan yang paling cepat terasa</p>
           <h3 className="mt-2 text-xl font-semibold text-neutral-950">{metric.label}</h3>
         </div>
         <span

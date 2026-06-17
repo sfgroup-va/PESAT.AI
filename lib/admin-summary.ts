@@ -1,4 +1,4 @@
-export const FUNNEL_ORDER = ["s1", "fact1", "s2", "fact2", "s3", "s4", "s5", "s6", "s7", "s8"] as const;
+export const FUNNEL_ORDER = ["q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate"] as const;
 
 type AdminSessionRow = {
   completed: boolean | null;

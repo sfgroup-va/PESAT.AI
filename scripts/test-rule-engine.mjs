@@ -30,7 +30,7 @@ try {
   compileTsToFile(ruleEngineSource, "rule-engine.mjs");
 
   const { AVAILABLE_SOLUTIONS } = await import(pathToFileURL(path.join(tempDir, "solutions.mjs")).href);
-  const { selectSolutions, calculateImpactRanges, buildChart, buildDiagnosisPack, buildActionPlan, extractUserSignals, buildCostOfInaction } = await import(pathToFileURL(path.join(tempDir, "rule-engine.mjs")).href);
+  const { selectSolutions, calculateImpactRanges, buildChart, buildDiagnosisPack, buildActionPlan, buildFallbackResult, extractUserSignals, buildCostOfInaction } = await import(pathToFileURL(path.join(tempDir, "rule-engine.mjs")).href);
 
   const solutionIds = new Set(AVAILABLE_SOLUTIONS.map((solution) => solution.id));
   const expectedPrimary = {
@@ -47,9 +47,9 @@ try {
     const selected = selectSolutions({
       mainChallenges: [challenge],
       detailChallenges: [],
-      impactLevel: "critical",
-      frictionSource: "delayed_response",
-      adoptionStyle: "dfy"
+      impactLevel: "",
+      frictionSource: "",
+      adoptionStyle: ""
     }).map((solution) => solution.id);
 
     assert.deepEqual(selected, expectedIds, `${challenge} should map deterministically to its priority solutions`);
@@ -84,25 +84,34 @@ try {
   const combined = selectSolutions({
     mainChallenges: ["revenue", "cost"],
     detailChallenges: [],
-    impactLevel: "critical",
-    frictionSource: "delayed_response",
-    adoptionStyle: "dfy"
+    impactLevel: "",
+    frictionSource: "",
+    adoptionStyle: ""
   }).map((solution) => solution.id);
   assert.deepEqual(combined, expectedPrimary.revenue, "secondary challenge must not push result over max 4 solutions");
   assert.equal(new Set(combined).size, combined.length, "selected solutions must be unique");
 
+  const frictionDriven = selectSolutions({
+    mainChallenges: ["revenue"],
+    detailChallenges: [],
+    impactLevel: "critical",
+    frictionSource: "delayed_response",
+    adoptionStyle: "starting"
+  }).map((solution) => solution.id);
+  assert.equal(frictionDriven[0], "ai_whatsapp_sales_bot", "friction source should influence which solution appears first");
+
   assert.deepEqual(calculateImpactRanges({ mainChallenges: ["revenue"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }), {
-    revenueIncrease: "10-30%",
-    hoursSaved: "20-60 jam/bulan"
+    revenueIncrease: "8-18%",
+    hoursSaved: "15-35 jam/bulan"
   });
   assert.deepEqual(calculateImpactRanges({ mainChallenges: ["cost"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }), {
-    costReduction: "8-22%",
-    hoursSaved: "20-60 jam/bulan"
+    costReduction: "8-15%",
+    hoursSaved: "15-35 jam/bulan"
   });
   assert.deepEqual(calculateImpactRanges({ mainChallenges: ["fraud", "brand_trust"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }), {
-    riskReduction: "15-45%",
-    trustLift: "15-35% peningkatan trust signal",
-    hoursSaved: "20-60 jam/bulan"
+    riskReduction: "15-30%",
+    trustLift: "12-22% peningkatan trust signal",
+    hoursSaved: "15-35 jam/bulan"
   });
 
   const chart = buildChart({ mainChallenges: ["fraud"], detailChallenges: [], impactLevel: "critical", frictionSource: "transaction_anomaly", adoptionStyle: "dfy" });
@@ -130,6 +139,11 @@ try {
   assert.ok(plan[0].title.includes("Fase 1"), "first phase must be the quick win");
   assert.ok(plan[0].solutions.length >= 1, "quick win phase must name at least one selected solution");
   assert.ok(plan.every((phase) => phase.timeframe && phase.focus && phase.outcome), "each phase must carry timeframe, focus, and outcome");
+
+  const fallbackResult = buildFallbackResult("session-test", diagnosisAnswers, diagnosisSolutions, calculateImpactRanges(diagnosisAnswers));
+  assert.ok(fallbackResult.solutionCards?.[0]?.whyThisFits && fallbackResult.solutionCards[0].whyThisFits.includes("follow-up"), "final result cards should explain why a solution fits the selected bottleneck");
+  assert.ok(fallbackResult.solutionCards?.[0]?.expectedOutcome && fallbackResult.solutionCards[0].expectedOutcome.length > 0, "final result cards should describe the fastest outcome to expect");
+  assert.ok(fallbackResult.solutionCards?.[0]?.watchout && fallbackResult.solutionCards[0].watchout.length > 0, "final result cards should include an implementation watchout");
 
   // Optional statistics: only echo numbers the user actually typed, never invent them.
   const signals = extractUserSignals("Omzet kami sekitar Rp100 juta/bulan, ada 50 chat WA per hari, tim 5 orang.");

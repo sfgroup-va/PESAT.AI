@@ -2,16 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Clock, TrendingUp, Zap, Shield, Sparkles, TrendingDown, Search, AlertTriangle, Brain, ArrowRight, BarChart3 } from "lucide-react";
+import { Clock, Shield, Sparkles, TrendingDown, Search, AlertTriangle, Brain, ArrowRight, BarChart3 } from "lucide-react";
 import { ImpactComparisonChart } from "@/components/ImpactComparisonChart";
+import { StrategicSummary } from "@/components/report/StrategicSummary";
 import type { GeneratedResult } from "@/lib/types";
 
 export function ResultView({ sessionId }: { sessionId: string }) {
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [error, setError] = useState("");
-  const [monthlyRevenue, setMonthlyRevenue] = useState(500000000);
-  const [monthlyCost, setMonthlyCost] = useState(80_000_000);
 
   useEffect(() => {
     fetch(`/api/result/${sessionId}`)
@@ -31,7 +29,7 @@ export function ResultView({ sessionId }: { sessionId: string }) {
         <section className="mx-auto max-w-2xl">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Pesat.AI result</p>
           <h1 className="text-4xl font-semibold leading-tight">{error}</h1>
-          <Link href="/" className="mt-8 inline-flex min-h-12 items-center rounded-full bg-neutral-950 px-6 text-sm font-semibold text-white">
+          <Link href="/" className="mt-8 inline-flex min-h-12 items-center rounded-full bg-[#4c1d95] px-6 text-sm font-semibold text-white">
             Kembali ke mini session
           </Link>
         </section>
@@ -50,12 +48,6 @@ export function ResultView({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const impactPercent = parseImpactPercent(result.impactCards);
-  const projectedGain = Math.round(monthlyRevenue * (impactPercent / 100));
-  const annualGain = projectedGain * 12;
-  const projectedCostSaving = Math.round(monthlyCost * (impactPercent / 100));
-  const annualCostSaving = projectedCostSaving * 12;
-  const isRevenueCluster = result.efficiencyMetrics.some((m) => m.label.toLowerCase().includes("lead") || m.label.toLowerCase().includes("revenue"));
   const hiddenCostTotal = result.hiddenCosts.reduce((sum, cost) => sum + cost.monthlyEstimate, 0);
 
   return (
@@ -66,19 +58,7 @@ export function ResultView({ sessionId }: { sessionId: string }) {
         <p className="mt-5 text-lg leading-8 text-neutral-600">{result.subheadline}</p>
 
         {/* Executive Summary: Before → After → Savings/Lift */}
-        {isRevenueCluster ? (
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <BeforeAfterCard label="Before" value={`Rp ${formatRupiah(monthlyRevenue)}`} tone="muted" />
-            <BeforeAfterCard label="After AI" value={`Rp ${formatRupiah(monthlyRevenue + projectedGain)}`} tone="highlight" />
-            <BeforeAfterCard label="Potensi Pertumbuhan" value={`+${impactPercent}%`} tone="accent" />
-          </div>
-        ) : (
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <BeforeAfterCard label="Biaya Sekarang" value={`Rp ${formatRupiah(monthlyCost)}`} tone="muted" />
-            <BeforeAfterCard label="Biaya Setelah AI" value={`Rp ${formatRupiah(monthlyCost - projectedCostSaving)}`} tone="highlight" />
-            <BeforeAfterCard label="Potensi Penghematan" value={`Rp ${formatRupiah(projectedCostSaving)}/bulan`} tone="accent" />
-          </div>
-        )}
+        <StrategicSummary result={result} />
 
         {/* Efficiency Metrics */}
         {result.efficiencyMetrics.length ? (
@@ -108,20 +88,6 @@ export function ResultView({ sessionId }: { sessionId: string }) {
           </div>
         ) : null}
 
-        {/* Diagnosis */}
-        {result.diagnosis ? (
-          <div className="mt-8 rounded-[1.35rem] border border-neutral-200 bg-neutral-50 p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Diagnosa</p>
-            <p className="mt-3 text-lg font-medium leading-8 text-neutral-900">{result.diagnosis}</p>
-            {result.rootCause?.text ? (
-              <div className="mt-4 border-l-2 border-neutral-900 pl-4">
-                <p className="text-base leading-7 text-neutral-700">{result.rootCause.text}</p>
-                <p className="mt-2 text-xs font-semibold text-neutral-400">Sumber: {result.rootCause.source}</p>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
         {/* Hidden Cost Radar */}
         {result.hiddenCosts.length ? (
           <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
@@ -142,45 +108,11 @@ export function ResultView({ sessionId }: { sessionId: string }) {
           </div>
         ) : null}
 
-        {/* Before vs After Visual */}
-        {result.beforeAfterMetrics.length ? (
-          <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Before vs After</p>
-            <div className="mt-5 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={result.beforeAfterMetrics} layout="vertical" margin={{ left: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="beforeValue" name="Before" fill="#d4d4d4" radius={[0, 8, 8, 0]} />
-                  <Bar dataKey="afterValue" name="After AI" fill="#111111" radius={[0, 8, 8, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        ) : null}
-
-        {/* User Signals */}
-        {result.userSignals?.length ? (
-          <div className="mt-8 rounded-[1.35rem] border border-neutral-200 p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Sinyal dari bisnis Anda</p>
-            <p className="mt-2 text-sm leading-6 text-neutral-500">Angka yang Anda sebutkan, kami jadikan dasar agar analisis lebih konkret.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {result.userSignals.map((signal) => (
-                <span key={signal} className="rounded-full bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-800">
-                  {signal}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
         {/* Finding Cards */}
         {result.findings.length ? (
           <div className="mt-8">
-            <h2 className="text-2xl font-semibold">Temuan Konsultan</h2>
-            <p className="mt-2 text-sm leading-6 text-neutral-500">Insight spesifik berbasis jawaban Anda.</p>
+            <h2 className="text-2xl font-semibold">Yang Mungkin Belum Terlihat</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-500">Insight yang biasanya baru terasa setelah biaya, delay, atau peluang hilang mulai menumpuk.</p>
             <div className="mt-4 grid gap-4">
               {result.findings.map((finding, index) => (
                 <div key={finding.title} className="rounded-[1.35rem] border border-neutral-200 p-6">
@@ -204,82 +136,27 @@ export function ResultView({ sessionId }: { sessionId: string }) {
           </div>
         ) : null}
 
-        {/* Impact Cards */}
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
-          {result.impactCards.map((card) => (
-            <div key={card.title} className="rounded-[1.35rem] border border-neutral-200 p-5">
-              <p className="text-sm font-semibold text-neutral-500">{card.title}</p>
-              <p className="mt-2 text-3xl font-semibold">{card.value}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-500">{card.description}</p>
-            </div>
-          ))}
-        </div>
-
         {/* Impact Comparison */}
         <ImpactComparisonChart result={result} />
 
-        {/* Before / After Text */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {result.beforeAfterText.map((text, index) => (
-            <div key={text} className="rounded-[1.35rem] bg-neutral-50 p-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">{index === 0 ? "Before" : "After"}</p>
-              <p className="mt-3 text-base font-medium leading-7 text-neutral-800">{text}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* ROI Calculator */}
-        <div className="mt-8 rounded-[1.35rem] border border-neutral-200 bg-gradient-to-br from-white to-neutral-50 p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Kalkulator ROI</p>
-          <p className="mt-2 text-sm leading-6 text-neutral-500">Geser untuk melihat potensi impact di bisnis Anda.</p>
-          <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-neutral-700">
-              {isRevenueCluster ? "Omzet bulanan (Rp)" : "Biaya operasional manual/bulan (Rp)"}
-            </label>
-            <input
-              type="range"
-              min="10000000"
-              max="5000000000"
-              step="50000000"
-              value={isRevenueCluster ? monthlyRevenue : monthlyCost}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                if (isRevenueCluster) setMonthlyRevenue(value);
-                else setMonthlyCost(value);
-              }}
-              className="w-full accent-neutral-950"
-            />
-            <div className="mt-2 flex justify-between text-sm font-semibold text-neutral-600">
-              <span>Rp 10jt</span>
-              <span className="text-lg text-neutral-950">Rp {formatRupiah(isRevenueCluster ? monthlyRevenue : monthlyCost)}</span>
-              <span>Rp 5M</span>
-            </div>
-          </div>
-          <div className="mt-5 rounded-[1.35rem] bg-neutral-950 p-5 text-white">
-            <p className="text-sm text-neutral-400">{isRevenueCluster ? "Potensi tambahan per tahun" : "Potensi penghematan per tahun"}</p>
-            <p className="mt-1 text-3xl font-semibold">Rp {formatRupiah(isRevenueCluster ? annualGain : annualCostSaving)}</p>
-            <p className="mt-2 text-xs text-neutral-500">Estimasi berbasis benchmark industri. Angka final setelah discovery.</p>
-          </div>
-        </div>
-
         {/* Solusi Terukur */}
         {result.promise?.statement ? (
-          <div className="mt-8 rounded-[1.35rem] bg-neutral-950 p-6 text-white">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Solusi Terukur</p>
+          <div className="mt-8 rounded-[1.35rem] bg-[#2b1553] p-6 text-white">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#d7c9ff]">Solusi Terukur</p>
             <p className="mt-3 text-xl font-semibold leading-8">{result.promise.statement}</p>
             {result.promise.measuredBy?.length ? (
               <div className="mt-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Diukur lewat</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c4b5fd]">Diukur lewat</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {result.promise.measuredBy.map((metric) => (
-                    <span key={metric} className="rounded-full border border-neutral-700 px-3 py-1 text-sm text-neutral-200">
+                    <span key={metric} className="rounded-full border border-[#5b21b6] px-3 py-1 text-sm text-[#efe9ff]">
                       {metric}
                     </span>
                   ))}
                 </div>
               </div>
             ) : null}
-            {result.promise.disclaimer ? <p className="mt-5 text-xs leading-6 text-neutral-400">{result.promise.disclaimer}</p> : null}
+            {result.promise.disclaimer ? <p className="mt-5 text-xs leading-6 text-[#d7c9ff]">{result.promise.disclaimer}</p> : null}
           </div>
         ) : null}
 
@@ -299,10 +176,15 @@ export function ResultView({ sessionId }: { sessionId: string }) {
           </div>
         ) : null}
 
+        <div className="mt-8 rounded-[1.35rem] bg-[linear-gradient(145deg,#4c1d95_0%,#7c3aed_100%)] p-6 text-white">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#efe9ff]">Kenapa solusi ini masuk akal</p>
+          <p className="mt-3 text-xl font-semibold leading-8">{result.uniqueMechanism}</p>
+        </div>
+
         {/* Solution Cards */}
         <div className="mt-8">
           <h2 className="text-2xl font-semibold">Solusi yang paling relevan</h2>
-          <p className="mt-2 text-sm leading-6 text-neutral-500">Diurutkan berdasarkan match dengan profil bisnis Anda.</p>
+          <p className="mt-2 text-sm leading-6 text-neutral-500">Bukan semua dipasang sekaligus. Ini urutan solusi yang paling masuk akal untuk menutup bottleneck utama lebih dulu.</p>
           <div className="mt-4 grid gap-3">
             {result.solutionCards?.map((card, index) => (
               <div
@@ -318,6 +200,28 @@ export function ResultView({ sessionId }: { sessionId: string }) {
                       <ConfidenceBadge score={card.confidenceScore} />
                     </div>
                     <p className="mt-1 text-sm leading-6 text-neutral-600">{card.description}</p>
+                    {card.whyThisFits || card.expectedOutcome || card.watchout ? (
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        {card.whyThisFits ? (
+                          <div className="rounded-[1rem] bg-neutral-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Kenapa Ini</p>
+                            <p className="mt-2 text-sm leading-6 text-neutral-700">{card.whyThisFits}</p>
+                          </div>
+                        ) : null}
+                        {card.expectedOutcome ? (
+                          <div className="rounded-[1rem] bg-emerald-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Efek Cepat</p>
+                            <p className="mt-2 text-sm leading-6 text-emerald-900">{card.expectedOutcome}</p>
+                          </div>
+                        ) : null}
+                        {card.watchout ? (
+                          <div className="rounded-[1rem] bg-amber-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Yang Perlu Dijaga</p>
+                            <p className="mt-2 text-sm leading-6 text-amber-900">{card.watchout}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-500">
                       <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1">
                         <Clock className="h-3 w-3" />
@@ -376,7 +280,7 @@ export function ResultView({ sessionId }: { sessionId: string }) {
             </div>
             <Link
               href="/"
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-neutral-950 px-6 text-sm font-semibold text-white transition hover:bg-black sm:w-auto"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#4c1d95] px-6 text-sm font-semibold text-white transition hover:bg-[#3b1476] sm:w-auto"
             >
               <BarChart3 className="h-4 w-4" />
               Mulai Lagi & Simpan Laporan
@@ -401,25 +305,6 @@ function FindingBlock({ icon, title, text }: { icon: React.ReactNode; title: str
 }
 
 /* ─── Helper Components ─── */
-
-function BeforeAfterCard({ label, value, tone }: { label: string; value: string; tone: "muted" | "highlight" | "accent" }) {
-  const toneStyles = {
-    muted: "bg-neutral-100 text-neutral-600",
-    highlight: "bg-neutral-950 text-white",
-    accent: "bg-emerald-600 text-white"
-  };
-  return (
-    <div className={`rounded-[1.35rem] p-5 ${toneStyles[tone]}`}>
-      <div className="flex items-center gap-2 text-sm font-semibold opacity-70">
-        {tone === "muted" && <Clock className="h-4 w-4" />}
-        {tone === "highlight" && <TrendingUp className="h-4 w-4" />}
-        {tone === "accent" && <Zap className="h-4 w-4" />}
-        {label}
-      </div>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-    </div>
-  );
-}
 
 function ImpactBadge({ badge }: { badge: string }) {
   const styles: Record<string, string> = {
@@ -451,16 +336,4 @@ function formatRupiah(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(0)}jt`;
   if (value >= 1000) return `${(value / 1000).toFixed(0)}rb`;
   return value.toString();
-}
-
-function parseImpactPercent(cards: Array<{ title: string; value: string }>): number {
-  let maxPercent = 20;
-  for (const card of cards) {
-    const match = card.value.match(/(\d+)-?(\d+)?%?/);
-    if (match) {
-      const val = parseInt(match[2] || match[1], 10);
-      if (val > maxPercent) maxPercent = val;
-    }
-  }
-  return maxPercent;
 }

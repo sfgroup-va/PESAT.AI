@@ -1,6 +1,7 @@
-import type { AdoptionId, ChallengeId, ContactData, DetailId, FrictionSourceId, ImpactId, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, ContactData, DetailId, FrictionSourceId, ImpactId, IntakePathId, OtherAnswers, WizardAnswers } from "@/lib/types";
 
 const challengeIds = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"] as const satisfies readonly ChallengeId[];
+const intakePathIds = ["sales", "ops", "cash_control", "brand", "other"] as const satisfies readonly IntakePathId[];
 const detailIds = [
   "follow_up",
   "repeat_order",
@@ -37,6 +38,7 @@ const eventTypes = ["screen_view", "click"] as const;
 const eventScreens = ["hero", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate", "admin"] as const;
 
 const challengeSet = new Set<string>(challengeIds);
+const intakePathSet = new Set<string>(intakePathIds);
 const detailSet = new Set<string>(detailIds);
 const impactSet = new Set<string>(impactIds);
 const frictionSourceSet = new Set<string>(frictionSourceIds);
@@ -85,19 +87,33 @@ function uniqueAllowed<T extends string>(value: unknown, allowed: Set<string>, m
   return selected;
 }
 
+function sanitizeOtherAnswers(value: unknown): OtherAnswers {
+  const input = typeof value === "object" && value ? (value as Record<string, unknown>) : {};
+  return {
+    mainChallenge: sanitizeText(input.mainChallenge, 220),
+    detailChallenge: sanitizeText(input.detailChallenge, 220),
+    impactLevel: sanitizeText(input.impactLevel, 220),
+    frictionSource: sanitizeText(input.frictionSource, 220),
+    adoptionStyle: sanitizeText(input.adoptionStyle, 220)
+  };
+}
+
 export function sanitizeAnswers(value: unknown): WizardAnswers {
   const input = typeof value === "object" && value ? (value as Record<string, unknown>) : {};
+  const intakePath = typeof input.intakePath === "string" && intakePathSet.has(input.intakePath) ? (input.intakePath as IntakePathId) : "";
   const impactLevel = typeof input.impactLevel === "string" && impactSet.has(input.impactLevel) ? (input.impactLevel as ImpactId) : "";
   const frictionSource =
     typeof input.frictionSource === "string" && frictionSourceSet.has(input.frictionSource) ? (input.frictionSource as FrictionSourceId) : "";
   const adoptionStyle = typeof input.adoptionStyle === "string" && adoptionSet.has(input.adoptionStyle) ? (input.adoptionStyle as AdoptionId) : "";
 
   return {
+    intakePath,
     mainChallenges: uniqueAllowed<ChallengeId>(input.mainChallenges, challengeSet, 2),
     detailChallenges: uniqueAllowed<DetailId>(input.detailChallenges, detailSet, 8),
     impactLevel,
     frictionSource,
     adoptionStyle,
+    otherAnswers: sanitizeOtherAnswers(input.otherAnswers),
     detailNote: sanitizeWordLimitedText(input.detailNote, 1000)
   };
 }
@@ -123,6 +139,8 @@ export function sanitizeContact(value: unknown): ContactData {
     companyName: sanitizeText(input.companyName, 160),
     name: sanitizeText(input.name, 120),
     wa: sanitizeText(input.wa, 40).replace(/[^\d+()\-\s]/g, ""),
+    employeeCount: sanitizeText(input.employeeCount, 80),
+    yearlyRevenue: sanitizeText(input.yearlyRevenue, 120),
     followUpAllowed: Boolean(input.followUpAllowed)
   };
 }
@@ -139,6 +157,8 @@ export function sanitizeDiscoveryPayload(value: unknown) {
     companyName: sanitizeText(input.companyName, 160),
     name: sanitizeText(input.name, 120),
     wa: sanitizeText(input.wa, 40).replace(/[^\d+()\-\s]/g, ""),
+    employeeCount: sanitizeText(input.employeeCount, 80),
+    yearlyRevenue: sanitizeText(input.yearlyRevenue, 120),
     budgetContext: sanitizeText(input.budgetContext, 500),
     message: sanitizeWordLimitedText(input.message, 1500, 18000),
     summary: sanitizeText(input.summary, 500)
@@ -147,7 +167,6 @@ export function sanitizeDiscoveryPayload(value: unknown) {
 
 export function validateDiscoveryPayload(payload: ReturnType<typeof sanitizeDiscoveryPayload>) {
   const missing = [
-    !payload.companyName ? "companyName" : "",
     !payload.name ? "name" : "",
     !payload.wa ? "wa" : "",
     payload.wa && !hasUsableWhatsAppNumber(payload.wa) ? "wa" : ""

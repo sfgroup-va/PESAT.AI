@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { calculateImpactRanges, selectSolutions } from "@/lib/rule-engine";
 import { generateResultCopy } from "@/lib/openai-result";
 import { getDb } from "@/lib/db";
+import { storePromptLearningEvent } from "@/lib/prompt-learning";
 import { sanitizeAnswers, sanitizeContact, validateCompleteAnswers } from "@/lib/validation";
 import type { ContactData, WizardAnswers } from "@/lib/types";
 
@@ -48,6 +49,15 @@ export async function POST(request: Request) {
     } catch (err: unknown) {
       return NextResponse.json({ error: String(err) }, { status: 500 });
     }
+  }
+
+  if (persisted) {
+    await storePromptLearningEvent({
+      sessionId,
+      sourceRef: sessionId,
+      sourceType: "session_result",
+      snapshot: { answers, contact, result }
+    }).catch(() => undefined);
   }
 
   return NextResponse.json({ ...result, persisted });

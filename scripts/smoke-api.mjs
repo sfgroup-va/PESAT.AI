@@ -40,7 +40,8 @@ const validResult = await request("/api/result", {
     answers: {
       mainChallenges: ["revenue"],
       detailChallenges: ["follow_up"],
-      impactLevel: "revenue",
+      impactLevel: "critical",
+      frictionSource: "delayed_response",
       adoptionStyle: "dfy",
       detailNote: "Lead banyak masuk dari WhatsApp."
     },
@@ -73,7 +74,7 @@ const validEvent = await request("/api/event", {
   method: "POST",
   body: JSON.stringify({
     type: "screen_view",
-    screen: "s1",
+    screen: "q1",
     metadata: {
       source: "smoke-test",
       selectedCount: 1,
@@ -115,7 +116,6 @@ const unauthorizedAdmin = await request("/api/admin/summary", {
 const validDiscovery = await request("/api/discovery", {
   method: "POST",
   body: JSON.stringify({
-    companyName: "Test Co",
     name: "Tester",
     wa: "+628123456789",
     summary: validResult.body?.headline || "Smoke test"
@@ -159,7 +159,12 @@ const result = {
   unauthorizedAdminRejected: unauthorizedAdmin.status === 401,
   validDiscoveryOk: validDiscovery.status === 200 && typeof validDiscovery.body?.whatsappUrl === "string",
   discoveryWhatsappTargetOk: discoveryUrl?.origin === "https://wa.me" && discoveryUrl.pathname === "/6281290401240",
-  discoveryWhatsappMessageOk: discoveryText.includes("Halo Pesat.AI") && discoveryText.includes("Perusahaan: Test Co") && discoveryText.includes("Nama: Tester") && discoveryText.includes("WA: +628123456789") && discoveryText.includes(validResult.body?.headline || "Smoke test"),
+  discoveryWhatsappMessageOk:
+    discoveryText.includes("Halo Pesat.AI") &&
+    !discoveryText.includes("Perusahaan:") &&
+    discoveryText.includes("Nama: Tester") &&
+    discoveryText.includes("WA: +628123456789") &&
+    discoveryText.includes(validResult.body?.headline || "Smoke test"),
   persisted: {
     result: Boolean(validResult.body?.persisted),
     discovery: Boolean(validDiscovery.body?.persisted)

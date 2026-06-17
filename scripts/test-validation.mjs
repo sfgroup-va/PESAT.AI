@@ -33,15 +33,25 @@ try {
 
   const thousandWordNote = Array.from({ length: 1005 }, (_, index) => `kata${index + 1}`).join(" ");
   const answers = sanitizeAnswers({
+    intakePath: "sales",
     mainChallenges: ["revenue", "fraud", "cost", "fake"],
     detailChallenges: ["follow_up", "follow_up", "repeat_order", "pricing", "lead_quality", "admin_cost", "manual_docs", "invoice_ap", "process_waste", "fake"],
     impactLevel: "critical",
     frictionSource: "delayed_response",
     adoptionStyle: "dfy",
+    otherAnswers: {
+      mainChallenge: "Approval sering lewat chat pribadi",
+      detailChallenge: "Banyak lead masuk tapi prioritas follow-up belum jelas",
+      impactLevel: "Muncul 2-3 kali per minggu",
+      frictionSource: "Data dari tiap tim masih beda format",
+      adoptionStyle: "Kami mau setup dulu lalu tim internal ambil alih"
+    },
     detailNote: thousandWordNote
   });
+  assert.equal(answers.intakePath, "sales");
   assert.deepEqual(answers.mainChallenges, ["revenue", "fraud"]);
   assert.deepEqual(answers.detailChallenges, ["follow_up", "repeat_order", "pricing", "lead_quality", "admin_cost", "manual_docs", "invoice_ap", "process_waste"]);
+  assert.equal(answers.otherAnswers.mainChallenge, "Approval sering lewat chat pribadi");
   assert.equal(answers.detailNote.split(/\s+/).length, 1000);
   assert.deepEqual(validateCompleteAnswers(answers), { ok: true, missing: [] });
   assert.deepEqual(validateCompleteAnswers(sanitizeAnswers({})).missing, ["mainChallenges", "detailChallenges", "impactLevel", "frictionSource", "adoptionStyle"]);
@@ -51,11 +61,15 @@ try {
     companyName: ` ${"A".repeat(200)} `,
     name: ` ${"B".repeat(200)} `,
     wa: "+62 812 abc<script> 345 6789",
+    employeeCount: " 120 orang ",
+    yearlyRevenue: " Rp 12 M ",
     followUpAllowed: 1
   });
   assert.equal(contact.companyName.length, 160);
   assert.equal(contact.name.length, 120);
   assert.equal(contact.wa, "+62 812  345 6789");
+  assert.equal(contact.employeeCount, "120 orang");
+  assert.equal(contact.yearlyRevenue, "Rp 12 M");
   assert.equal(contact.followUpAllowed, true);
 
   assert.equal(hasUsableWhatsAppNumber("+628123456789"), true);
@@ -67,17 +81,21 @@ try {
     companyName: "Test Co",
     name: "Tester",
     wa: "+62-812-345-6789 ext!",
+    employeeCount: "85",
+    yearlyRevenue: "Rp 9 M",
     budgetContext: "b".repeat(700),
     message: Array.from({ length: 1505 }, (_, index) => `jawaban${index + 1}`).join(" "),
     summary: "s".repeat(700)
   });
   assert.equal(discovery.sessionId.length, 80);
   assert.equal(discovery.wa, "+62-812-345-6789 ");
+  assert.equal(discovery.employeeCount, "85");
+  assert.equal(discovery.yearlyRevenue, "Rp 9 M");
   assert.equal(discovery.budgetContext.length, 500);
   assert.equal(discovery.message.split(/\s+/).length, 1500);
   assert.equal(discovery.summary.length, 500);
   assert.deepEqual(validateDiscoveryPayload(discovery), { ok: true, missing: [] });
-  assert.deepEqual(validateDiscoveryPayload(sanitizeDiscoveryPayload({ companyName: "", name: "", wa: "123" })).missing, ["companyName", "name", "wa"]);
+  assert.deepEqual(validateDiscoveryPayload(sanitizeDiscoveryPayload({ companyName: "", name: "", wa: "123" })).missing, ["name", "wa"]);
 
   const event = sanitizeEventPayload({
     sessionId: "session-1",

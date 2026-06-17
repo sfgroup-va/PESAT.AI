@@ -1,5 +1,6 @@
 import { buildFallbackResult } from "@/lib/rule-engine";
 import { normalizeModelPayload, type ModelPayload } from "@/lib/result-normalizer";
+import { DETAIL_LABELS, FRICTION_SOURCES, IMPACT_LEVEL_LABELS } from "@/lib/solutions";
 import type { GeneratedResult, ImpactRanges, PesatSolution, WizardAnswers } from "@/lib/types";
 
 const OPENAI_TIMEOUT_MS = 20000;
@@ -27,16 +28,21 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
           {
             role: "system",
             content: [
-              "Kamu konsultan transformasi AI senior di Pesat.AI yang menulis ringkasan hasil untuk pemilik bisnis. Ubah input terstruktur menjadi JSON valid sesuai schema.",
+              "Act as UX and CRO expert. Kamu konsultan transformasi AI senior di Pesat.AI yang menulis report singkat untuk pemilik bisnis. Ubah input terstruktur menjadi JSON valid sesuai schema.",
               "ATURAN KERAS (anti-halusinasi): jangan menciptakan solusi, angka, persentase, sumber, atau statistik baru di luar input. Setiap angka/persentase WAJIB persis dari impactRanges atau userSignals. Jika tidak ada angka di input, tetap kualitatif, JANGAN mengarang statistik.",
-              "Gaya: bahasa Indonesia, profesional dan kredibel seperti konsultan strategi; tajam, spesifik, berbasis bukti, percaya diri tanpa hype. Hindari klise dan kata kosong.",
-              "Tujuan: pembaca merasa benar-benar dipahami dan melihat jalan keluar yang jelas, sehingga tertarik melanjutkan ke discovery call dengan Pesat.AI.",
+              "Gaya: bahasa Indonesia, profesional dan kredibel seperti konsultan strategi; tajam, spesifik, berbasis bukti, percaya diri tanpa hype. Hindari klise, jargon kosong, dan pengulangan.",
+              "PENTING: report harus cepat dipahami. Gunakan kalimat pendek, satu gagasan utama per kalimat, dan hindari bahasa bertele-tele.",
+              "Tujuan: pembaca merasa 'ini memang masalah saya', menemukan satu insight yang belum ia sadari, dan melihat jalan keluar yang jelas sehingga tertarik melanjutkan ke discovery call dengan Pesat.AI.",
               "Buat hasil personal dan insightful, bukan generik:",
-              "- 'diagnosis': cerminkan masalah SPESIFIK klien dari answers.detailChallenges dan detailNote. Jika userSignals berisi angka dari klien (mis. jumlah chat, omzet, jam kerja), gunakan untuk membuat insight lebih konkret. Tunjukkan kamu paham, lalu reframe ke akar masalah. Dasar: diagnosisContext.deterministicDiagnosis.",
+              "- 'diagnosis': cerminkan masalah SPESIFIK klien dari answers.detailChallenges, answers.otherAnswers, dan detailNote. Jika userSignals berisi angka dari klien (mis. jumlah chat, omzet, jam kerja), gunakan untuk membuat insight lebih konkret. Tunjukkan kamu paham, lalu reframe ke akar masalah. Dasar: diagnosisContext.deterministicDiagnosis.",
+              "- Jawaban q3 dan q4 WAJIB terasa dipakai: severity problem dan sumber gesekan utama harus memengaruhi diagnosis, first step, dan urgensi.",
               "- 'promiseStatement': janji meyakinkan TAPI jujur. Wajib menyebut rentang dari impactRanges apa adanya, sebut diukur lewat diagnosisContext.promiseFrame.measuredBy, dan tegaskan ini estimasi bukan garansi.",
               "- 'costOfInaction': konsekuensi jujur bila masalah dibiarkan, untuk membangun urgensi tanpa menakut-nakuti berlebihan. Boleh merujuk userSignals, tapi JANGAN mengarang angka. Dasar: diagnosisContext.costOfInactionFrame.",
               "- 'firstStep': satu langkah pertama konkret dan realistis, sesuaikan dengan answers.adoptionStyle. Dasar: diagnosisContext.firstStepFrame.",
+              "- 'headline' harus terasa tajam dan langsung ke masalah inti, idealnya <= 14 kata.",
+              "- 'subheadline' harus menjelaskan kenapa ini penting dan apa yang mulai bisa dibenahi, idealnya <= 24 kata.",
               "- 'headline','subheadline','impactCards','beforeAfterText','uniqueMechanism','solutionsText': isi sesuai input. impactCards.value harus salah satu nilai dari impactRanges.",
+              "- Untuk 'solutionsText', setiap item harus terasa seperti rekomendasi konsultan: sebut nama solusi, kenapa diprioritaskan lebih dulu, perubahan tercepat yang diharapkan, dan syarat agar solusi itu benar-benar bekerja.",
               "Jika ragu, ikuti deterministicDiagnosis/promiseFrame/firstStepFrame/costOfInactionFrame daripada mengarang."
             ].join("\n")
           },
@@ -45,6 +51,12 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
             content: JSON.stringify({
               answers,
               detailNote: answers.detailNote || "",
+              questionContext: {
+                selectedDetail: answers.detailChallenges[0] ? DETAIL_LABELS[answers.detailChallenges[0]] : "",
+                impactLevel: answers.impactLevel ? IMPACT_LEVEL_LABELS[answers.impactLevel] : "",
+                frictionSource: answers.frictionSource ? FRICTION_SOURCES[answers.frictionSource].label : "",
+                otherAnswers: answers.otherAnswers || {}
+              },
               userSignals: fallback.userSignals,
               solutions,
               impactRanges,

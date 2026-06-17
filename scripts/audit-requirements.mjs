@@ -89,7 +89,7 @@ check("hero rolling lines complete", [
 ].every((line) => homeData.includes(line)));
 check("wizard screens present", ["hero", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate"].every((step) => experience.includes(`"${step}"`)));
 check("WhatsApp target configured", read("app/api/discovery/route.ts").includes("6281290401240"));
-check("API smoke validates WhatsApp target and message", smokeApi.includes("discoveryWhatsappTargetOk") && smokeApi.includes("discoveryWhatsappMessageOk") && smokeApi.includes("Perusahaan: Test Co"));
+check("API smoke validates WhatsApp target and message", smokeApi.includes("discoveryWhatsappTargetOk") && smokeApi.includes("discoveryWhatsappMessageOk") && smokeApi.includes('!discoveryText.includes("Perusahaan:")'));
 check("share and PDF controls exist", experience.includes("Copy Link") && experience.includes("Export PDF") && packageJson.dependencies.jspdf);
 check("Recharts dependency exists", Boolean(packageJson.dependencies.recharts));
 check("Supabase schema tables exist", ["public.sessions", "public.events", "public.discovery_requests"].every((table) => schema.includes(table)));
@@ -101,7 +101,7 @@ check("Supabase schema has executable coverage", supabaseSchemaTest.includes("se
 check("required route files exist", routeFiles.every(exists));
 check("Cloudflare config targets account", wrangler.includes("99dd60debc042e9b615dd44472645e71") && wrangler.includes("nodejs_compat"));
 check("env templates match required secrets and vars", requiredSecrets.every((name) => envExample.includes(`${name}=`) && envProductionExample.includes(`${name}=`) && secretsCheck.includes(name)) && publicVars.every((name) => envExample.includes(`${name}=`) && envProductionExample.includes(`${name}=`) && wrangler.includes(name)));
-check("production env template has no committed secret values", requiredSecrets.every((name) => envProductionExample.includes(`${name}=\n`)));
+check("production env template has no committed secret values", requiredSecrets.every((name) => new RegExp(`${name}=\\r?\\n`).test(envProductionExample)));
 check("production scripts exist", exists("scripts/check-production.ps1") && exists("scripts/smoke-ui.mjs") && exists("scripts/finalize-cloudflare.ps1"));
 check("production security headers configured", ["X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy", "Permissions-Policy"].every((header) => nextConfig.includes(header)));
 check("API smoke validates production security and SEO", smokeApi.includes("securityHeadersOk") && smokeApi.includes("robotsOk") && smokeApi.includes("sitemapOk") && smokeApi.includes("Disallow: /admin"));
@@ -129,7 +129,7 @@ check("share result route has explicit not-ready states", resultGetRoute.include
 check("share result page has recovery CTA", resultView.includes("Kembali ke mini session") && resultView.includes("Supabase belum terhubung"));
 check("API smoke validates share result unavailable state", smokeApi.includes("shareResultUnavailableOk") && smokeApi.includes("/api/result/"));
 check("UI smoke validates PDF download", read("scripts/smoke-ui.mjs").includes("pdfDownloadOk") && read("scripts/smoke-ui.mjs").includes('waitForEvent("download"'));
-check("UI smoke validates discovery prefill", read("scripts/smoke-ui.mjs").includes("discoveryPrefillOk") && read("scripts/smoke-ui.mjs").includes("Smoke Prefill Co"));
+check("UI smoke validates ungated result and fresh lead gate", read("scripts/smoke-ui.mjs").includes("resultGateFreeOk") && read("scripts/smoke-ui.mjs").includes("discoveryFormFreshOk"));
 check("UI smoke validates result recovery page", read("scripts/smoke-ui.mjs").includes("resultRecoveryCtaOk") && read("scripts/smoke-ui.mjs").includes("/result/00000000-0000-0000-0000-000000000000"));
 check("finalizer runs preflight before secrets", finalizer.includes("npm.cmd run check:quality") && finalizer.includes("opennextjs-cloudflare build") && finalizer.indexOf("npm.cmd run check:quality") < finalizer.indexOf("wrangler secret list"));
 check("finalizer has safe preflight-only mode", finalizer.includes("$PreflightOnly") && finalizer.includes("check-cloudflare-secrets.ps1") && read("GO_LIVE.md").includes("-PreflightOnly"));

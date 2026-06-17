@@ -19,7 +19,7 @@ const tempFile = path.join(os.tmpdir(), `pesat-solutions-${Date.now()}.mjs`);
 fs.writeFileSync(tempFile, compiled, "utf8");
 
 try {
-  const { AVAILABLE_SOLUTIONS, CHALLENGE_LABELS } = await import(pathToFileURL(tempFile).href);
+  const { AVAILABLE_SOLUTIONS, CHALLENGE_LABELS, FRICTION_SOLUTION_MAP, buildSmartQuestionCopy, buildTransitionFact } = await import(pathToFileURL(tempFile).href);
   const challengeIds = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"];
   const challengeSet = new Set(challengeIds);
 
@@ -41,6 +41,27 @@ try {
 
   const clustersWithSolutions = new Set(AVAILABLE_SOLUTIONS.flatMap((solution) => solution.cluster));
   assert.deepEqual([...clustersWithSolutions].sort(), [...challengeSet].sort(), "every challenge must have at least one solution");
+
+  assert.ok(Array.isArray(FRICTION_SOLUTION_MAP.delayed_response), "friction map must exist so q4 affects recommendations");
+  assert.ok(FRICTION_SOLUTION_MAP.delayed_response.includes("ai_whatsapp_sales_bot"), "delayed response should prioritize solutions that improve response speed");
+
+  const smartCopy = buildSmartQuestionCopy({
+    mainChallenges: ["revenue"],
+    detailChallenges: ["follow_up"],
+    frictionSource: "delayed_response"
+  });
+  assert.ok(smartCopy.q4.title.toLowerCase().includes("follow-up"), "smart question copy should reflect the selected detail challenge");
+  assert.ok(smartCopy.q6.helper.toLowerCase().includes("generik"), "smart question copy should steer the user away from generic answers");
+
+  const detailTransition = buildTransitionFact(
+    {
+      mainChallenges: ["revenue"],
+      detailChallenges: ["follow_up"]
+    },
+    "q2"
+  );
+  assert.ok(detailTransition.text.toLowerCase().includes("respons"), "detail transition fact should reflect the selected bottleneck");
+  assert.ok(!detailTransition.text.toLowerCase().includes("retensi"), "detail transition fact should avoid unrelated generic copy");
 
   console.log(JSON.stringify({ ok: true, checked: "solutions", solutions: AVAILABLE_SOLUTIONS.length, clusters: challengeIds.length }, null, 2));
 } finally {
