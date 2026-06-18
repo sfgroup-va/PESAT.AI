@@ -24,8 +24,9 @@ export async function POST(request: Request) {
   if (sql) {
     try {
       await sql`
-        INSERT INTO discovery_requests (session_id, company_name, name, wa, budget_context, message)
+        INSERT INTO discovery_requests (session_id, company_name, name, wa, employee_count, yearly_revenue, budget_context, message)
         VALUES (${body.sessionId || null}, ${body.companyName}, ${body.name}, ${body.wa},
+                ${body.employeeCount}, ${body.yearlyRevenue},
                 ${body.budgetContext || null}, ${body.message || null})
       `;
 
@@ -47,6 +48,8 @@ export async function POST(request: Request) {
     `Perusahaan: ${body.companyName}`,
     `Nama: ${body.name}`,
     `WA: ${body.wa}`,
+    `Jumlah karyawan: ${body.employeeCount}`,
+    `Omzet per tahun: ${body.yearlyRevenue}`,
     body.budgetContext ? `Budget/konteks: ${body.budgetContext}` : "",
     body.summary ? `Ringkasan mini session: ${body.summary}` : "",
     body.message ? `Konteks tambahan:\n${body.message}` : ""

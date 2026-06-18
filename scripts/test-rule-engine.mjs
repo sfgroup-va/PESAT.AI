@@ -36,10 +36,9 @@ try {
   const expectedPrimary = {
     revenue: ["ai_sales_assistant", "ai_repeat_order", "ai_crm_pintar", "ai_dynamic_pricing"],
     cost: ["ai_pembukuan_otomatis", "ai_invoice_ap_otomatis", "ai_document_processor", "ai_process_intelligence"],
-    fraud: ["ai_fraud_detection", "ai_data_quality_auto_heal", "ai_roi_impact_tracker", "ai_quality_control_visual"],
+    risk_trust: ["ai_fraud_detection", "ai_data_quality_auto_heal", "ai_local_ai_search_trust_builder", "ai_roi_impact_tracker"],
     cash_stock: ["ai_prediksi_cashflow", "ai_demand_planner", "ai_inventory_optimizer", "ai_executive_dashboard"],
-    reporting: ["ai_report_generator", "ai_executive_dashboard", "ai_meeting_notetaker", "ai_ticket_router"],
-    brand_trust: ["ai_organic_traffic_builder", "ai_local_ai_search_trust_builder", "ai_social_media_manager", "ai_sentiment_pelanggan"]
+    reporting: ["ai_report_generator", "ai_executive_dashboard", "ai_meeting_notetaker", "ai_ticket_router"]
   };
 
   // With no detail challenges, selection falls back to the deterministic cluster priority.
@@ -61,10 +60,10 @@ try {
   const detailCases = [
     { main: "revenue", detail: "follow_up", top: "ai_whatsapp_sales_bot" },
     { main: "cost", detail: "admin_cost", top: "ai_pembukuan_otomatis" },
-    { main: "fraud", detail: "transaction_anomaly", top: "ai_fraud_detection" },
+    { main: "risk_trust", detail: "transaction_anomaly", top: "ai_fraud_detection" },
     { main: "cash_stock", detail: "cashflow_blind", top: "ai_prediksi_cashflow" },
     { main: "reporting", detail: "slow_reports", top: "ai_report_generator" },
-    { main: "brand_trust", detail: "google_visibility", top: "ai_organic_traffic_builder" }
+    { main: "risk_trust", detail: "google_visibility", top: "ai_organic_traffic_builder" }
   ];
   for (const testCase of detailCases) {
     const selected = selectSolutions({
@@ -99,13 +98,13 @@ try {
     costReduction: "8-22%",
     hoursSaved: "20-60 jam/bulan"
   });
-  assert.deepEqual(calculateImpactRanges({ mainChallenges: ["fraud", "brand_trust"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }), {
+  assert.deepEqual(calculateImpactRanges({ mainChallenges: ["risk_trust"], detailChallenges: [], impactLevel: "", frictionSource: "", adoptionStyle: "" }), {
     riskReduction: "15-45%",
     trustLift: "15-35% peningkatan trust signal",
     hoursSaved: "20-60 jam/bulan"
   });
 
-  const chart = buildChart({ mainChallenges: ["fraud"], detailChallenges: [], impactLevel: "critical", frictionSource: "transaction_anomaly", adoptionStyle: "dfy" });
+  const chart = buildChart({ mainChallenges: ["risk_trust"], detailChallenges: [], impactLevel: "critical", frictionSource: "transaction_anomaly", adoptionStyle: "dfy" });
   assert.equal(chart.length, 2);
   assert.equal(chart[0].name, "Before");
   assert.ok(chart[0].before > 0);

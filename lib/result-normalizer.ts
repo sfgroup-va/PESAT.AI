@@ -3,6 +3,7 @@ import type { GeneratedResult, ImpactRanges, PesatSolution } from "@/lib/types";
 export type ModelPayload = {
   headline: string;
   subheadline: string;
+  tldr?: string;
   diagnosis: string;
   promiseStatement: string;
   costOfInaction: string;
@@ -34,7 +35,7 @@ export function normalizeModelPayload(
   fallback: GeneratedResult,
   solutions: PesatSolution[],
   impactRanges: ImpactRanges
-): Pick<GeneratedResult, "headline" | "subheadline" | "diagnosis" | "costOfInaction" | "firstStep" | "impactCards" | "beforeAfterText" | "uniqueMechanism" | "solutionsText"> & { promiseStatement: string } {
+): Pick<GeneratedResult, "headline" | "subheadline" | "tldr" | "diagnosis" | "costOfInaction" | "firstStep" | "impactCards" | "beforeAfterText" | "uniqueMechanism" | "solutionsText"> & { promiseStatement: string } {
   const allowedImpactValues = new Set(Object.values(impactRanges).filter(Boolean));
   const solutionNames = solutions.map((solution) => solution.name.toLowerCase());
 
@@ -76,6 +77,7 @@ export function normalizeModelPayload(
   return {
     headline: cleanString(payload.headline, 140) || fallback.headline,
     subheadline: cleanString(payload.subheadline, 260) || fallback.subheadline,
+    tldr: cleanString(payload.tldr, 220) || fallback.tldr || fallback.subheadline,
     diagnosis,
     promiseStatement,
     costOfInaction,

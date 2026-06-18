@@ -23,7 +23,7 @@ fs.writeFileSync(tempFile, compiled, "utf8");
 
 try {
   const { TRANSITION_FACTS } = await import(pathToFileURL(tempFile).href);
-  const challenges = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"];
+  const challenges = ["revenue", "cost", "risk_trust", "cash_stock", "reporting"];
   const allowedSources = ["hbr", "orange business", "acfe", "mckinsey", "gartner", "google search central"];
 
   assert.deepEqual(Object.keys(TRANSITION_FACTS).sort(), [...challenges].sort());

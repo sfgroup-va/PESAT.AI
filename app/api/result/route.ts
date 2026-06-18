@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { calculateImpactRanges, selectSolutions } from "@/lib/rule-engine";
 import { generateResultCopy } from "@/lib/openai-result";
-import { getDb } from "@/lib/db";
+import { getDb, getRecentOtherExamples } from "@/lib/db";
 import { sanitizeAnswers, sanitizeContact, validateCompleteAnswers } from "@/lib/validation";
 import type { ContactData, WizardAnswers } from "@/lib/types";
 
@@ -27,8 +27,9 @@ export async function POST(request: Request) {
   }
   const solutions = selectSolutions(answers);
   const impactRanges = calculateImpactRanges(answers);
-  const result = await generateResultCopy(sessionId, answers, solutions, impactRanges);
   const sql = getDb();
+  const otherExamples = await getRecentOtherExamples(sql);
+  const result = await generateResultCopy(sessionId, answers, solutions, impactRanges, otherExamples);
   let persisted = false;
 
   if (sql) {

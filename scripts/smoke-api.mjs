@@ -105,7 +105,9 @@ const invalidDiscoveryWa = await request("/api/discovery", {
   body: JSON.stringify({
     companyName: "Test Co",
     name: "Tester",
-    wa: "123"
+    wa: "123",
+    employeeCount: "10-50",
+    yearlyRevenue: "1-5 miliar"
   })
 });
 const unauthorizedAdmin = await request("/api/admin/summary", {
@@ -118,6 +120,8 @@ const validDiscovery = await request("/api/discovery", {
     companyName: "Test Co",
     name: "Tester",
     wa: "+628123456789",
+    employeeCount: "10-50",
+    yearlyRevenue: "1-5 miliar",
     summary: validResult.body?.headline || "Smoke test"
   })
 });

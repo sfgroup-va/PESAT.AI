@@ -20,7 +20,7 @@ fs.writeFileSync(tempFile, compiled, "utf8");
 
 try {
   const { AVAILABLE_SOLUTIONS, CHALLENGE_LABELS } = await import(pathToFileURL(tempFile).href);
-  const challengeIds = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"];
+  const challengeIds = ["revenue", "cost", "risk_trust", "cash_stock", "reporting"];
   const challengeSet = new Set(challengeIds);
 
   assert.equal(AVAILABLE_SOLUTIONS.length, 31, "AVAILABLE_SOLUTIONS must contain exactly 31 services");

@@ -69,6 +69,20 @@ const initialDiscoveryContext: DiscoveryContextAnswers = {
   discoveryGoal: ""
 };
 
+const OTHER_CONTEXT_KEY: Record<
+  "mainChallenge" | "detailChallenge" | "impactLevel" | "frictionSource" | "adoptionStyle" | "detailNumeric" | "frictionChannel" | "currentStack",
+  ContextAnswerKey
+> = {
+  mainChallenge: "mainChallengeOther",
+  detailChallenge: "detailChallengeOther",
+  impactLevel: "impactLevelOther",
+  frictionSource: "frictionSourceOther",
+  adoptionStyle: "adoptionStyleOther",
+  detailNumeric: "detailNumericOther",
+  frictionChannel: "frictionChannelOther",
+  currentStack: "currentStackOther"
+};
+
 const OPTIONAL_DISCOVERY_QUESTIONS: Array<{
   id: DiscoveryContextKey;
   label: string;
@@ -148,9 +162,6 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
 
   const detailNoteWordCount = useMemo(() => countWords(detailNote), [detailNote]);
 
-  const primaryChallenge = answers.mainChallenges[0] || "revenue";
-  const fact = TRANSITION_FACTS[primaryChallenge];
-
   const track = useCallback(
     async (type: "screen_view" | "click", screen: Step, metadata?: Record<string, unknown>, sessionIdOverride?: string) => {
       await fetch("/api/event", {
@@ -169,7 +180,12 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   }, [step, track]);
 
   // Contact is only required for the lead gate discovery submission, not for generating the result.
-  const canSubmitDiscovery = Boolean(contact.name && contact.name.trim()) && hasUsableWhatsAppNumber(contact.wa || "");
+  const canSubmitDiscovery =
+    Boolean(contact.companyName && contact.companyName.trim()) &&
+    Boolean(contact.name && contact.name.trim()) &&
+    hasUsableWhatsAppNumber(contact.wa || "") &&
+    Boolean(contact.employeeCount && contact.employeeCount.trim()) &&
+    Boolean(contact.yearlyRevenue && contact.yearlyRevenue.trim());
 
   async function saveSession(nextAnswers = answers, nextContact = contact, completed = false) {
     const activeSessionId = sessionId || crypto.randomUUID();
@@ -190,26 +206,130 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     setStep("q1");
   }
 
-  function selectChallenge(id: ChallengeId) {
+  function selectChallenge(id: ChallengeId | "other") {
+    const isToggleOff = answers.mainChallenges[0] === id;
     setAnswers((current) => ({
       ...current,
-      mainChallenges: current.mainChallenges[0] === id ? [] : [id],
-      detailChallenges: []
+      mainChallenges: isToggleOff ? [] : [id as ChallengeId],
+      detailChallenges: [],
+      contextAnswers: {
+        ...current.contextAnswers,
+        [OTHER_CONTEXT_KEY.mainChallenge]: undefined,
+        [OTHER_CONTEXT_KEY.detailChallenge]: undefined,
+        [OTHER_CONTEXT_KEY.detailNumeric]: undefined,
+        [OTHER_CONTEXT_KEY.currentStack]: undefined
+      }
+    }));
+    if (!isToggleOff && id !== "other") {
+      advanceWithFact("q1", "q2");
+    }
+  }
+
+  function selectDetail(id: DetailId | "other") {
+    const isToggleOff = answers.detailChallenges[0] === id;
+    setAnswers((current) => ({
+      ...current,
+      detailChallenges: isToggleOff ? [] : [id as DetailId],
+      contextAnswers: {
+        ...current.contextAnswers,
+        [OTHER_CONTEXT_KEY.detailChallenge]: undefined,
+        [OTHER_CONTEXT_KEY.detailNumeric]: undefined,
+        [OTHER_CONTEXT_KEY.currentStack]: undefined
+      }
     }));
   }
 
-  function selectDetail(id: DetailId) {
+  function selectDetailNumeric(id: string) {
+    const isToggleOff = answers.contextAnswers?.detailNumeric === id;
     setAnswers((current) => ({
       ...current,
-      detailChallenges: current.detailChallenges[0] === id ? [] : [id]
+      contextAnswers: {
+        ...current.contextAnswers,
+        detailNumeric: isToggleOff ? undefined : id,
+        [OTHER_CONTEXT_KEY.detailNumeric]: undefined
+      }
     }));
   }
 
-  function selectFrictionSource(id: FrictionSourceId) {
+  function selectStack(id: string) {
+    const isToggleOff = answers.contextAnswers?.currentStack === id;
     setAnswers((current) => ({
       ...current,
-      frictionSource: current.frictionSource === id ? "" : id
+      contextAnswers: {
+        ...current.contextAnswers,
+        currentStack: isToggleOff ? undefined : id,
+        [OTHER_CONTEXT_KEY.currentStack]: undefined
+      }
     }));
+    if (
+      !isToggleOff &&
+      id !== "other" &&
+      answers.detailChallenges[0] &&
+      (answers.detailChallenges[0] as string) !== "other" &&
+      answers.contextAnswers?.detailNumeric &&
+      answers.contextAnswers.detailNumeric !== "other"
+    ) {
+      advanceWithFact("q2", "q3");
+    }
+  }
+
+  function selectImpact(id: ImpactId | "other") {
+    const isToggleOff = answers.impactLevel === id;
+    setAnswers((current) => ({
+      ...current,
+      impactLevel: isToggleOff ? "" : (id as ImpactId),
+      contextAnswers: {
+        ...current.contextAnswers,
+        [OTHER_CONTEXT_KEY.impactLevel]: undefined
+      }
+    }));
+    if (!isToggleOff && id !== "other") {
+      setStep("q4");
+    }
+  }
+
+  function selectFrictionSource(id: FrictionSourceId | "other") {
+    const isToggleOff = answers.frictionSource === id;
+    setAnswers((current) => ({
+      ...current,
+      frictionSource: isToggleOff ? "" : (id as FrictionSourceId),
+      contextAnswers: {
+        ...current.contextAnswers,
+        [OTHER_CONTEXT_KEY.frictionSource]: undefined,
+        frictionChannel: undefined,
+        [OTHER_CONTEXT_KEY.frictionChannel]: undefined
+      }
+    }));
+  }
+
+  function selectFrictionChannel(id: string) {
+    const isToggleOff = answers.contextAnswers?.frictionChannel === id;
+    setAnswers((current) => ({
+      ...current,
+      contextAnswers: {
+        ...current.contextAnswers,
+        frictionChannel: isToggleOff ? undefined : id,
+        [OTHER_CONTEXT_KEY.frictionChannel]: undefined
+      }
+    }));
+    if (!isToggleOff && id !== "other" && answers.frictionSource && (answers.frictionSource as string) !== "other") {
+      setStep("q5");
+    }
+  }
+
+  function selectAdoption(id: AdoptionId | "other") {
+    const isToggleOff = answers.adoptionStyle === id;
+    setAnswers((current) => ({
+      ...current,
+      adoptionStyle: isToggleOff ? "" : (id as AdoptionId),
+      contextAnswers: {
+        ...current.contextAnswers,
+        [OTHER_CONTEXT_KEY.adoptionStyle]: undefined
+      }
+    }));
+    if (!isToggleOff && id !== "other") {
+      setStep("q6");
+    }
   }
 
   function setContextAnswer(key: ContextAnswerKey, value: string) {
@@ -223,8 +343,15 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   }
 
   function advanceWithFact(currentStep: Step, nextStep: Step) {
+    const primary = answers.mainChallenges[0];
+    const validPrimary = primary && CHALLENGE_LABELS[primary as ChallengeId] ? primary : "revenue";
+    const factData = TRANSITION_FACTS[validPrimary as ChallengeId];
+    if (!factData) {
+      setStep(nextStep);
+      return;
+    }
     const isFirstTransition = currentStep === "q1";
-    setTransitionFact({ text: isFirstTransition ? fact.first : fact.second, source: fact.source });
+    setTransitionFact({ text: isFirstTransition ? factData.first : factData.second, source: factData.source });
     setTimeout(() => {
       setTransitionFact(null);
       setStep(nextStep);
@@ -312,6 +439,8 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
       companyName: String(form.get("companyName") || contact.companyName || ""),
       name: String(form.get("name") || contact.name || ""),
       wa: String(form.get("wa") || contact.wa || ""),
+      employeeCount: String(form.get("employeeCount") || contact.employeeCount || ""),
+      yearlyRevenue: String(form.get("yearlyRevenue") || contact.yearlyRevenue || ""),
       budgetContext: String(form.get("budgetContext") || ""),
       message: combinedMessage,
       summary: result?.headline
@@ -429,7 +558,19 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         />
                       ))}
                     </div>
-                    <PrimaryAction disabled={!answers.mainChallenges[0]} onClick={() => advanceWithFact("q1", "q2")} label="Lanjut" />
+                    {(answers.mainChallenges[0] as string) === "other" && (
+                      <OtherInput
+                        label="Jelaskan fokus utama bisnis Anda"
+                        value={answers.contextAnswers?.mainChallengeOther || ""}
+                        onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.mainChallenge, value)}
+                        placeholder="Contoh: sulit mengejar pertumbuhan karena tim sales tersebar di banyak channel..."
+                      />
+                    )}
+                    <PrimaryAction
+                      disabled={!answers.mainChallenges[0] || ((answers.mainChallenges[0] as string) === "other" && !answers.contextAnswers?.mainChallengeOther)}
+                      onClick={() => advanceWithFact("q1", "q2")}
+                      label="Lanjut"
+                    />
                   </QualityQuestionShell>
                 )}
 
@@ -438,7 +579,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                   <QualityQuestionShell eyebrow={QUALITY_QUESTIONS[1].eyebrow} title={QUALITY_QUESTIONS[1].title} note={QUALITY_QUESTIONS[1].note}>
                     <div className="grid gap-3">
                       {QUALITY_QUESTIONS[1].options
-                        .filter((option) => DETAIL_TO_CHALLENGE[option.id as DetailId] === answers.mainChallenges[0])
+                        .filter((option) => DETAIL_TO_CHALLENGE[option.id as DetailId] === answers.mainChallenges[0] || option.id === "other")
                         .map((option) => (
                           <QualityChoiceButton
                             key={option.id}
@@ -450,21 +591,37 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                           />
                         ))}
                     </div>
+                    {(answers.detailChallenges[0] as string) === "other" && (
+                      <OtherInput
+                        label="Jelaskan titik bocor terbesar"
+                        value={answers.contextAnswers?.detailChallengeOther || ""}
+                        onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.detailChallenge, value)}
+                        placeholder="Contoh: tim kami sering kehabisan stok tanpa peringatan..."
+                      />
+                    )}
 
-                    {answers.detailChallenges[0] && DETAIL_FOLLOW_UPS[answers.detailChallenges[0]] && (
+                    {answers.detailChallenges[0] && DETAIL_FOLLOW_UPS[answers.detailChallenges[0] as DetailId] && (
                       <div className="mt-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
-                        <FollowUpShell eyebrow={DETAIL_FOLLOW_UPS[answers.detailChallenges[0]]!.eyebrow} title={DETAIL_FOLLOW_UPS[answers.detailChallenges[0]]!.title}>
+                        <FollowUpShell eyebrow={DETAIL_FOLLOW_UPS[answers.detailChallenges[0] as DetailId]!.eyebrow} title={DETAIL_FOLLOW_UPS[answers.detailChallenges[0] as DetailId]!.title}>
                           <div className="grid gap-3">
-                            {DETAIL_FOLLOW_UPS[answers.detailChallenges[0]]!.options.map((option) => (
+                            {DETAIL_FOLLOW_UPS[answers.detailChallenges[0] as DetailId]!.options.map((option) => (
                               <QualityChoiceButton
                                 key={option.id}
                                 active={answers.contextAnswers?.detailNumeric === option.id}
-                                onClick={() => setContextAnswer("detailNumeric", option.id)}
+                                onClick={() => selectDetailNumeric(option.id)}
                                 label={option.label}
                                 note={option.note}
                               />
                             ))}
                           </div>
+                          {answers.contextAnswers?.detailNumeric === "other" && (
+                            <OtherInput
+                              label="Jelaskan skala/detail masalah"
+                              value={answers.contextAnswers?.detailNumericOther || ""}
+                              onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.detailNumeric, value)}
+                              placeholder="Contoh: sekitar 50-100 dokumen per minggu..."
+                            />
+                          )}
                         </FollowUpShell>
                       </div>
                     )}
@@ -477,18 +634,33 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                               <QualityChoiceButton
                                 key={option.id}
                                 active={answers.contextAnswers?.currentStack === option.id}
-                                onClick={() => setContextAnswer("currentStack", option.id)}
+                                onClick={() => selectStack(option.id)}
                                 label={option.label}
                                 note={option.note}
                               />
                             ))}
                           </div>
+                          {answers.contextAnswers?.currentStack === "other" && (
+                            <OtherInput
+                              label="Jelaskan stack operasional Anda"
+                              value={answers.contextAnswers?.currentStackOther || ""}
+                              onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.currentStack, value)}
+                              placeholder="Contoh: custom ERP + WhatsApp + Google Sheets..."
+                            />
+                          )}
                         </FollowUpShell>
                       </div>
                     )}
 
                     <PrimaryAction
-                      disabled={!answers.detailChallenges[0] || !answers.contextAnswers?.detailNumeric || !answers.contextAnswers?.currentStack}
+                      disabled={
+                        !answers.detailChallenges[0] ||
+                        ((answers.detailChallenges[0] as string) === "other" && !answers.contextAnswers?.detailChallengeOther) ||
+                        !answers.contextAnswers?.detailNumeric ||
+                        (answers.contextAnswers?.detailNumeric === "other" && !answers.contextAnswers?.detailNumericOther) ||
+                        !answers.contextAnswers?.currentStack ||
+                        (answers.contextAnswers?.currentStack === "other" && !answers.contextAnswers?.currentStackOther)
+                      }
                       onClick={() => advanceWithFact("q2", "q3")}
                       label="Lanjut"
                     />
@@ -503,14 +675,26 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         <QualityChoiceButton
                           key={option.id}
                           active={answers.impactLevel === option.id}
-                          onClick={() => setAnswers({ ...answers, impactLevel: option.id as ImpactId })}
+                          onClick={() => selectImpact(option.id as ImpactId)}
                           label={option.label}
                           note={option.note}
                           emoji={option.emoji}
                         />
                       ))}
                     </div>
-                    <PrimaryAction disabled={!answers.impactLevel} onClick={() => setStep("q4")} label="Lanjut" />
+                    {(answers.impactLevel as string) === "other" && (
+                      <OtherInput
+                        label="Jelaskan intensitas masalah"
+                        value={answers.contextAnswers?.impactLevelOther || ""}
+                        onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.impactLevel, value)}
+                        placeholder="Contoh: hampir setiap hari, terutama saat akhir bulan..."
+                      />
+                    )}
+                    <PrimaryAction
+                      disabled={!answers.impactLevel || ((answers.impactLevel as string) === "other" && !answers.contextAnswers?.impactLevelOther)}
+                      onClick={() => setStep("q4")}
+                      label="Lanjut"
+                    />
                   </QualityQuestionShell>
                 )}
 
@@ -529,27 +713,49 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         />
                       ))}
                     </div>
+                    {(answers.frictionSource as string) === "other" && (
+                      <OtherInput
+                        label="Jelaskan sumber gesekan terbesar"
+                        value={answers.contextAnswers?.frictionSourceOther || ""}
+                        onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.frictionSource, value)}
+                        placeholder="Contoh: data harus diinput ke 3 sistem berbeda..."
+                      />
+                    )}
 
-                    {answers.frictionSource && FRICTION_FOLLOW_UPS[answers.frictionSource] && (
+                    {answers.frictionSource && FRICTION_FOLLOW_UPS[answers.frictionSource as FrictionSourceId] && (
                       <div className="mt-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
-                        <FollowUpShell eyebrow={FRICTION_FOLLOW_UPS[answers.frictionSource].eyebrow} title={FRICTION_FOLLOW_UPS[answers.frictionSource].title}>
+                        <FollowUpShell eyebrow={FRICTION_FOLLOW_UPS[answers.frictionSource as FrictionSourceId].eyebrow} title={FRICTION_FOLLOW_UPS[answers.frictionSource as FrictionSourceId].title}>
                           <div className="grid gap-3">
-                            {FRICTION_FOLLOW_UPS[answers.frictionSource].options.map((option) => (
+                            {FRICTION_FOLLOW_UPS[answers.frictionSource as FrictionSourceId].options.map((option) => (
                               <QualityChoiceButton
                                 key={option.id}
                                 active={answers.contextAnswers?.frictionChannel === option.id}
-                                onClick={() => setContextAnswer("frictionChannel", option.id)}
+                                onClick={() => selectFrictionChannel(option.id)}
                                 label={option.label}
                                 note={option.note}
                               />
                             ))}
                           </div>
+                          {answers.contextAnswers?.frictionChannel === "other" && (
+                            <OtherInput
+                              label="Jelaskan channel/akar gesekan"
+                              value={answers.contextAnswers?.frictionChannelOther || ""}
+                              onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.frictionChannel, value)}
+                              placeholder="Contoh: laporan ad-hoc dari banyak cabang..."
+                            />
+                          )}
                         </FollowUpShell>
                       </div>
                     )}
 
                     <PrimaryAction
-                      disabled={!answers.frictionSource || !answers.contextAnswers?.frictionChannel}
+                      disabled={
+                        !answers.frictionSource ||
+                        ((answers.frictionSource as string) === "other" && !answers.contextAnswers?.frictionSourceOther) ||
+                        ((answers.frictionSource as string) !== "other" &&
+                          (!answers.contextAnswers?.frictionChannel ||
+                            (answers.contextAnswers?.frictionChannel === "other" && !answers.contextAnswers?.frictionChannelOther)))
+                      }
                       onClick={() => setStep("q5")}
                       label="Lanjut"
                     />
@@ -564,14 +770,26 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         <QualityChoiceButton
                           key={option.id}
                           active={answers.adoptionStyle === option.id}
-                          onClick={() => setAnswers({ ...answers, adoptionStyle: option.id as AdoptionId })}
+                          onClick={() => selectAdoption(option.id as AdoptionId)}
                           label={option.label}
                           note={option.note}
                           emoji={option.emoji}
                         />
                       ))}
                     </div>
-                    <PrimaryAction disabled={!answers.adoptionStyle} onClick={() => setStep("q6")} label="Lanjut" />
+                    {(answers.adoptionStyle as string) === "other" && (
+                      <OtherInput
+                        label="Jelaskan model kerja sama yang diinginkan"
+                        value={answers.contextAnswers?.adoptionStyleOther || ""}
+                        onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.adoptionStyle, value)}
+                        placeholder="Contoh: kami ingin pilot 1 bulan dengan 1 divisi dulu..."
+                      />
+                    )}
+                    <PrimaryAction
+                      disabled={!answers.adoptionStyle || ((answers.adoptionStyle as string) === "other" && !answers.contextAnswers?.adoptionStyleOther)}
+                      onClick={() => setStep("q6")}
+                      label="Lanjut"
+                    />
                   </QualityQuestionShell>
                 )}
 
@@ -598,36 +816,90 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                 {/* Review */}
                 {step === "review" && (
                   <QualityQuestionShell eyebrow="07 / Review" title="Cek sebentar. Apakah ini sudah pas?">
-                    <ReviewRow label="Situasi terberat" value={CHALLENGE_LABELS[answers.mainChallenges[0] || "revenue"]} onEdit={() => setStep("q1")} />
+                    <ReviewRow
+                      label="Situasi terberat"
+                      value={
+                        (answers.mainChallenges[0] as string) === "other"
+                          ? answers.contextAnswers?.mainChallengeOther || "-"
+                          : CHALLENGE_LABELS[(answers.mainChallenges[0] as ChallengeId) || "revenue"]
+                      }
+                      onEdit={() => setStep("q1")}
+                    />
                     <ReviewRow
                       label="Titik bocor terbesar"
-                      value={QUALITY_QUESTIONS[1].options.find((o) => o.id === answers.detailChallenges[0])?.label || "-"}
+                      value={
+                        (answers.detailChallenges[0] as string) === "other"
+                          ? answers.contextAnswers?.detailChallengeOther || "-"
+                          : QUALITY_QUESTIONS[1].options.find((o) => o.id === answers.detailChallenges[0])?.label || "-"
+                      }
                       onEdit={() => setStep("q2")}
                     />
-                    <ReviewRow label="Intensitas masalah" value={QUALITY_QUESTIONS[2].options.find((o) => o.id === answers.impactLevel)?.label || "-"} onEdit={() => setStep("q3")} />
-                    <ReviewRow label="Sumber gesekan terbesar" value={answers.frictionSource ? FRICTION_SOURCES[answers.frictionSource].label : "-"} onEdit={() => setStep("q4")} />
+                    <ReviewRow
+                      label="Intensitas masalah"
+                      value={
+                        (answers.impactLevel as string) === "other"
+                          ? answers.contextAnswers?.impactLevelOther || "-"
+                          : QUALITY_QUESTIONS[2].options.find((o) => o.id === answers.impactLevel)?.label || "-"
+                      }
+                      onEdit={() => setStep("q3")}
+                    />
+                    <ReviewRow
+                      label="Sumber gesekan terbesar"
+                      value={
+                        (answers.frictionSource as string) === "other"
+                          ? answers.contextAnswers?.frictionSourceOther || "-"
+                          : answers.frictionSource
+                            ? FRICTION_SOURCES[answers.frictionSource as FrictionSourceId].label
+                            : "-"
+                      }
+                      onEdit={() => setStep("q4")}
+                    />
                     {answers.contextAnswers?.frictionChannel && answers.frictionSource && (
                       <ReviewRow
                         label="Channel/akar gesekan"
-                        value={FRICTION_FOLLOW_UPS[answers.frictionSource].options.find((o) => o.id === answers.contextAnswers?.frictionChannel)?.label || "-"}
+                        value={
+                          answers.contextAnswers.frictionChannel === "other"
+                            ? answers.contextAnswers?.frictionChannelOther || "-"
+                            : FRICTION_FOLLOW_UPS[answers.frictionSource as FrictionSourceId].options.find(
+                                (o) => o.id === answers.contextAnswers?.frictionChannel
+                              )?.label || "-"
+                        }
                         onEdit={() => setStep("q4")}
                       />
                     )}
                     {answers.contextAnswers?.detailNumeric && answers.detailChallenges[0] && (
                       <ReviewRow
                         label="Skala/detail masalah"
-                        value={DETAIL_FOLLOW_UPS[answers.detailChallenges[0]]?.options.find((o) => o.id === answers.contextAnswers?.detailNumeric)?.label || "-"}
+                        value={
+                          answers.contextAnswers.detailNumeric === "other"
+                            ? answers.contextAnswers?.detailNumericOther || "-"
+                            : DETAIL_FOLLOW_UPS[answers.detailChallenges[0] as DetailId]?.options.find(
+                                (o) => o.id === answers.contextAnswers?.detailNumeric
+                              )?.label || "-"
+                        }
                         onEdit={() => setStep("q2")}
                       />
                     )}
                     {answers.contextAnswers?.currentStack && (
                       <ReviewRow
                         label="Stack operasional"
-                        value={STACK_FOLLOW_UP.options.find((o) => o.id === answers.contextAnswers?.currentStack)?.label || "-"}
+                        value={
+                          answers.contextAnswers.currentStack === "other"
+                            ? answers.contextAnswers?.currentStackOther || "-"
+                            : STACK_FOLLOW_UP.options.find((o) => o.id === answers.contextAnswers?.currentStack)?.label || "-"
+                        }
                         onEdit={() => setStep("q2")}
                       />
                     )}
-                    <ReviewRow label="Cara kerja sama" value={QUALITY_QUESTIONS[4].options.find((o) => o.id === answers.adoptionStyle)?.label || "-"} onEdit={() => setStep("q5")} />
+                    <ReviewRow
+                      label="Cara kerja sama"
+                      value={
+                        (answers.adoptionStyle as string) === "other"
+                          ? answers.contextAnswers?.adoptionStyleOther || "-"
+                          : QUALITY_QUESTIONS[4].options.find((o) => o.id === answers.adoptionStyle)?.label || "-"
+                      }
+                      onEdit={() => setStep("q5")}
+                    />
                     <ReviewRow label="Konteks tambahan" value={detailNote ? `${detailNote.slice(0, 60)}${detailNote.length > 60 ? "..." : ""}` : "-"} onEdit={() => setStep("q6")} />
                     <PrimaryAction onClick={startLoadingSequence} label="Sudah Pas — Susun Diagnosis" />
                   </QualityQuestionShell>
@@ -677,13 +949,13 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                       <p className="text-sm font-semibold text-neutral-500">Nilai yang Anda dapatkan:</p>
                       <ul className="mt-3 space-y-2 text-sm font-medium text-neutral-700">
                         <li className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-emerald-600" /> PDF laporan lengkap (10-12 halaman)
+                          <Check className="h-4 w-4 text-violet-600" /> PDF laporan lengkap (10-12 halaman)
                         </li>
                         <li className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-emerald-600" /> Implementation roadmap 90 hari
+                          <Check className="h-4 w-4 text-violet-600" /> Implementation roadmap 90 hari
                         </li>
                         <li className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-emerald-600" /> 30 menit strategy call dengan tim operasional Pesat.AI
+                          <Check className="h-4 w-4 text-violet-600" /> 30 menit strategy call dengan tim operasional Pesat.AI
                         </li>
                       </ul>
                     </div>
@@ -695,7 +967,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         placeholder="Konteks budget atau target bisnis"
                       />
                       <PrimaryAction type="submit" label={isLoading ? "Menyimpan..." : "Kirim Laporan & Jadwalkan Strategy Call"} loading={isLoading} disabled={isLoading} />
-                      {!canSubmitDiscovery ? <p className="text-xs text-neutral-400">Isi Nama Anda dan Nomor WhatsApp yang valid untuk melanjutkan.</p> : null}
+                      {!canSubmitDiscovery ? <p className="text-xs text-neutral-400">Isi nama perusahaan, Nama, Nomor WhatsApp, jumlah karyawan, dan omzet per tahun untuk melanjutkan.</p> : null}
                       {discoveryError ? <p className="text-sm font-semibold leading-6 text-red-700">{discoveryError}</p> : null}
                       {discoveryNotice ? <p className="text-sm font-semibold text-amber-700">{discoveryNotice}</p> : null}
                     </form>
@@ -744,8 +1016,7 @@ function frictionEmoji(id: FrictionSourceId): string {
     duplicate_data: "🔄",
     manual_reports: "📑",
     delayed_response: "⏳",
-    human_error: "⚠️",
-    approval_bottleneck: "🚧",
+    error_control: "⚠️",
     knowledge_silo: "🧠"
   };
   return map[id];
@@ -811,6 +1082,23 @@ function FollowUpShell({ eyebrow, title, children }: { eyebrow: string; title: s
   );
 }
 
+function OtherInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return (
+    <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold text-neutral-700">{label}</span>
+        <input
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder || "Jelaskan..."}
+          className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+        />
+      </label>
+    </div>
+  );
+}
+
 function QualityChoiceButton({ active, onClick, label, note, emoji }: { active: boolean; onClick: () => void; label: string; note?: string; emoji?: string }) {
   return (
     <button
@@ -866,9 +1154,10 @@ function ContactFields({ contact, setContact, optional = false }: { contact: Con
       <input
         name="companyName"
         value={contact.companyName || ""}
+        required={!optional}
         onChange={(event) => setContact({ ...contact, companyName: event.target.value })}
         className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
-        placeholder="Nama perusahaan (opsional)"
+        placeholder={`Nama perusahaan${optional ? " (opsional)" : ""}`}
       />
       <input
         name="name"
@@ -885,6 +1174,22 @@ function ContactFields({ contact, setContact, optional = false }: { contact: Con
         onChange={(event) => setContact({ ...contact, wa: event.target.value })}
         className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
         placeholder={`Nomor WhatsApp${optional ? " (opsional)" : ""}`}
+      />
+      <input
+        name="employeeCount"
+        value={contact.employeeCount || ""}
+        required={!optional}
+        onChange={(event) => setContact({ ...contact, employeeCount: event.target.value })}
+        className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+        placeholder={`Jumlah karyawan${optional ? " (opsional)" : ""}`}
+      />
+      <input
+        name="yearlyRevenue"
+        value={contact.yearlyRevenue || ""}
+        required={!optional}
+        onChange={(event) => setContact({ ...contact, yearlyRevenue: event.target.value })}
+        className="rounded-3xl border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
+        placeholder={`Omzet per tahun${optional ? " (opsional)" : ""}`}
       />
       {optional ? (
         <label className="flex items-center gap-3 rounded-3xl border border-neutral-200 px-5 py-4 text-sm font-semibold text-neutral-700">
@@ -945,7 +1250,14 @@ function ResultPanel({
         <h2 className="text-4xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-5xl">{result.headline}</h2>
         <p className="mt-5 text-lg leading-8 text-neutral-600">{result.subheadline}</p>
 
-        {/* Before → After → Savings/Lift Cards */}
+        {result.tldr ? (
+          <div className="mt-6 rounded-[1.35rem] bg-gradient-to-r from-indigo-50 via-violet-50 to-fuchsia-50 p-5 sm:p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-600">Ringkasan singkat</p>
+            <p className="mt-2 text-base font-medium leading-7 text-neutral-800">{result.tldr}</p>
+          </div>
+        ) : null}
+
+        {/* Before → After → Savings/Lift Cards -->
         {isRevenueCluster ? (
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <BeforeAfterCard label="Before" value={`Rp ${formatRupiah(monthlyRevenue)}`} icon={<Clock className="h-5 w-5" />} tone="muted" />
@@ -977,10 +1289,10 @@ function ResultPanel({
                     <ArrowRight className="h-4 w-4 text-neutral-300" />
                     <div className="text-right">
                       <p className="text-xs text-neutral-400">After AI</p>
-                      <p className="text-lg font-semibold text-emerald-600">{metric.after}</p>
+                      <p className="text-lg font-semibold text-violet-600">{metric.after}</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm font-semibold text-emerald-700">{metric.impact}</p>
+                  <p className="mt-3 text-sm font-semibold text-violet-700">{metric.impact}</p>
                   <p className="mt-1 text-xs leading-5 text-neutral-500">{metric.description}</p>
                 </div>
               ))}
@@ -1074,9 +1386,9 @@ function ResultPanel({
                     <FindingBlock icon={<TrendingDown className="h-4 w-4" />} title="Risiko" text={finding.risk} />
                     <FindingBlock icon={<Brain className="h-4 w-4" />} title="Solusi Terukur" text={finding.solution} />
                   </div>
-                  <div className="mt-4 rounded-[1rem] bg-emerald-50 p-4">
-                    <p className="text-sm font-semibold text-emerald-800">📈 Potensi Hasil</p>
-                    <p className="mt-1 text-sm leading-6 text-emerald-700">{finding.potential}</p>
+                  <div className="mt-4 rounded-[1rem] bg-violet-50 p-4">
+                    <p className="text-sm font-semibold text-violet-800">📈 Potensi Hasil</p>
+                    <p className="mt-1 text-sm leading-6 text-violet-700">{finding.potential}</p>
                   </div>
                 </div>
               ))}
@@ -1127,7 +1439,7 @@ function ResultPanel({
                 if (isRevenueCluster) setMonthlyRevenue(value);
                 else setMonthlyCost(value);
               }}
-              className="w-full accent-neutral-950"
+              className="w-full accent-violet-600"
             />
             <div className="mt-2 flex justify-between text-sm font-semibold text-neutral-600">
               <span>Rp 10jt</span>
@@ -1209,7 +1521,7 @@ function ResultPanel({
                         <Clock className="h-3 w-3" />
                         Setup: {card.setupTime}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-3 py-1 text-violet-700">
                         <Shield className="h-3 w-3" />
                         {card.proofBasis}
                       </span>
@@ -1279,7 +1591,7 @@ function ResultPanel({
               {result.efficiencyMetrics[0] ? (
                 <div className="mt-2 flex items-center gap-2">
                   <span className="text-lg font-semibold">{result.efficiencyMetrics[0].after}</span>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-400">
                     {result.efficiencyMetrics[0].impact}
                   </span>
                 </div>
@@ -1292,7 +1604,7 @@ function ResultPanel({
                 <div key={metric.label} className="rounded-2xl bg-neutral-50 p-3">
                   <p className="text-[9px] font-medium text-neutral-500 leading-tight">{metric.label}</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-950">{metric.after}</p>
-                  <p className="text-[9px] font-semibold text-emerald-600">{metric.impact}</p>
+                  <p className="text-[9px] font-semibold text-violet-600">{metric.impact}</p>
                 </div>
               ))}
               {result.hiddenCosts.length ? (
@@ -1414,7 +1726,7 @@ function BeforeAfterCard({ label, value, icon, tone }: { label: string; value: s
   const toneStyles = {
     muted: "bg-neutral-100 text-neutral-600",
     highlight: "bg-neutral-950 text-white",
-    accent: "bg-emerald-600 text-white"
+    accent: "bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white"
   };
   return (
     <div className={`rounded-[1.35rem] p-5 ${toneStyles[tone]}`}>
@@ -1430,7 +1742,7 @@ function BeforeAfterCard({ label, value, icon, tone }: { label: string; value: s
 function ImpactBadge({ badge }: { badge: string }) {
   const styles: Record<string, string> = {
     "quick-win": "bg-amber-50 text-amber-700 border-amber-200",
-    "high-impact": "bg-emerald-50 text-emerald-700 border-emerald-200",
+    "high-impact": "bg-violet-50 text-violet-700 border-violet-200",
     strategic: "bg-blue-50 text-blue-700 border-blue-200"
   };
   const labels: Record<string, string> = {

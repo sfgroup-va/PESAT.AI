@@ -12,10 +12,9 @@ import type { AdoptionId, ChallengeId, ContextAnswerKey, DiagnosisPack, Efficien
 const CLUSTER_PRIORITY: Record<ChallengeId, string[]> = {
   revenue: ["ai_sales_assistant", "ai_repeat_order", "ai_crm_pintar", "ai_dynamic_pricing"],
   cost: ["ai_pembukuan_otomatis", "ai_invoice_ap_otomatis", "ai_document_processor", "ai_process_intelligence"],
-  fraud: ["ai_fraud_detection", "ai_data_quality_auto_heal", "ai_roi_impact_tracker", "ai_quality_control_visual"],
+  risk_trust: ["ai_fraud_detection", "ai_data_quality_auto_heal", "ai_local_ai_search_trust_builder", "ai_roi_impact_tracker"],
   cash_stock: ["ai_prediksi_cashflow", "ai_demand_planner", "ai_inventory_optimizer", "ai_executive_dashboard"],
-  reporting: ["ai_report_generator", "ai_executive_dashboard", "ai_meeting_notetaker", "ai_ticket_router"],
-  brand_trust: ["ai_organic_traffic_builder", "ai_local_ai_search_trust_builder", "ai_social_media_manager", "ai_sentiment_pelanggan"]
+  reporting: ["ai_report_generator", "ai_executive_dashboard", "ai_meeting_notetaker", "ai_ticket_router"]
 };
 
 // Maps each friction source to the solutions that directly remove that friction.
@@ -23,8 +22,7 @@ const FRICTION_SOLUTION_BOOST: Record<FrictionSourceId, string[]> = {
   duplicate_data: ["ai_data_quality_auto_heal", "ai_document_processor", "ai_pembukuan_otomatis", "ai_invoice_ap_otomatis"],
   manual_reports: ["ai_report_generator", "ai_executive_dashboard", "ai_meeting_notetaker", "ai_pembukuan_otomatis"],
   delayed_response: ["ai_whatsapp_sales_bot", "ai_sales_assistant", "ai_ticket_router", "ai_chatbot_24_7"],
-  human_error: ["ai_data_quality_auto_heal", "ai_document_processor", "ai_quality_control_visual", "ai_process_intelligence"],
-  approval_bottleneck: ["ai_fraud_detection", "ai_process_intelligence", "ai_invoice_ap_otomatis", "ai_roi_impact_tracker"],
+  error_control: ["ai_data_quality_auto_heal", "ai_document_processor", "ai_quality_control_visual", "ai_process_intelligence", "ai_fraud_detection", "ai_invoice_ap_otomatis", "ai_roi_impact_tracker"],
   knowledge_silo: ["ai_sop_knowledge_writer", "ai_process_intelligence", "ai_meeting_notetaker"]
 };
 
@@ -125,20 +123,18 @@ function scoreSolution(solution: PesatSolution, answers: WizardAnswers): number 
 const CLUSTER_REFRAME: Record<ChallengeId, string> = {
   revenue: "kecepatan follow-up, timing, dan repeat order yang belum ditangani secara sistematis",
   cost: "pekerjaan manual berulang yang diam-diam berubah menjadi biaya tetap",
-  fraud: "anomali kecil yang tidak terpantau sampai akhirnya membesar",
+  risk_trust: "anomali, celah kontrol, dan trust signal yang belum dipantau secara sistematis",
   cash_stock: "keputusan kas dan stok yang diambil dari laporan masa lalu, bukan dari prediksi",
-  reporting: "keputusan yang telat karena data tidak siap saat paling dibutuhkan",
-  brand_trust: "brand yang sulit ditemukan dan dijelaskan konsisten di Google dan AI search"
+  reporting: "keputusan yang telat karena data tidak siap saat paling dibutuhkan"
 };
 
 // Concrete, client-checkable metrics per cluster — turns a vague promise into a measurable one.
 const MEASURED_BY: Record<ChallengeId, string[]> = {
   revenue: ["kecepatan follow-up lead", "konversi chat ke closing", "repeat order rate"],
   cost: ["jam kerja manual per bulan", "biaya proses per transaksi", "tingkat error input"],
-  fraud: ["anomali terdeteksi lebih dini", "waktu deteksi risiko", "nilai risiko yang tertahan"],
+  risk_trust: ["anomali terdeteksi lebih dini", "trust signal di Google dan AI search", "waktu deteksi risiko"],
   cash_stock: ["akurasi prediksi kas", "frekuensi stockout", "modal tertahan di stok"],
-  reporting: ["waktu menyiapkan laporan", "kecepatan keputusan", "action item yang dieksekusi"],
-  brand_trust: ["visibilitas di Google dan AI search", "volume review positif", "trust signal yang terindeks"]
+  reporting: ["waktu menyiapkan laporan", "kecepatan keputusan", "action item yang dieksekusi"]
 };
 
 // Timeframe is honest and adoption-aware: a client just starting needs a different horizon than a done-for-you rollout.
@@ -157,19 +153,17 @@ const COST_OF_INACTION: Record<ChallengeId, string> = {
   revenue:
     "Selama follow-up dan repeat order belum sistematis, peluang yang sudah ada terus bocor diam-diam setiap minggu, dan kompetitor yang lebih responsif yang menutupnya.",
   cost: "Pekerjaan manual yang dibiarkan terus menumpuk sebagai biaya tetap dan jam kerja tim yang seharusnya bisa dialihkan ke pekerjaan yang lebih bernilai.",
-  fraud: "Anomali yang tidak dipantau cenderung membesar; biaya menanganinya setelah terlanjur jauh lebih mahal daripada mendeteksinya sejak awal.",
+  risk_trust: "Anomali dan trust signal yang tidak dipantau membesar tanpa disadari; biaya menanganinya setelah terlanjur jauh lebih mahal daripada mendeteksinya sejak awal.",
   cash_stock: "Tanpa prediksi, keputusan kas dan stok tetap reaktif: modal tertahan di stok yang salah atau barang habis tepat saat permintaan datang.",
-  reporting: "Keputusan yang menunggu laporan manual terus tertinggal momentum, dan tim sibuk menyusun data alih-alih bertindak atasnya.",
-  brand_trust: "Saat brand belum konsisten muncul di Google dan AI search, pelanggan menemukan dan mempercayai kompetitor lebih dulu."
+  reporting: "Keputusan yang menunggu laporan manual terus tertinggal momentum, dan tim sibuk menyusun data alih-alih bertindak atasnya."
 };
 
 const HEADLINE_BY_CLUSTER: Record<ChallengeId, string> = {
   revenue: "Ada pipeline revenue yang bocor setiap minggu — dan itu bisa diperbaiki tanpa menambah tim sales.",
   cost: "Rp 200-400 juta per tahun mungkin tersembunyi di pekerjaan manual yang belum terlihat.",
-  fraud: "Celah operasional yang baru ketahuan setelah rugi sebenarnya bisa terdeteksi 40 hari lebih awal.",
+  risk_trust: "Celah operasional dan trust signal yang baru ketahuan setelah rugi sebenarnya bisa terdeteksi jauh lebih awal.",
   cash_stock: "Kas dan stok Anda masih dijalankan dengan prediksi yang terlambat — ini cara memperbaikinya.",
-  reporting: "Keputusan bisnis Anda menunggu data yang baru siap 5 hari kemudian. Itu bisa jadi 4 jam.",
-  brand_trust: "Pelanggan baru menemukan kompetitor Anda lebih dulu karena trust signal belum dibangun sistematis."
+  reporting: "Keputusan bisnis Anda menunggu data yang baru siap 5 hari kemudian. Itu bisa jadi 4 jam."
 };
 
 const EFFICIENCY_METRICS: Record<ChallengeId, EfficiencyMetric[]> = {
@@ -190,10 +184,10 @@ const EFFICIENCY_METRICS: Record<ChallengeId, EfficiencyMetric[]> = {
     { label: "Error rate input", before: "8%", after: "1.5%", impact: "-81%", impactType: "positive", description: "Lebih sedikit waktu dihabiskan untuk koreksi" },
     { label: "Biaya duplikasi proses", before: "Rp 22 juta", after: "Rp 5 juta", impact: "-77%", impactType: "positive", description: "Satu data tidak dikerjakan berkali-kali" }
   ],
-  fraud: [
+  risk_trust: [
     { label: "Waktu deteksi anomali", before: "45 hari", after: "2 hari", impact: "-96%", impactType: "positive", description: "Risiko tertangkap sebelum membesar" },
-    { label: "Nilai risiko tertahan", before: "Rp 150 juta", after: "Rp 25 juta", impact: "-83%", impactType: "positive", description: "Potensi kerugian berkurang drastis" },
-    { label: "Insiden lolos pantau", before: "30%", after: "4%", impact: "-87%", impactType: "positive", description: "Pola mencurigakan lebih sedikit terlewat" }
+    { label: "Trust signal terpantau", before: "20%", after: "85%", impact: "+325%", impactType: "positive", description: "Review, Google, dan AI search terawal" },
+    { label: "Insiden lolos pantau", before: "30%", after: "4%", impact: "-87%", impactType: "positive", description: "Anomali atau masalah trust lebih sedikit terlewat" }
   ],
   cash_stock: [
     { label: "Akurasi prediksi cashflow", before: "55%", after: "82%", impact: "+49%", impactType: "positive", description: "Kebutuhan kas terlihat lebih awal" },
@@ -218,11 +212,6 @@ const EFFICIENCY_METRICS: Record<ChallengeId, EfficiencyMetric[]> = {
       impactType: "positive",
       description: "Single source of truth untuk semua tim"
     }
-  ],
-  brand_trust: [
-    { label: "Visibility Google organik", before: "12%", after: "28%", impact: "+133%", impactType: "positive", description: "Lebih sering ditemukan calon pelanggan" },
-    { label: "Review yang terrespons", before: "20%", after: "85%", impact: "+325%", impactType: "positive", description: "Trust meningkat karena response aktif" },
-    { label: "Lead organik/bulan", before: "80", after: "180", impact: "+125%", impactType: "positive", description: "Traffic berkualitas tanpa paid ads" }
   ]
 };
 
@@ -237,10 +226,10 @@ const HIDDEN_COSTS_BY_CLUSTER: Record<ChallengeId, HiddenCost[]> = {
     { id: "error_correction", label: "Koreksi error input", monthlyEstimate: 14000000, description: "Waktu memperbaiki kesalahan input dan rekon" },
     { id: "manual_reports", label: "Laporan manual", monthlyEstimate: 16000000, description: "Copy-paste dan pivot manual antar periode" }
   ],
-  fraud: [
-    { id: "late_detection", label: "Deteksi anomali terlambat", monthlyEstimate: 35000000, description: "Kerugian membesar sebelum teridentifikasi" },
-    { id: "investigation", label: "Investigasi manual", monthlyEstimate: 18000000, description: "Waktu tim menelusuri transaksi mencurigakan" },
-    { id: "compliance_gap", label: "Compliance risk", monthlyEstimate: 12000000, description: "Risiko denda dan audit karena audit trail lemah" }
+  risk_trust: [
+    { id: "missed_signal", label: "Sinyal risiko/trust terlewat", monthlyEstimate: 30000000, description: "Anomali atau trust signal tidak dipantau sampai membesar" },
+    { id: "investigation", label: "Investigasi & tindak lanjut manual", monthlyEstimate: 18000000, description: "Waktu tim menelusuri transaksi atau review mencurigakan" },
+    { id: "search_visibility_gap", label: "Brand tidak muncul di Google/AI search", monthlyEstimate: 20000000, description: "Pelanggan menemukan kompetitor lebih dulu" }
   ],
   cash_stock: [
     { id: "stockout_loss", label: "Kehilangan sales karena stockout", monthlyEstimate: 30000000, description: "Barang habis tepat saat permintaan datang" },
@@ -251,11 +240,6 @@ const HIDDEN_COSTS_BY_CLUSTER: Record<ChallengeId, HiddenCost[]> = {
     { id: "report_delay", label: "Laporan telat selesai", monthlyEstimate: 20000000, description: "Keputusan penting terhambat menunggu data" },
     { id: "meeting_no_action", label: "Meeting tanpa action", monthlyEstimate: 14000000, description: "Waktu rapat tidak menghasilkan eksekusi" },
     { id: "data_reconciliation", label: "Rekonsiliasi antar tim", monthlyEstimate: 12000000, description: "Versi data berbeda antar departemen" }
-  ],
-  brand_trust: [
-    { id: "missed_organic", label: "Traffic organik hilang", monthlyEstimate: 25000000, description: "Pelanggan tidak menemukan brand di Google" },
-    { id: "unread_reviews", label: "Review tidak terrespons", monthlyEstimate: 10000000, description: "Trust menurun karena komplain tidak teratasi" },
-    { id: "ai_search_gap", label: "Tidak muncul di AI search", monthlyEstimate: 18000000, description: "Brand tidak masuk pertimbangan calon pelanggan modern" }
   ]
 };
 
@@ -296,22 +280,22 @@ const FINDINGS_BY_CLUSTER: Record<ChallengeId, Finding[]> = {
       potential: "Duplikasi input berkurang drastis • Waktu rekonsiliasi turun • Kepercayaan data meningkat"
     }
   ],
-  fraud: [
+  risk_trust: [
     {
-      title: "Fraud baru terlihat setelah kerugian membesar",
-      finding: "Anomali transaksi baru diketahui setelah kerugian sudah signifikan, karena pemantauan masih bergantung pada audit manual berkala.",
-      impact: "Semakin lama anomali terlewat, semakin besar kerugian dan semakin sulit menelusuri akar masalahnya.",
-      risk: "Karyawan atau pihak luar yang mengetahui celah ini bisa memanfaatkannya berulang kali.",
-      solution: "AI Fraud Detection yang memantau pola transaksi real-time dan flag deviasi sejak dini.",
-      potential: "Waktu deteksi anomali turun 96% • Nilai risiko tertahan turun 83% • Insiden lolos pantau turun 87%"
+      title: "Anomali dan trust signal baru terlihat setelah kerugian membesar",
+      finding: "Anomali transaksi, review negatif, atau celah kontrol baru diketahui setelah dampaknya signifikan, karena pemantauan masih manual dan berkala.",
+      impact: "Semakin lama sinyal terlewat, semakin besar kerugian finansial maupun reputasi, dan semakin sulit menelusuri akar masalahnya.",
+      risk: "Karyawan, pihak luar, atau kompetitor yang mengetahui celah ini bisa memanfaatkannya berulang kali.",
+      solution: "AI Fraud Detection + AI Sentiment Pelanggan + AI Local & AI Search Trust Builder untuk pemantauan risiko dan trust real-time.",
+      potential: "Waktu deteksi anomali turun 96% • Trust signal terpantau naik 325% • Insiden lolos pantau turun 87%"
     },
     {
-      title: "Audit trail lemah meningkatkan compliance risk",
-      finding: "Approval dan perubahan data sering tidak terlacak dengan baik, sehingga sulit membuktikan siapa yang bertanggung jawab.",
-      impact: "Investigasi kasus memakan waktu lama dan hasilnya tidak kuat secara hukum maupun internal.",
-      risk: "Saat audit eksternal datang, dokumen bukti tidak cukup untuk memenuhi standar compliance.",
-      solution: "AI Process Intelligence + logging otomatis untuk setiap approval dan perubahan data kritis.",
-      potential: "Audit trail kuat • Waktu investigasi turun • Compliance risk menurun"
+      title: "Brand tidak muncul di jawaban AI dan review tidak terawal",
+      finding: "Calon pelanggan bertanya ke ChatGPT, Perplexity, dan Gemini sebelum Google. Jika brand tidak muncul di jawaban AI atau review tidak direspons, Anda tidak masuk pertimbangan.",
+      impact: "Peluang pelanggan baru hilang sebelum mereka mengunjungi website, sementara kompetitor memperkuat posisinya.",
+      risk: "Reputasi brand memudar tanpa disadari karena tidak ada monitoring sistematis.",
+      solution: "AI Local & AI Search Trust Builder + AI Sentiment Pelanggan untuk trust signal yang konsisten.",
+      potential: "Visibility Google/AI search naik • Review respons naik • Trust signal semakin kuat"
     }
   ],
   cash_stock: [
@@ -348,24 +332,6 @@ const FINDINGS_BY_CLUSTER: Record<ChallengeId, Finding[]> = {
       risk: "Keputusan penting tertunda atau diambil berdasarkan data yang salah.",
       solution: "Single source of truth dengan AI Executive Dashboard yang mengintegrasikan data dari semua tim.",
       potential: "Versi data berbeda turun 75% • Meeting tanpa action clear turun 75% • Keputusan lebih cepat"
-    }
-  ],
-  brand_trust: [
-    {
-      title: "Brand Anda tidak muncul di jawaban AI",
-      finding: "Calon pelanggan kini bertanya ke ChatGPT, Perplexity, dan Gemini sebelum Google. Jika brand Anda tidak muncul di jawaban AI, Anda tidak masuk ke pertimbangan mereka.",
-      impact: "Peluang pelanggan baru hilang sebelum mereka pernah mengunjungi website atau bicara dengan sales.",
-      risk: "Kompetitor yang lebih siap di AI search akan semakin memperkuat posisinya seiring waktu.",
-      solution: "AI Local & AI Search Trust Builder + AI Organic Traffic Builder untuk trust signal yang konsisten.",
-      potential: "Visibility Google organik naik 133% • Lead organik/bulan naik 125% • Review respons naik 325%"
-    },
-    {
-      title: "Review dan komplain tidak teridentifikasi",
-      finding: "Feedback pelanggan tersebar di banyak platform dan sering terlewat, sehingga masalah trust tidak diatasi sejak dini.",
-      impact: "Satu review negatif yang tidak terrespons bisa menurunkan keputusan puluhan calon pelanggan.",
-      risk: "Reputasi brand perlahan memudar tanpa Anda sadari karena tidak ada monitoring sistematis.",
-      solution: "AI Sentiment Pelanggan + AI Survey & Feedback Analyzer untuk monitoring dan respons cepat.",
-      potential: "Review yang terrespons naik • Sentimen pelanggan membaik • Trust signal semakin kuat"
     }
   ]
 };
@@ -412,7 +378,7 @@ export function calculateFindings(answers: WizardAnswers): Finding[] {
 
 export function buildBeforeAfterMetrics(answers: WizardAnswers) {
   const primary = answers.mainChallenges[0] || "revenue";
-  const isRevenueCluster = primary === "revenue" || primary === "brand_trust";
+  const isRevenueCluster = primary === "revenue";
 
   if (isRevenueCluster) {
     return [
@@ -575,10 +541,12 @@ export function calculateImpactRanges(answers: WizardAnswers): ImpactRanges {
 
   if (challenges.has("revenue")) ranges.revenueIncrease = adjustRangeString("10-30%", multiplier);
   if (challenges.has("cost")) ranges.costReduction = adjustRangeString("8-22%", multiplier);
-  if (challenges.has("fraud")) ranges.riskReduction = adjustRangeString("15-45%", multiplier);
+  if (challenges.has("risk_trust")) {
+    ranges.riskReduction = adjustRangeString("15-45%", multiplier);
+    ranges.trustLift = adjustRangeString("15-35% peningkatan trust signal", multiplier);
+  }
   if (challenges.has("cash_stock")) ranges.cashAccuracy = adjustRangeString("20-40% lebih presisi", multiplier);
   if (challenges.has("reporting") || challenges.has("cost")) ranges.hoursSaved = adjustRangeString("20-60 jam/bulan", multiplier);
-  if (challenges.has("brand_trust")) ranges.trustLift = adjustRangeString("15-35% peningkatan trust signal", multiplier);
 
   if (!ranges.hoursSaved) ranges.hoursSaved = adjustRangeString("20-60 jam/bulan", multiplier);
 
@@ -645,14 +613,14 @@ export function buildSolutionCards(solutions: PesatSolution[], answers: WizardAn
 
 export function buildFallbackResult(sessionId: string, answers: WizardAnswers, solutions: PesatSolution[], impactRanges: ImpactRanges): GeneratedResult {
   const primary = answers.mainChallenges[0] || "revenue";
-  const isRevenueCluster = primary === "revenue" || primary === "brand_trust";
+  const isRevenueCluster = primary === "revenue";
 
   const impactCards = Object.entries(impactRanges)
     .slice(0, 3)
     .map(([key, value]) => ({
       title: key.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase()),
       value,
-      description: "Estimasi awal berbasis benchmark industri dan jawaban mini session."
+      description: "Estimasi awal berbasis benchmark industri dan jawaban mini session Anda."
     }));
 
   const diagnosisPack = buildDiagnosisPack(answers, solutions, impactRanges);
@@ -666,6 +634,10 @@ export function buildFallbackResult(sessionId: string, answers: WizardAnswers, s
 
   const savingsLabel = isRevenueCluster ? `+Rp ${formatMoney(monthlyRevenue * 0.15)}/bulan` : `Rp ${formatMoney(monthlyCost * 0.28)}/bulan`;
 
+  const tldr = isRevenueCluster
+    ? `Bisnis Anda kehilangan peluang revenue karena proses follow-up dan repeat order belum sistematis. AI bisa membantu menutup pipeline yang bocor dengan dampak terukur.`
+    : `Ada biaya tersembunyi dan pekerjaan manual yang masih memakan waktu tim. AI bisa merapikan proses tersebut dan mengurangi pemborosan operasional.`;
+
   return {
     sessionId,
     headline: HEADLINE_BY_CLUSTER[primary],
@@ -674,6 +646,7 @@ export function buildFallbackResult(sessionId: string, answers: WizardAnswers, s
         ? `Revenue pipeline bisa lebih tertutup dengan lift yang terukur.`
         : `Ada biaya tersembunyi sekitar ${savingsLabel} yang bisa dikurangi lewat otomasi.`
     }`,
+    tldr,
     diagnosis: diagnosisPack.diagnosis,
     rootCause: diagnosisPack.rootCause,
     promise: diagnosisPack.promise,

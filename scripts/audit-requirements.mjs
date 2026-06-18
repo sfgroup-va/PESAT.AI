@@ -48,7 +48,7 @@ const goLiveAudit = read("scripts/go-live-audit.ps1");
 
 const solutionIds = [...solutions.matchAll(/\{\s*id:\s*"(ai_[^"]+)",\s*name:/g)].map((match) => match[1]);
 const uniqueSolutionIds = new Set(solutionIds);
-const challengeKeys = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"];
+const challengeKeys = ["revenue", "cost", "risk_trust", "cash_stock", "reporting"];
 const routeFiles = [
   "app/page.tsx",
   "app/admin/page.tsx",

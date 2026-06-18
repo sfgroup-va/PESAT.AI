@@ -1,4 +1,4 @@
-export type ChallengeId = "revenue" | "cost" | "fraud" | "cash_stock" | "reporting" | "brand_trust";
+export type ChallengeId = "revenue" | "cost" | "risk_trust" | "cash_stock" | "reporting";
 
 export type DetailId =
   | "follow_up"
@@ -27,12 +27,22 @@ export type FrictionSourceId =
   | "duplicate_data"
   | "manual_reports"
   | "delayed_response"
-  | "human_error"
-  | "approval_bottleneck"
+  | "error_control"
   | "knowledge_silo";
 export type AdoptionId = "dfy" | "diy" | "hybrid" | "starting";
 
-export type ContextAnswerKey = "detailNumeric" | "frictionChannel" | "currentStack";
+export type ContextAnswerKey =
+  | "mainChallengeOther"
+  | "detailChallengeOther"
+  | "impactLevelOther"
+  | "frictionSourceOther"
+  | "adoptionStyleOther"
+  | "detailNumericOther"
+  | "frictionChannelOther"
+  | "currentStackOther"
+  | "detailNumeric"
+  | "frictionChannel"
+  | "currentStack";
 
 export type WizardAnswers = {
   mainChallenges: ChallengeId[];
@@ -49,6 +59,8 @@ export type ContactData = {
   name?: string;
   wa?: string;
   followUpAllowed?: boolean;
+  employeeCount?: string;
+  yearlyRevenue?: string;
 };
 
 export type PesatSolution = {
@@ -161,6 +173,7 @@ export type GeneratedResult = {
   sessionId: string;
   headline: string;
   subheadline: string;
+  tldr?: string;
   diagnosis: string;
   rootCause: RootCause;
   promise: ResultPromise;

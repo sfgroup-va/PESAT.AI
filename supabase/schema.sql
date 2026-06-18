@@ -29,6 +29,8 @@ create table if not exists public.discovery_requests (
   company_name text not null,
   name text not null,
   wa text not null check (length(regexp_replace(wa, '\D', '', 'g')) between 9 and 16),
+  employee_count text not null,
+  yearly_revenue text not null,
   budget_context text,
   message text,
   created_at timestamptz not null default now()

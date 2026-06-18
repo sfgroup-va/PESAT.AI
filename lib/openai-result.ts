@@ -4,7 +4,7 @@ import type { GeneratedResult, ImpactRanges, PesatSolution, WizardAnswers } from
 
 const OPENAI_TIMEOUT_MS = 20000;
 
-export async function generateResultCopy(sessionId: string, answers: WizardAnswers, solutions: PesatSolution[], impactRanges: ImpactRanges): Promise<GeneratedResult> {
+export async function generateResultCopy(sessionId: string, answers: WizardAnswers, solutions: PesatSolution[], impactRanges: ImpactRanges, otherExamples: string[] = []): Promise<GeneratedResult> {
   const fallback = buildFallbackResult(sessionId, answers, solutions, impactRanges);
 
   if (!process.env.OPENAI_API_KEY) {
@@ -36,8 +36,9 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
               "- 'promiseStatement': janji meyakinkan TAPI jujur. Wajib menyebut rentang dari impactRanges apa adanya, sebut diukur lewat diagnosisContext.promiseFrame.measuredBy, dan tegaskan ini estimasi bukan garansi.",
               "- 'costOfInaction': konsekuensi jujur bila masalah dibiarkan, untuk membangun urgensi tanpa menakut-nakuti berlebihan. Boleh merujuk userSignals, tapi JANGAN mengarang angka. Dasar: diagnosisContext.costOfInactionFrame.",
               "- 'firstStep': satu langkah pertama konkret dan realistis, sesuaikan dengan answers.adoptionStyle dan effortLevel solusi utama. Dasar: diagnosisContext.firstStepFrame.",
-              "- 'headline','subheadline','impactCards','beforeAfterText','uniqueMechanism','solutionsText': isi sesuai input. impactCards.value harus salah satu nilai dari impactRanges.",
+              "- 'headline','subheadline','tldr','impactCards','beforeAfterText','uniqueMechanism','solutionsText': isi sesuai input. impactCards.value harus salah satu nilai dari impactRanges. 'tldr' adalah ringkasan 2-3 kalimat singkat di awal hasil: apa masalah utamanya dan apa potensi terbesarnya, bahasa sangat sederhana, tanpa jargon.",
               "- 'solutionsText': jelaskan SETIAP solusi terpilih dengan mengaitkan capabilities, integrations, dan caseStudy (jika ada) ke konteks klien. Sebutkan prerequisites yang perlu disiapkan.",
+              "- Gunakan recentOtherExamples sebagai referensi pola bahasa klien serupa, tapi JANGAN menyebutkan data spesifik milik klien lain. Gunakan hanya untuk membuat nada lebih natural.",
               "Jika ragu, ikuti deterministicDiagnosis/promiseFrame/firstStepFrame/costOfInactionFrame daripada mengarang."
             ].join("\n")
           },
@@ -47,6 +48,10 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
               answers,
               detailNote: answers.detailNote || "",
               contextAnswers: answers.contextAnswers || {},
+              currentOtherAnswers: Object.entries(answers.contextAnswers || {})
+                .filter(([key]) => key.endsWith("Other"))
+                .map(([key, value]) => `${key}: ${value}`),
+              recentOtherExamples: otherExamples,
               userSignals: fallback.userSignals,
               solutions: solutions.map((solution) => ({
                 id: solution.id,
@@ -78,6 +83,7 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
               requiredShape: {
                 headline: "string",
                 subheadline: "string",
+                tldr: "string (2-3 kalimat ringkasan sangat sederhana)",
                 diagnosis: "string (cermin masalah spesifik klien, pakai userSignals bila ada)",
                 promiseStatement: "string (solusi terukur + jujur)",
                 costOfInaction: "string (konsekuensi jujur bila dibiarkan)",
@@ -97,10 +103,11 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
             schema: {
               type: "object",
               additionalProperties: false,
-              required: ["headline", "subheadline", "diagnosis", "promiseStatement", "costOfInaction", "firstStep", "impactCards", "beforeAfterText", "uniqueMechanism", "solutionsText"],
+              required: ["headline", "subheadline", "tldr", "diagnosis", "promiseStatement", "costOfInaction", "firstStep", "impactCards", "beforeAfterText", "uniqueMechanism", "solutionsText"],
               properties: {
                 headline: { type: "string" },
                 subheadline: { type: "string" },
+                tldr: { type: "string" },
                 diagnosis: { type: "string" },
                 promiseStatement: { type: "string" },
                 costOfInaction: { type: "string" },
@@ -151,10 +158,11 @@ export async function generateResultCopy(sessionId: string, answers: WizardAnswe
     if (!text) return fallback;
 
     const parsed = normalizeModelPayload(JSON.parse(text) as Partial<ModelPayload>, fallback, solutions, impactRanges);
-    const { diagnosis, promiseStatement, costOfInaction, firstStep, ...copy } = parsed;
+    const { diagnosis, promiseStatement, costOfInaction, firstStep, tldr, ...copy } = parsed;
     return {
       ...fallback,
       ...copy,
+      tldr,
       sessionId,
       solutions,
       solutionCards: fallback.solutionCards,

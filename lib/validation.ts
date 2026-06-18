@@ -1,6 +1,6 @@
 import type { AdoptionId, ChallengeId, ContactData, ContextAnswerKey, DetailId, FrictionSourceId, ImpactId, WizardAnswers } from "@/lib/types";
 
-const challengeIds = ["revenue", "cost", "fraud", "cash_stock", "reporting", "brand_trust"] as const satisfies readonly ChallengeId[];
+const challengeIds = ["revenue", "cost", "risk_trust", "cash_stock", "reporting"] as const satisfies readonly ChallengeId[];
 const detailIds = [
   "follow_up",
   "repeat_order",
@@ -28,8 +28,7 @@ const frictionSourceIds = [
   "duplicate_data",
   "manual_reports",
   "delayed_response",
-  "human_error",
-  "approval_bottleneck",
+  "error_control",
   "knowledge_silo"
 ] as const satisfies readonly FrictionSourceId[];
 const adoptionIds = ["dfy", "diy", "hybrid", "starting"] as const satisfies readonly AdoptionId[];
@@ -41,7 +40,19 @@ const detailSet = new Set<string>(detailIds);
 const impactSet = new Set<string>(impactIds);
 const frictionSourceSet = new Set<string>(frictionSourceIds);
 const adoptionSet = new Set<string>(adoptionIds);
-const contextAnswerKeys = new Set<string>(["detailNumeric", "frictionChannel", "currentStack"] satisfies ContextAnswerKey[]);
+const contextAnswerKeys = new Set<string>([
+  "mainChallengeOther",
+  "detailChallengeOther",
+  "impactLevelOther",
+  "frictionSourceOther",
+  "adoptionStyleOther",
+  "detailNumericOther",
+  "frictionChannelOther",
+  "currentStackOther",
+  "detailNumeric",
+  "frictionChannel",
+  "currentStack"
+] satisfies ContextAnswerKey[]);
 const eventTypeSet = new Set<string>(eventTypes);
 const eventScreenSet = new Set<string>(eventScreens);
 
@@ -114,12 +125,13 @@ export function sanitizeAnswers(value: unknown): WizardAnswers {
 }
 
 export function validateCompleteAnswers(answers: WizardAnswers) {
+  const other = answers.contextAnswers || {};
   const missing = [
-    answers.mainChallenges.length === 0 ? "mainChallenges" : "",
-    answers.detailChallenges.length === 0 ? "detailChallenges" : "",
-    !answers.impactLevel ? "impactLevel" : "",
-    !answers.frictionSource ? "frictionSource" : "",
-    !answers.adoptionStyle ? "adoptionStyle" : ""
+    answers.mainChallenges.length === 0 && !other.mainChallengeOther ? "mainChallenges" : "",
+    answers.detailChallenges.length === 0 && !other.detailChallengeOther ? "detailChallenges" : "",
+    !answers.impactLevel && !other.impactLevelOther ? "impactLevel" : "",
+    !answers.frictionSource && !other.frictionSourceOther ? "frictionSource" : "",
+    !answers.adoptionStyle && !other.adoptionStyleOther ? "adoptionStyle" : ""
   ].filter(Boolean);
 
   return {
@@ -134,7 +146,9 @@ export function sanitizeContact(value: unknown): ContactData {
     companyName: sanitizeText(input.companyName, 160),
     name: sanitizeText(input.name, 120),
     wa: sanitizeText(input.wa, 40).replace(/[^\d+()\-\s]/g, ""),
-    followUpAllowed: Boolean(input.followUpAllowed)
+    followUpAllowed: Boolean(input.followUpAllowed),
+    employeeCount: sanitizeText(input.employeeCount, 20),
+    yearlyRevenue: sanitizeText(input.yearlyRevenue, 40)
   };
 }
 
@@ -152,7 +166,9 @@ export function sanitizeDiscoveryPayload(value: unknown) {
     wa: sanitizeText(input.wa, 40).replace(/[^\d+()\-\s]/g, ""),
     budgetContext: sanitizeText(input.budgetContext, 500),
     message: sanitizeWordLimitedText(input.message, 1500, 18000),
-    summary: sanitizeText(input.summary, 500)
+    summary: sanitizeText(input.summary, 500),
+    employeeCount: sanitizeText(input.employeeCount, 20),
+    yearlyRevenue: sanitizeText(input.yearlyRevenue, 40)
   };
 }
 
@@ -161,7 +177,9 @@ export function validateDiscoveryPayload(payload: ReturnType<typeof sanitizeDisc
     !payload.companyName ? "companyName" : "",
     !payload.name ? "name" : "",
     !payload.wa ? "wa" : "",
-    payload.wa && !hasUsableWhatsAppNumber(payload.wa) ? "wa" : ""
+    payload.wa && !hasUsableWhatsAppNumber(payload.wa) ? "wa" : "",
+    !payload.employeeCount ? "employeeCount" : "",
+    !payload.yearlyRevenue ? "yearlyRevenue" : ""
   ].filter(Boolean);
 
   return {

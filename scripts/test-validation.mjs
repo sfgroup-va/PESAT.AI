@@ -33,14 +33,14 @@ try {
 
   const thousandWordNote = Array.from({ length: 1005 }, (_, index) => `kata${index + 1}`).join(" ");
   const answers = sanitizeAnswers({
-    mainChallenges: ["revenue", "fraud", "cost", "fake"],
+    mainChallenges: ["revenue", "risk_trust", "cost", "fake"],
     detailChallenges: ["follow_up", "follow_up", "repeat_order", "pricing", "lead_quality", "admin_cost", "manual_docs", "invoice_ap", "process_waste", "fake"],
     impactLevel: "critical",
     frictionSource: "delayed_response",
     adoptionStyle: "dfy",
     detailNote: thousandWordNote
   });
-  assert.deepEqual(answers.mainChallenges, ["revenue", "fraud"]);
+  assert.deepEqual(answers.mainChallenges, ["revenue", "risk_trust"]);
   assert.deepEqual(answers.detailChallenges, ["follow_up", "repeat_order", "pricing", "lead_quality", "admin_cost", "manual_docs", "invoice_ap", "process_waste"]);
   assert.equal(answers.detailNote.split(/\s+/).length, 1000);
   assert.deepEqual(validateCompleteAnswers(answers), { ok: true, missing: [] });
@@ -67,6 +67,8 @@ try {
     companyName: "Test Co",
     name: "Tester",
     wa: "+62-812-345-6789 ext!",
+    employeeCount: "10-50",
+    yearlyRevenue: "1-5 miliar",
     budgetContext: "b".repeat(700),
     message: Array.from({ length: 1505 }, (_, index) => `jawaban${index + 1}`).join(" "),
     summary: "s".repeat(700)
@@ -77,7 +79,7 @@ try {
   assert.equal(discovery.message.split(/\s+/).length, 1500);
   assert.equal(discovery.summary.length, 500);
   assert.deepEqual(validateDiscoveryPayload(discovery), { ok: true, missing: [] });
-  assert.deepEqual(validateDiscoveryPayload(sanitizeDiscoveryPayload({ companyName: "", name: "", wa: "123" })).missing, ["companyName", "name", "wa"]);
+  assert.deepEqual(validateDiscoveryPayload(sanitizeDiscoveryPayload({ companyName: "", name: "", wa: "123" })).missing, ["companyName", "name", "wa", "employeeCount", "yearlyRevenue"]);
 
   const event = sanitizeEventPayload({
     sessionId: "session-1",
