@@ -656,8 +656,9 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                       disabled={
                         !answers.detailChallenges[0] ||
                         ((answers.detailChallenges[0] as string) === "other" && !answers.contextAnswers?.detailChallengeOther) ||
-                        !answers.contextAnswers?.detailNumeric ||
-                        (answers.contextAnswers?.detailNumeric === "other" && !answers.contextAnswers?.detailNumericOther) ||
+                        ((answers.detailChallenges[0] as string) !== "other" &&
+                          (!answers.contextAnswers?.detailNumeric ||
+                            (answers.contextAnswers?.detailNumeric === "other" && !answers.contextAnswers?.detailNumericOther))) ||
                         !answers.contextAnswers?.currentStack ||
                         (answers.contextAnswers?.currentStack === "other" && !answers.contextAnswers?.currentStackOther)
                       }

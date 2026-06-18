@@ -4,7 +4,7 @@ export const CHALLENGE_LABELS: Record<ChallengeId, string> = {
   revenue: "Omzet tidak naik padahal lead ada",
   cost: "Biaya operasional membengkak tanpa sadar",
   risk_trust: "Ada risiko finansial atau brand sulit dipercaya",
-  cash_stock: "Kas & stok sering meleset dari prediksi",
+  cash_stock: "Kas, stok & laporan sering meleset dari prediksi",
   reporting: "Keputusan penting selalu telat karena data belum siap"
 };
 
@@ -142,8 +142,7 @@ export const QUALITY_QUESTIONS: QualityQuestion[] = [
       { id: "revenue", label: "Omzet sulit naik", note: "Lead ada tapi follow-up buyar dan repeat order rendah", emoji: "📉" },
       { id: "cost", label: "Biaya operasional membengkak", note: "Banyak pekerjaan manual berulang yang tersembunyi", emoji: "💸" },
       { id: "risk_trust", label: "Ada risiko finansial atau brand", note: "Anomali/approval terlewat, review tidak terbaca, brand sulit ditemukan", emoji: "🚨" },
-      { id: "cash_stock", label: "Kas & stok sering meleset", note: "Prediksi salah, modal tertahan, atau sering stockout", emoji: "📊" },
-      { id: "reporting", label: "Keputusan telat karena data belum siap", note: "Laporan manual, meeting tanpa hasil, tiap tim punya angka berbeda", emoji: "⏱️" },
+      { id: "cash_stock", label: "Kas, stok & laporan sering meleset", note: "Prediksi salah, modal tertahan, stockout, atau laporan telat", emoji: "📊" },
       { id: "other", label: "Lainnya", note: "Ceritakan di bawah", emoji: "✏️" }
     ]
   },
@@ -249,7 +248,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 50", note: "Personal follow-up masih feasible" },
       { id: "medium", label: "50 - 200", note: "Mulai butuh sistem agar tidak ada yang terlewat" },
       { id: "high", label: "200 - 500", note: "Sistematisasi penting untuk response time" },
-      { id: "very_high", label: "Lebih dari 500", note: "Hampir pasti perlu otomasi besar" }
+      { id: "very_high", label: "Lebih dari 500", note: "Hampir pasti perlu otomasi besar" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   repeat_order: {
@@ -260,7 +260,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 100", note: "Masih bisa dipantau manual" },
       { id: "medium", label: "100 - 1.000", note: "Segmentasi mulai bernilai" },
       { id: "high", label: "1.000 - 5.000", note: "Trigger otomatis akan sangat terasa impact-nya" },
-      { id: "very_high", label: "Lebih dari 5.000", note: "Personalized repeat order menjadi must-have" }
+      { id: "very_high", label: "Lebih dari 5.000", note: "Personalized repeat order menjadi must-have" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   pricing: {
@@ -271,7 +272,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 10", note: "Harga relatif sederhana" },
       { id: "medium", label: "10 - 50", note: "Mulai perlu monitoring kompetitor" },
       { id: "high", label: "50 - 200", note: "Dynamic pricing mulai relevan" },
-      { id: "very_high", label: "Lebih dari 200", note: "Sangat cocok untuk model pricing otomatis" }
+      { id: "very_high", label: "Lebih dari 200", note: "Sangat cocok untuk model pricing otomatis" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   lead_quality: {
@@ -282,7 +284,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 30", note: "Screener sederhana sudah cukup" },
       { id: "medium", label: "30 - 150", note: "Scoring otomatis mulai diperlukan" },
       { id: "high", label: "150 - 500", note: "Prioritas lead sangat penting" },
-      { id: "very_high", label: "Lebih dari 500", note: "Butuh lead scoring + routing otomatis" }
+      { id: "very_high", label: "Lebih dari 500", note: "Butuh lead scoring + routing otomatis" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   admin_cost: {
@@ -293,7 +296,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 10 jam", note: "Impact otomasi masih terbatas" },
       { id: "medium", label: "10 - 30 jam", note: "Ada ruang penghematan signifikan" },
       { id: "high", label: "30 - 80 jam", note: "Otomasi akan sangat terasa" },
-      { id: "very_high", label: "Lebih dari 80 jam", note: "Ini posisi biaya tersembunyi terbesar" }
+      { id: "very_high", label: "Lebih dari 80 jam", note: "Ini posisi biaya tersembunyi terbesar" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   manual_docs: {
@@ -304,7 +308,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 20", note: "Manual masih manageable" },
       { id: "medium", label: "20 - 100", note: "Document processor mulai bernilai" },
       { id: "high", label: "100 - 500", note: "OCR + ekstraksi field sangat diperlukan" },
-      { id: "very_high", label: "Lebih dari 500", note: "Must-have untuk skalabilitas" }
+      { id: "very_high", label: "Lebih dari 500", note: "Must-have untuk skalabilitas" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   invoice_ap: {
@@ -315,7 +320,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 50", note: "Template otomatis sudah cukup" },
       { id: "medium", label: "50 - 200", note: "Matching otomatis mulai relevan" },
       { id: "high", label: "200 - 1.000", note: "AP automation sangat diperlukan" },
-      { id: "very_high", label: "Lebih dari 1.000", note: "Critical untuk cashflow dan vendor relation" }
+      { id: "very_high", label: "Lebih dari 1.000", note: "Critical untuk cashflow dan vendor relation" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   process_waste: {
@@ -326,7 +332,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "1 - 3 langkah", note: "Bottleneck masih sederhana" },
       { id: "medium", label: "4 - 7 langkah", note: "Ada celah efisiensi jelas" },
       { id: "high", label: "8 - 12 langkah", note: "Process intelligence sangat relevan" },
-      { id: "very_high", label: "Lebih dari 12 langkah", note: "Besar kemungkinan waste tersembunyi" }
+      { id: "very_high", label: "Lebih dari 12 langkah", note: "Besar kemungkinan waste tersembunyi" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   transaction_anomaly: {
@@ -337,7 +344,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 100", note: "Review manual masih cukup" },
       { id: "medium", label: "100 - 1.000", note: "Rule-based alert mulai diperlukan" },
       { id: "high", label: "1.000 - 10.000", note: "Anomaly detection otomatis sangat bernilai" },
-      { id: "very_high", label: "Lebih dari 10.000", note: "Real-time scoring menjadi must" }
+      { id: "very_high", label: "Lebih dari 10.000", note: "Real-time scoring menjadi must" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   data_leak: {
@@ -348,7 +356,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "1 - 2 sistem", note: "Risiko fragmentasi rendah" },
       { id: "medium", label: "3 - 5 sistem", note: "Mulai perlu governance" },
       { id: "high", label: "6 - 10 sistem", note: "Data quality auto-heal relevan" },
-      { id: "very_high", label: "Lebih dari 10 sistem", note: "Kritis untuk compliance dan audit" }
+      { id: "very_high", label: "Lebih dari 10 sistem", note: "Kritis untuk compliance dan audit" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   approval_gap: {
@@ -359,7 +368,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "1 level", note: "Risiko approval gap lebih rendah" },
       { id: "medium", label: "2 - 3 level", note: "Delay dan gap mulai muncul" },
       { id: "high", label: "4 - 6 level", note: "Butuh routing & audit trail otomatis" },
-      { id: "very_high", label: "Lebih dari 6 level", note: "Bottleneck signifikan, otomasi urgent" }
+      { id: "very_high", label: "Lebih dari 6 level", note: "Bottleneck signifikan, otomasi urgent" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   cashflow_blind: {
@@ -370,7 +380,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "1 minggu ke depan", note: "Prediksi sangat terbatas" },
       { id: "medium", label: "2 - 4 minggu", note: "Cashflow forecasting akan membantu" },
       { id: "high", label: "1 - 2 bulan", note: "Sudah baik, tapi bisa lebih presisi" },
-      { id: "very_high", label: "Lebih dari 2 bulan", note: "Optimasi modal menjadi fokus utama" }
+      { id: "very_high", label: "Lebih dari 2 bulan", note: "Optimasi modal menjadi fokus utama" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   stockout: {
@@ -381,7 +392,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Jarang / 0-1 kali", note: "Risiko stockout masih rendah" },
       { id: "medium", label: "2 - 5 kali", note: "Demand planner mulai relevan" },
       { id: "high", label: "6 - 15 kali", note: "Kehilangan sales berulang perlu ditangani" },
-      { id: "very_high", label: "Lebih dari 15 kali", note: "Inventory & demand planning menjadi kritis" }
+      { id: "very_high", label: "Lebih dari 15 kali", note: "Inventory & demand planning menjadi kritis" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   overstock: {
@@ -392,7 +404,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 10%", note: "Overstock masih terkendali" },
       { id: "medium", label: "10 - 25%", note: "Ada ruang perbaikan cashflow" },
       { id: "high", label: "25 - 50%", note: "Inventory optimizer sangat diperlukan" },
-      { id: "very_high", label: "Lebih dari 50%", note: "Kritis untuk kesehatan kas" }
+      { id: "very_high", label: "Lebih dari 50%", note: "Kritis untuk kesehatan kas" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   slow_reports: {
@@ -403,7 +416,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 4 jam", note: "Masih cepat, tapi bisa lebih otomatis" },
       { id: "medium", label: "4 jam - 2 hari", note: "Report generator akan sangat terasa" },
       { id: "high", label: "3 - 7 hari", note: "Decision delay signifikan" },
-      { id: "very_high", label: "Lebih dari 1 minggu", note: "Sangat urgent untuk real-time reporting" }
+      { id: "very_high", label: "Lebih dari 1 minggu", note: "Sangat urgent untuk real-time reporting" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   no_bi: {
@@ -414,7 +428,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "1 - 2 sumber", note: "Integrasi sederhana" },
       { id: "medium", label: "3 - 5 sumber", note: "Executive dashboard mulai relevan" },
       { id: "high", label: "6 - 10 sumber", note: "Single source of truth sangat diperlukan" },
-      { id: "very_high", label: "Lebih dari 10 sumber", note: "Must-have untuk decision speed" }
+      { id: "very_high", label: "Lebih dari 10 sumber", note: "Must-have untuk decision speed" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   manual_meetings: {
@@ -425,7 +440,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Kurang dari 5 jam", note: "Masih efisien" },
       { id: "medium", label: "5 - 15 jam", note: "Notetaker & action tracker mulai berguna" },
       { id: "high", label: "15 - 30 jam", note: "Meeting productivity tools sangat diperlukan" },
-      { id: "very_high", label: "Lebih dari 30 jam", note: "Besar kemungkinan meeting overload" }
+      { id: "very_high", label: "Lebih dari 30 jam", note: "Besar kemungkinan meeting overload" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   google_visibility: {
@@ -436,7 +452,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Sudah page 1 untuk mayoritas", note: "Optimasi lanjutan untuk AI search" },
       { id: "medium", label: "Page 2-3 untuk beberapa", note: "Organic traffic builder relevan" },
       { id: "high", label: "Jarang muncul di page 1-3", note: "Butuh strategi konten sistematis" },
-      { id: "very_high", label: "Hampir tidak muncul", note: "Fundamental SEO + AI search perlu dibangun" }
+      { id: "very_high", label: "Hampir tidak muncul", note: "Fundamental SEO + AI search perlu dibangun" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   ai_search: {
@@ -447,7 +464,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "Sering muncul", note: "Pertahankan dan perkuat citasi" },
       { id: "medium", label: "Kadang muncul", note: "Perlu optimasi trust signal" },
       { id: "high", label: "Jarang / tidak yakin", note: "AI search trust builder sangat relevan" },
-      { id: "very_high", label: "Tidak pernah", note: "Fundamental presence perlu dibangun" }
+      { id: "very_high", label: "Tidak pernah", note: "Fundamental presence perlu dibangun" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   },
   review_sentiment: {
@@ -458,7 +476,8 @@ export const DETAIL_FOLLOW_UPS: Partial<Record<DetailId, FollowUpQuestion>> = {
       { id: "low", label: "1 platform", note: "Monitoring sederhana" },
       { id: "medium", label: "2 - 3 platform", note: "Sentiment analyzer mulai berguna" },
       { id: "high", label: "4 - 6 platform", note: "Unified monitoring diperlukan" },
-      { id: "very_high", label: "Lebih dari 6 platform", note: "Must-have untuk reputation management" }
+      { id: "very_high", label: "Lebih dari 6 platform", note: "Must-have untuk reputation management" },
+      { id: "other", label: "Lainnya", note: "Ceritakan skala/detail Anda" }
     ]
   }
 };
@@ -617,7 +636,7 @@ export const DETAIL_TO_CHALLENGE: Record<DetailId, ChallengeId> = {
   cashflow_blind: "cash_stock",
   stockout: "cash_stock",
   overstock: "cash_stock",
-  slow_reports: "reporting",
+  slow_reports: "cash_stock",
   no_bi: "reporting",
   manual_meetings: "reporting",
   google_visibility: "risk_trust",
