@@ -636,7 +636,7 @@ export const DETAIL_TO_CHALLENGE: Record<DetailId, ChallengeId> = {
   cashflow_blind: "cash_stock",
   stockout: "cash_stock",
   overstock: "cash_stock",
-  slow_reports: "cash_stock",
+  slow_reports: "reporting",
   no_bi: "reporting",
   manual_meetings: "reporting",
   google_visibility: "risk_trust",
