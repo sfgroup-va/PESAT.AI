@@ -6,7 +6,7 @@ Panduan cepat untuk menjalankan, mengembangkan, dan deploy project Pesat.AI.
 
 ## 1. Project Overview
 
-Pesat.AI adalah landing page + Mini Session diagnostic tool untuk B2B AI consulting.
+Pesat.AI adalah landing page + Mini Session diagnostic tool untuk **B2B AI solutions**.
 
 - **Framework:** Next.js 16 (App Router)
 - **Deployment target:** Cloudflare Workers via OpenNext
@@ -155,29 +155,49 @@ supabase db push
 
 **Migrasi penting terbaru:**
 - `20260612000000_update_event_screens.sql` — update event screen constraint untuk Mini Session flow baru (q1-q6, review, loading, result, leadGate).
+- `20260615000000_discovery_fields.sql` — menambahkan kolom `employee_count` dan `yearly_revenue` di tabel `discovery_requests`.
 
 ---
 
-## 9. Mini Session Flow (Redesign v2)
+## 9. Mini Session Flow (Redesign v3 — Pak Nell feedback)
 
-Flow terbaru setelah UX/CRO redesign:
+Flow terbaru setelah iterasi feedback:
 
 ```
 Hero → Q1 → Q2 → Q3 → Q4 → Q5 → Q6 → Review → Loading → Result → LeadGate
 ```
 
+### Prinsip UX
+
+- **Bahasa pemilik bisnis**, tanpa jargon teknikal.
+- **Tidak ada kata “konsultan / konsultasi”** di product copy; selalu diarahkan ke **solusi**.
+- **Auto-advance**: setelah user pilih opsi multiple choice, wizard langsung lanjut tanpa tombol **Lanjut**.
+- Tombol **Lanjut** hanya muncul saat user memilih **“Lainnya”** (membutuhkan isian teks) atau di step Q6 / Review.
+- **“Lainnya” + free-text** tersedia di setiap wizard stage (Q1-Q5 dan semua follow-up) untuk menangkap konteks spesifik.
+- Kontak (nama, WA, jumlah karyawan, omzet per tahun) diminta **SETELAH** value diberikan, di LeadGate.
+
+### Step detail
+
 | Step | Konten |
 |------|--------|
-| Q1 | Situasi operasional terberat (revenue, cost, fraud, cash_stock, reporting, brand_trust) |
-| Q2 | Metrik yang paling sering merah |
-| Q3 | Intensitas masalah (mild, weekly, often, critical) |
-| Q4 | Sumber gesekan terbesar (duplicate_data, manual_reports, delayed_response, dll) |
-| Q5 | Gaya adopsi AI (dfy, hybrid, diy, starting) |
-| Q6 | Optional operational context textarea |
-| Review | Ringkasan jawaban |
-| Loading | 4 insight edukatif, 5-6 detik per insight |
-| Result | Executive summary, hidden cost radar, finding cards, action plan |
-| LeadGate | Kontak diminta SETELAH value diberikan |
+| Q1 | **Fokus utama bisnis** — 4 pilihan + Lainnya: Omset stagnan/turun, Biaya besar/boros, Ada risiko kecurangan/data tidak aman/brand tidak dipercaya, Kas & stok sering meleset |
+| Q2 | **Titik bocor terbesar** — difilter berdasarkan Q1, 4 pilihan + Lainnya per cluster |
+| Q2a | Follow-up volume/severity sesuai detail yang dipilih |
+| Q2b | **Stack operasional** — WhatsApp + Spreadsheet, ERP, E-commerce/Marketplace, CRM/Helpdesk, Lainnya |
+| Q3 | **Seberapa sering masalah terjadi** — Jarang, 1-2x seminggu, Hampir setiap hari, Setiap hari, Lainnya |
+| Q4 | **Akar masalah / sumber gesekan** — Input data berulang, Gabung data/buat laporan manual, Respons & follow-up lambat, Kesalahan & kendali proses, Pengetahuan hanya di kepala orang, Lainnya |
+| Q4a | Follow-up channel/lokasi gesekan sesuai sumber yang dipilih |
+| Q5 | **Cara kerja sama** — Pesat.AI jalankan penuh, Pesat.AI setup + tim lanjutkan, Tim internal eksekusi dengan blueprint, Mulai dari pilot kecil, Lainnya |
+| Q6 | **Konteks tambahan (opsional)** — textarea bebas |
+| Review | Ringkasan jawaban sebelum generate hasil |
+| Loading | 4 insight edukatif, tanpa tombol Lanjut |
+| Result | TLDR card, AIDA flow, tema ungu (indigo/violet/fuchsia), bahasa sederhana, ROI calculator |
+| LeadGate | Kontak + employee count + yearly revenue diminta SETELAH value diberikan |
+
+### Personalisasi AI
+
+- Semua jawaban **“Lainnya”** tersimpan di `sessions.answers.contextAnswers.*Other`.
+- Sistem mengambil recent Other answers dari database dan menginjeksi ke prompt LLM agar copy result terasa lebih relevan (real-time “fine-tuning”).
 
 ---
 
@@ -187,12 +207,14 @@ Hero → Q1 → Q2 → Q3 → Q4 → Q5 → Q6 → Review → Loading → Result
 |------|----------------|
 | `components/PesatExperience.tsx` | Wizard UI utama |
 | `components/ResultView.tsx` | Halaman hasil shareable |
+| `components/ResultPanel.tsx` | Panel hasil di dalam wizard |
 | `components/ImpactComparisonChart.tsx` | Chart Before/After yang readable |
-| `lib/solutions.ts` | Katalog solusi, pertanyaan, loading insights |
+| `lib/solutions.ts` | Katalog solusi, pertanyaan, loading insights, follow-ups |
 | `lib/rule-engine.ts` | Logika seleksi solusi, impact metrics, findings |
 | `lib/types.ts` | TypeScript types |
 | `lib/validation.ts` | Sanitasi & validasi input |
 | `lib/openai-result.ts` | LLM copy generation dengan fallback |
+| `lib/db.ts` | Database client + helper recent Other examples |
 | `app/api/result/route.ts` | Generate & persist result |
 | `app/api/session/route.ts` | Persist session answers |
 | `app/api/discovery/route.ts` | Handle discovery request |
@@ -258,5 +280,6 @@ npm run smoke:prod
 ## 14. Notes
 
 - Jangan commit secret values ke repo.
-- Custom domain `pesat.ai` attachment dilakukan via Cloudflare; untuk sementaran worker juga accessible via `pesat-ai-homepage.n311311.workers.dev`.
-- UI redesign terbaru memprioritaskan **insight quality** di atas visual polish.
+- Custom domain `pesat.ai` attachment dilakukan via Cloudflare; untuk sementara worker juga accessible via `pesat-ai-homepage.n311311.workers.dev`.
+- UI redesign terbaru memprioritaskan **clarity bahasa bisnis** dan **auto-advance flow** di atas visual polish.
+- Semua copy product dijaga agar tidak mengandung kata “konsultan / konsultasi”; fokus pada **solusi** dan **hasil bisnis**.

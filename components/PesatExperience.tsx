@@ -750,7 +750,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                               label="Jelaskan channel/akar gesekan"
                               value={answers.contextAnswers?.frictionChannelOther || ""}
                               onChange={(value) => setContextAnswer(OTHER_CONTEXT_KEY.frictionChannel, value)}
-                              placeholder="Contoh: laporan ad-hoc dari banyak cabang..."
+                              placeholder="Contoh: data dari banyak cabang harus digabung manual tiap minggu..."
                             />
                           )}
                         </FollowUpShell>
@@ -815,7 +815,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         onChange={(event) => handleDetailNoteChange(event.target.value)}
                         rows={5}
                         className="w-full rounded-[1.35rem] border border-neutral-200 px-5 py-4 outline-none transition focus:border-neutral-900"
-                        placeholder="Contoh: tim kami masih input data manual dari WhatsApp ke spreadsheet setiap hari, sales sering telat follow-up lead, dan laporan mingguan baru jadi hari Selasa padahal meeting direksi hari Senin pagi..."
+                        placeholder="Contoh: tim kami masih input data manual dari WhatsApp ke spreadsheet setiap hari, sales sering telat follow-up lead, dan stok sering habis mendadak saat order besar masuk..."
                       />
                       <div className="mt-2 flex items-center justify-between gap-4 text-xs text-neutral-400">
                         <span>Semakin spesifik, semakin tajam diagnosis dan rekomendasi yang kami susun.</span>
