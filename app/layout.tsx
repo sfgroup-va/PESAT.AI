@@ -21,7 +21,7 @@ const display = Sora({
 
 export const metadata: Metadata = {
   title: "Pesat.AI | Buktikan Sendiri dalam 5 Menit",
-  description: "Mini session untuk membuktikan peluang AI, otomasi, revenue, biaya, fraud, cashflow, dan business intelligence di bisnis Anda.",
+  description: "Mini session untuk membuktikan peluang AI, otomasi, omset, biaya, kas & stok, dan risiko operasional di bisnis Anda.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://pesat.ai"),
   openGraph: {
     title: "Pesat.AI | Buktikan Sendiri dalam 5 Menit",

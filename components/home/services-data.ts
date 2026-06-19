@@ -275,7 +275,7 @@ export const services: ServiceItem[] = [
     desc: "Mengatur balasan email rutin dan jadwal meeting otomatis, menghemat 5–10 jam per minggu untuk eksekutif dan tim.",
     detail: {
       analogy: "Seperti asisten pribadi yang mengurus inbox dan kalender Anda.",
-      example: "Konsultan: email rutin dibalas draft otomatis, jadwal meeting diatur tanpa tarik-ulur.",
+      example: "Jasa profesional: email rutin dibalas draft otomatis, jadwal meeting diatur tanpa tarik-ulur.",
       before: "Berjam-jam habis untuk email rutin & atur jadwal manual.",
       after: "Email & jadwal terurus otomatis — hemat 5–10 jam/minggu.",
       complexity: "quick"

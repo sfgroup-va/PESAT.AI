@@ -11,7 +11,7 @@ const steps = [
     icon: Compass,
     title: "Buktikan sendiri",
     time: "5 menit",
-    body: "Jawab beberapa pertanyaan tentang revenue, biaya, fraud, cashflow, reporting, dan trust. Sistem langsung memilih jalur solusi yang paling relevan.",
+    body: "Jawab beberapa pertanyaan singkat tentang omset, biaya, kas & stok, serta risiko operasional. Sistem langsung memilih jalur solusi yang paling relevan.",
     bullets: ["Tanpa signup", "Tanpa kartu kredit", "Output bisa dibagikan"]
   },
   {

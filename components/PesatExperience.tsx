@@ -566,11 +566,13 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         placeholder="Contoh: sulit mengejar pertumbuhan karena tim sales tersebar di banyak channel..."
                       />
                     )}
-                    <PrimaryAction
-                      disabled={!answers.mainChallenges[0] || ((answers.mainChallenges[0] as string) === "other" && !answers.contextAnswers?.mainChallengeOther)}
-                      onClick={() => advanceWithFact("q1", "q2")}
-                      label="Lanjut"
-                    />
+                    {(answers.mainChallenges[0] as string) === "other" && (
+                      <PrimaryAction
+                        disabled={!answers.contextAnswers?.mainChallengeOther}
+                        onClick={() => advanceWithFact("q1", "q2")}
+                        label="Lanjut"
+                      />
+                    )}
                   </QualityQuestionShell>
                 )}
 
@@ -652,19 +654,23 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                       </div>
                     )}
 
-                    <PrimaryAction
-                      disabled={
-                        !answers.detailChallenges[0] ||
-                        ((answers.detailChallenges[0] as string) === "other" && !answers.contextAnswers?.detailChallengeOther) ||
-                        ((answers.detailChallenges[0] as string) !== "other" &&
-                          (!answers.contextAnswers?.detailNumeric ||
-                            (answers.contextAnswers?.detailNumeric === "other" && !answers.contextAnswers?.detailNumericOther))) ||
-                        !answers.contextAnswers?.currentStack ||
-                        (answers.contextAnswers?.currentStack === "other" && !answers.contextAnswers?.currentStackOther)
-                      }
-                      onClick={() => advanceWithFact("q2", "q3")}
-                      label="Lanjut"
-                    />
+                    {((answers.detailChallenges[0] as string) === "other" ||
+                      answers.contextAnswers?.detailNumeric === "other" ||
+                      answers.contextAnswers?.currentStack === "other") && (
+                      <PrimaryAction
+                        disabled={
+                          !answers.detailChallenges[0] ||
+                          ((answers.detailChallenges[0] as string) === "other" && !answers.contextAnswers?.detailChallengeOther) ||
+                          ((answers.detailChallenges[0] as string) !== "other" &&
+                            answers.contextAnswers?.detailNumeric === "other" &&
+                            !answers.contextAnswers?.detailNumericOther) ||
+                          !answers.contextAnswers?.currentStack ||
+                          (answers.contextAnswers?.currentStack === "other" && !answers.contextAnswers?.currentStackOther)
+                        }
+                        onClick={() => advanceWithFact("q2", "q3")}
+                        label="Lanjut"
+                      />
+                    )}
                   </QualityQuestionShell>
                 )}
 
@@ -691,11 +697,13 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         placeholder="Contoh: hampir setiap hari, terutama saat akhir bulan..."
                       />
                     )}
-                    <PrimaryAction
-                      disabled={!answers.impactLevel || ((answers.impactLevel as string) === "other" && !answers.contextAnswers?.impactLevelOther)}
-                      onClick={() => setStep("q4")}
-                      label="Lanjut"
-                    />
+                    {(answers.impactLevel as string) === "other" && (
+                      <PrimaryAction
+                        disabled={!answers.contextAnswers?.impactLevelOther}
+                        onClick={() => setStep("q4")}
+                        label="Lanjut"
+                      />
+                    )}
                   </QualityQuestionShell>
                 )}
 
@@ -749,17 +757,19 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                       </div>
                     )}
 
-                    <PrimaryAction
-                      disabled={
-                        !answers.frictionSource ||
-                        ((answers.frictionSource as string) === "other" && !answers.contextAnswers?.frictionSourceOther) ||
-                        ((answers.frictionSource as string) !== "other" &&
-                          (!answers.contextAnswers?.frictionChannel ||
-                            (answers.contextAnswers?.frictionChannel === "other" && !answers.contextAnswers?.frictionChannelOther)))
-                      }
-                      onClick={() => setStep("q5")}
-                      label="Lanjut"
-                    />
+                    {((answers.frictionSource as string) === "other" || answers.contextAnswers?.frictionChannel === "other") && (
+                      <PrimaryAction
+                        disabled={
+                          !answers.frictionSource ||
+                          ((answers.frictionSource as string) === "other" && !answers.contextAnswers?.frictionSourceOther) ||
+                          ((answers.frictionSource as string) !== "other" &&
+                            answers.contextAnswers?.frictionChannel === "other" &&
+                            !answers.contextAnswers?.frictionChannelOther)
+                        }
+                        onClick={() => setStep("q5")}
+                        label="Lanjut"
+                      />
+                    )}
                   </QualityQuestionShell>
                 )}
 
@@ -786,11 +796,13 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
                         placeholder="Contoh: kami ingin pilot 1 bulan dengan 1 divisi dulu..."
                       />
                     )}
-                    <PrimaryAction
-                      disabled={!answers.adoptionStyle || ((answers.adoptionStyle as string) === "other" && !answers.contextAnswers?.adoptionStyleOther)}
-                      onClick={() => setStep("q6")}
-                      label="Lanjut"
-                    />
+                    {(answers.adoptionStyle as string) === "other" && (
+                      <PrimaryAction
+                        disabled={!answers.contextAnswers?.adoptionStyleOther}
+                        onClick={() => setStep("q6")}
+                        label="Lanjut"
+                      />
+                    )}
                   </QualityQuestionShell>
                 )}
 
@@ -996,7 +1008,7 @@ function LoadingSequence({ onComplete }: { onComplete: () => void }) {
         <div className="h-16 w-16 animate-spin rounded-full border-2 border-neutral-950 border-t-transparent" />
       </div>
 
-      <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Analisis konsultan sedang berjalan</p>
+      <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Sedang menyusun solusi untuk bisnis Anda</p>
 
       <div className="min-h-[180px] max-w-2xl transition-opacity duration-500" style={{ opacity: isVisible ? 1 : 0 }}>
         <h2 className="text-3xl font-semibold leading-tight tracking-normal text-neutral-950 sm:text-4xl">{activeInsight.text}</h2>
@@ -1372,7 +1384,7 @@ function ResultPanel({
         {/* Finding Cards */}
         {result.findings.length ? (
           <div className="mt-8">
-            <h3 className="text-2xl font-semibold">Temuan Konsultan</h3>
+            <h3 className="text-2xl font-semibold">Temuan Utama</h3>
             <p className="mt-2 text-sm leading-6 text-neutral-500">Insight spesifik berbasis jawaban Anda.</p>
             <div className="mt-4 grid gap-4">
               {result.findings.map((finding, index) => (
