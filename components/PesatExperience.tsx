@@ -28,6 +28,8 @@ import {
   STACK_FOLLOW_UP
 } from "@/lib/solutions";
 import { ImpactComparisonChart } from "@/components/ImpactComparisonChart";
+import { CoachContainer } from "@/components/coach/CoachContainer";
+import { toWizardAnswers, type DiagnosticState } from "@/lib/diagnostic-state";
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
 import type { AdoptionId, ChallengeId, ContactData, ContextAnswerKey, DetailId, GeneratedResult, ImpactId, FrictionSourceId, WizardAnswers } from "@/lib/types";
@@ -40,12 +42,13 @@ const initialAnswers: WizardAnswers = {
   adoptionStyle: ""
 };
 
-type Step = "hero" | "q1" | "q2" | "q3" | "q4" | "q5" | "q6" | "review" | "loading" | "result" | "leadGate";
+type Step = "hero" | "coach" | "q1" | "q2" | "q3" | "q4" | "q5" | "q6" | "review" | "loading" | "result" | "leadGate";
 
-const STEP_ORDER: Step[] = ["hero", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate"];
+const STEP_ORDER: Step[] = ["hero", "coach", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate"];
 
 const STEP_PROGRESS: Record<Step, number> = {
   hero: 0,
+  coach: 10,
   q1: 12,
   q2: 25,
   q3: 38,
@@ -202,8 +205,8 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
 
   async function startWizard() {
     const activeSessionId = await saveSession();
-    await track("click", "hero", { cta: "Buktikan Sendiri dalam 5 Menit" }, activeSessionId);
-    setStep("q1");
+    await track("click", "hero", { cta: "Mulai Sesi dengan AI Business Coach" }, activeSessionId);
+    setStep("coach");
   }
 
   function selectChallenge(id: ChallengeId | "other") {
@@ -222,6 +225,43 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     }));
     if (!isToggleOff && id !== "other") {
       advanceWithFact("q1", "q2");
+    }
+  }
+
+  async function finishCoach(diagnosticState: DiagnosticState) {
+    const wizardAnswers = toWizardAnswers(diagnosticState);
+    setAnswers(wizardAnswers);
+    setDetailNote("");
+    await generateResult(wizardAnswers);
+  }
+
+  async function generateResult(nextAnswersOverride?: WizardAnswers) {
+    setIsLoading(true);
+    setResultError("");
+    const nextAnswers = nextAnswersOverride ? { ...nextAnswersOverride, detailNote } : { ...answers, detailNote };
+    try {
+      const activeSessionId = await saveSession(nextAnswers, contact, true);
+      const response = await fetch("/api/result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: activeSessionId, answers: nextAnswers, contact })
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || "Hasil belum bisa dibuat.");
+      }
+      const data = (await response.json()) as GeneratedResult;
+      if (!data.headline || !Array.isArray(data.impactCards) || !Array.isArray(data.solutionsText)) {
+        throw new Error("Format hasil belum valid.");
+      }
+      setResult(data);
+      setStep("result");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Hasil belum bisa dibuat.";
+      setResultError(`${message} Silakan coba lagi.`);
+      void track("click", "loading", { error: "result_generation_failed", message });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -368,36 +408,6 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     setDiscoveryContext((current) => ({ ...current, [key]: trimToWordLimit(value.replace(/\r\n/g, "\n"), DISCOVERY_SHORT_ANSWER_WORD_LIMIT) }));
   }
 
-  async function generateResult() {
-    setIsLoading(true);
-    setResultError("");
-    const nextAnswers = { ...answers, detailNote };
-    try {
-      const activeSessionId = await saveSession(nextAnswers, contact, true);
-      const response = await fetch("/api/result", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: activeSessionId, answers: nextAnswers, contact })
-      });
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error || "Hasil belum bisa dibuat.");
-      }
-      const data = (await response.json()) as GeneratedResult;
-      if (!data.headline || !Array.isArray(data.impactCards) || !Array.isArray(data.solutionsText)) {
-        throw new Error("Format hasil belum valid.");
-      }
-      setResult(data);
-      setStep("result");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Hasil belum bisa dibuat.";
-      setResultError(`${message} Silakan coba lagi.`);
-      void track("click", "loading", { error: "result_generation_failed", message });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   async function saveResultDetailNote(note: string) {
     if (!result && !sessionId) return;
     await saveSession({ ...answers, detailNote: note }, contact, Boolean(result));
@@ -501,6 +511,8 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
           {cfg.sections.ctaDark ? <CtaBand variant="dark" showSecondary onStartWizard={startWizard} onScheduleDiscovery={scheduleDiscovery} /> : null}
           <Footer onStartWizard={startWizard} />
         </>
+      ) : step === "coach" ? (
+        <CoachContainer onClose={() => setStep("hero")} onFinish={finishCoach} />
       ) : (
         <section className="fixed inset-0 z-20 overflow-y-auto bg-surface">
           <div className={`mx-auto flex min-h-screen w-full flex-col px-5 py-5 sm:px-8 ${step === "result" ? "max-w-5xl" : "max-w-3xl"}`}>
