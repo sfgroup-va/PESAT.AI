@@ -1,7 +1,15 @@
-// Data-driven conversation script for the AI Business Coach Mini Session.
-// Each node = one "turn" in the diagnostic conversation.
+// Data-driven conversation script for the AI Business Coach Mini Session (v2).
+//
+// Mental model: bukan "isi pertanyaan → keluar report", tapi
+// "AI berhipotesis → user koreksi/konfirmasi → AI makin tajam → insight real-time".
+//
+// Setiap node memakai pola observasi → dugaan → konfirmasi.
+// Setelah user memilih, AI memberi `reaction` (momen "iya juga ya") SEBELUM next node.
+// Insight terakumulasi di panel persistent lewat `insightSlot` + `insightValue`.
 
 import type { PartialDiagnosticState } from "./diagnostic-state";
+
+export type InsightSlotId = "pressure" | "rootCause" | "bottleneck" | "solution";
 
 export type QuickReply = {
   id: string;
@@ -9,6 +17,15 @@ export type QuickReply = {
   emoji?: string;
   nextNode: FlowNodeId;
   update: PartialDiagnosticState;
+  /** Reaksi AI yang muncul setelah user memilih — momen "iya juga ya". */
+  reaction?: string;
+  /** Slot insight yang akan terisi + label isian. Keduanya wajib bersama. */
+  insightSlot?: InsightSlotId;
+  insightValue?: string;
+  freeText?: boolean;
+  freeTextPlaceholder?: string;
+  /** Untuk opsi "Lainnya": reaction tetap dimainkan, insight pakai slot generik. */
+  insightLabel?: string;
 };
 
 export type CoachMessage = {
@@ -17,11 +34,19 @@ export type CoachMessage = {
   typewriter?: boolean;
 };
 
+/**
+ * Pesan yang dirakit dinamis dari diagnostic state — dipakai untuk
+ * rangkuman Round 4 ("Kalau saya rangkum...") supaya terasa benar-benar
+ * membaca user, bukan template statis.
+ */
+export type DynamicMessageFn = (state: PartialDiagnosticState) => string;
+
 export type FlowNode = {
   id: FlowNodeId;
   messages: CoachMessage[];
+  /** Pesan dinamis yang dirakit dari state (mis. rangkuman). */
+  dynamicMessages?: DynamicMessageFn[];
   quickReplies?: QuickReply[];
-  insights?: string[];
   statusLabel?: string;
 };
 
@@ -33,6 +58,46 @@ export type FlowNodeId =
   | "solution-direction"
   | "transition-to-result";
 
+// Helper text untuk merangkum jawaban user di Round 4.
+const PRESSURE_SUMMARY: Record<string, string> = {
+  cost_pressure: "biaya terus jalan tanpa hasil sepadan",
+  risk_trust_pressure: "terlalu banyak hal bergantung ke Anda",
+  cash_stock_pressure: "masalah baru terlihat saat sudah telat"
+};
+
+const ROOTCAUSE_SUMMARY: Record<string, string> = {
+  repeated_work: "kerja kecil yang terus berulang",
+  owner_bottleneck: "keputusan kecil yang menumpuk di owner",
+  late_visibility: "masalah yang baru terlihat saat telat",
+  mixed: "kebocoran kecil yang numpuk dari banyak sisi"
+};
+
+const BOTTLENECK_SUMMARY: Record<string, string> = {
+  manual_admin: "input & cek ulang data manual",
+  approval_pileup: "antrean keputusan",
+  data_scattered: "data tercecer di banyak tempat",
+  knowledge_silo: "pengetahuan yang cuma dipegang 1–2 orang"
+};
+
+function rangkumanMessage(state: PartialDiagnosticState): string {
+  const pressure = state.pressureSource ? PRESSURE_SUMMARY[state.pressureSource] : null;
+  const root = state.rootCause ? ROOTCAUSE_SUMMARY[state.rootCause] : null;
+  const bottleneck = state.bottleneck ? BOTTLENECK_SUMMARY[state.bottleneck] : null;
+
+  const parts: string[] = [];
+  if (pressure) parts.push(`Tekanan utamanya bukan di permintaan, tapi di ${pressure}`);
+  if (root) parts.push(`akarnya di ${root}`);
+  if (bottleneck) parts.push(`titik macetnya di ${bottleneck}`);
+
+  if (parts.length === 0) {
+    return "Kalau saya rangkum sejauh ini, pola bisnis Anda sudah mulai jelas.";
+  }
+  // Gabungkan: "A, B, dan C."
+  if (parts.length === 1) return parts[0] + ".";
+  const last = parts[parts.length - 1];
+  return parts.slice(0, -1).join(", ") + ", dan " + last + ".";
+}
+
 export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
   welcome: {
     id: "welcome",
@@ -43,7 +108,7 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
         typewriter: true
       },
       {
-        text: "Biasanya di kondisi pasar seperti ini, masalahnya bukan sekadar omzet turun — tapi biaya kecil terus bocor, owner makin sering turun tangan, dan tim sibuk tanpa hasil yang sepadan.",
+        text: "Nanti Anda tinggal koreksi kalau saya meleset — saya mulai dari membaca pola besarnya dulu, lalu kita persempit bareng.",
         delayMs: 1200,
         typewriter: true
       }
@@ -57,14 +122,19 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
         update: {}
       }
     ],
-    statusLabel: "Membaca pola bisnis Anda"
+    statusLabel: "Memulai sesi diagnostik"
   },
 
   "pressure-reading": {
     id: "pressure-reading",
     messages: [
       {
-        text: "Saya mau cek, yang paling dekat dengan kondisi Anda saat ini yang mana?",
+        text: "Di kondisi pasar seperti sekarang, bisnis biasanya tidak goyah karena satu keputusan besar. Tekanannya datang dari kebocoran kecil yang numpuk diam-diam.",
+        delayMs: 800,
+        typewriter: true
+      },
+      {
+        text: "Dari empat pola ini, mana yang paling deket sama yang Anda rasakan?",
         delayMs: 800,
         typewriter: true
       }
@@ -72,83 +142,132 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     quickReplies: [
       {
         id: "cost_pressure",
-        label: "Biaya terus jalan, tapi hasilnya tidak terasa",
+        label: "Uang keluar terus, tapi saya nggak merasa lebih ringan",
+        emoji: "💸",
         nextNode: "root-cause",
-        update: { pressureSource: "cost_pressure", severity: "moderate" }
+        update: { pressureSource: "cost_pressure", severity: "moderate" },
+        reaction: "Oke. Berarti tekanannya bukan di permintaan yang hilang, tapi di biaya yang terus jalan tanpa hasil sepadan. Saya curiga masalahnya di operasional.",
+        insightSlot: "pressure",
+        insightValue: "biaya operasional yang berulang"
       },
       {
         id: "effort_pressure",
-        label: "Tim sibuk, tapi output tidak sebanding",
+        label: "Tim kelihatan sibuk, tapi hasilnya segitu-gitu aja",
+        emoji: "🏃",
         nextNode: "root-cause",
-        update: { pressureSource: "cost_pressure", severity: "moderate" }
+        update: { pressureSource: "cost_pressure", severity: "moderate" },
+        reaction: "Oke. Kalau tim udah sibuk tapi hasilnya belum berubah, saya belum curiga di jumlah orang. Saya lebih curiga di cara kerjanya — energi habis di tempat yang salah.",
+        insightSlot: "pressure",
+        insightValue: "cara kerja yang hisab energi tim"
       },
       {
         id: "owner_pressure",
-        label: "Saya harus ikut terlalu banyak hal",
+        label: "Kalau saya lepas, saya takut ada yang miss",
+        emoji: "👤",
         nextNode: "root-cause",
-        update: { pressureSource: "risk_trust_pressure", severity: "serious" }
+        update: { pressureSource: "risk_trust_pressure", severity: "serious" },
+        reaction: "Kena. Berarti bisnis masih bergantung ke keterlibatan Anda. Itu biasanya sinyal keputusan kecil belum punya sistem, jadi semuanya naik ke Anda.",
+        insightSlot: "pressure",
+        insightValue: "ketergantungan ke owner"
       },
       {
         id: "visibility_pressure",
-        label: "Masalah baru kelihatan saat telat",
+        label: "Masalah sering baru keliatan setelah telat",
+        emoji: "⏰",
         nextNode: "root-cause",
-        update: { pressureSource: "cash_stock_pressure", severity: "serious" }
+        update: { pressureSource: "cash_stock_pressure", severity: "serious" },
+        reaction: "Kena. Berarti Anda sering bereaksi terlambat — bukan karena nggak peduli, tapi karena info datang setelah kerugiannya terjadi.",
+        insightSlot: "pressure",
+        insightValue: "visibilitas yang telat"
+      },
+      {
+        id: "pressure_other",
+        label: "Lainnya",
+        emoji: "✏️",
+        nextNode: "root-cause",
+        update: {},
+        reaction: "Oke, terima kasih detailnya. Saya catat ini sebagai konteks tambahan.",
+        insightSlot: "pressure",
+        insightValue: "tekanan spesifik dari bisnis Anda",
+        freeText: true,
+        freeTextPlaceholder: "Ceritakan kondisi bisnis Anda saat ini"
       }
     ],
-    statusLabel: "Hipotesis 1 dari 4",
-    insights: ["Tekanan terbesar tampaknya ada di sisi operasional, bukan demand"]
+    statusLabel: "Mengenali tekanan bisnis"
   },
 
   "root-cause": {
     id: "root-cause",
     messages: [
       {
-        text: "Oke. Saya curiga problem Anda bukan di biaya besar yang kelihatan, tapi di kerja kecil yang berulang, keputusan yang naik terus ke owner, atau masalah yang baru kelihatan saat sudah telat.",
-        delayMs: 1200,
-        typewriter: true
-      },
-      {
-        text: "Dari tiga ini, mana yang paling menguras energi Anda?",
-        delayMs: 800,
+        text: "Saya persempit satu tingkat lagi. Biasanya kalau kayak gini, akar masalahnya bukan satu hal besar — tapi salah satu dari pola berikut. Mana yang paling nguras energi Anda?",
+        delayMs: 1000,
         typewriter: true
       }
     ],
     quickReplies: [
       {
         id: "repeated_work",
-        label: "Kerja kecil berulang",
+        label: "Kerja kecil yang berulang terus",
+        emoji: "🔄",
         nextNode: "bottleneck-test",
-        update: { rootCause: "repeated_work" }
+        update: { rootCause: "repeated_work" },
+        reaction: "Menarik. Kerja berulang itu biaya yang paling nggak keliatan di laporan — tapi paling nyata di energi tim.",
+        insightSlot: "rootCause",
+        insightValue: "kerja berulang yang terus jalan"
       },
       {
         id: "owner_bottleneck",
-        label: "Keputusan naik terus ke saya",
+        label: "Keputusan kecil naik terus ke saya",
+        emoji: "🚧",
         nextNode: "bottleneck-test",
-        update: { rootCause: "owner_bottleneck" }
+        update: { rootCause: "owner_bottleneck" },
+        reaction: "Kena. Kalau keputusan kecil terus berhenti di Anda, biaya termahal sebenarnya bukan gaji — tapi lambatnya seluruh alur bisnis.",
+        insightSlot: "rootCause",
+        insightValue: "keputusan menumpuk di owner"
       },
       {
         id: "late_visibility",
-        label: "Masalah telat terlihat",
+        label: "Masalah baru keliatan saat udah telat",
+        emoji: "⏰",
         nextNode: "bottleneck-test",
-        update: { rootCause: "late_visibility" }
+        update: { rootCause: "late_visibility" },
+        reaction: "Kena. Visibilitas yang telat = Anda ambil keputusan hari ini pakai data kemarin.",
+        insightSlot: "rootCause",
+        insightValue: "masalah telat terlihat"
       },
       {
         id: "mixed",
         label: "Campuran semuanya",
+        emoji: "🌀",
         nextNode: "bottleneck-test",
-        update: { rootCause: "mixed" }
+        update: { rootCause: "mixed" },
+        reaction: "Oke, campuran. Itu wajar. Nanti saya susun prioritasnya — mana yang kalau diberesin dulu, sisanya ikut ringan.",
+        insightSlot: "rootCause",
+        insightValue: "kebocoran dari banyak sisi"
+      },
+      {
+        id: "root_cause_other",
+        label: "Lainnya",
+        emoji: "✏️",
+        nextNode: "bottleneck-test",
+        update: {},
+        reaction: "Oke, saya catat. Kadang akar masalah yang sebenarnya bukan yang ada di daftar standar.",
+        insightSlot: "rootCause",
+        insightValue: "akar masalah spesifik Anda",
+        freeText: true,
+        freeTextPlaceholder: "Apa yang paling menguras energi Anda?"
       }
     ],
-    statusLabel: "Hipotesis 2 dari 4",
-    insights: ["Titik bocor utama kemungkinan bukan di 1 pos besar, tapi di pola operasional"]
+    statusLabel: "Mempersempit akar masalah"
   },
 
   "bottleneck-test": {
     id: "bottleneck-test",
     messages: [
       {
-        text: "Menarik. Kalau seperti itu, saya mau persempit satu hal lagi: saat hal-hal kecil macet, di mana biasanya proses berhenti?",
-        delayMs: 1200,
+        text: "Satu hal lagi biar saya yakin. Waktu hal-hal kecil macet di bisnis Anda, biasanya berhenti di mana?",
+        delayMs: 1000,
         typewriter: true
       }
     ],
@@ -156,75 +275,127 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
       {
         id: "manual_admin",
         label: "Input & cek ulang data manual",
+        emoji: "📝",
         nextNode: "solution-direction",
-        update: { bottleneck: "manual_admin" }
+        update: { bottleneck: "manual_admin" },
+        reaction: "Nah, itu. Input manual itu pekerjaan yang sebenernya bisa dijalankan sistem — tapi sekarang dikerjakan manusia, berulang, tiap hari.",
+        insightSlot: "bottleneck",
+        insightValue: "input manual berulang"
       },
       {
         id: "approval_pileup",
-        label: "Menunggu keputusan saya atau atasan",
+        label: "Nunggu keputusan saya / atasan",
+        emoji: "⏳",
         nextNode: "solution-direction",
-        update: { bottleneck: "approval_pileup" }
+        update: { bottleneck: "approval_pileup" },
+        reaction: "Kena. Antrean keputusan itu penghalang paling halus — semua orang nunggu, momentum hilang.",
+        insightSlot: "bottleneck",
+        insightValue: "antrean keputusan"
       },
       {
         id: "data_scattered",
-        label: "Data tersebar di banyak tempat",
+        label: "Data tercecer di banyak tempat",
+        emoji: "📊",
         nextNode: "solution-direction",
-        update: { bottleneck: "data_scattered" }
+        update: { bottleneck: "data_scattered" },
+        reaction: "Kena. Data tercecer artinya tiap keputusan butuh gathering dulu — dan sering versinya beda-beda.",
+        insightSlot: "bottleneck",
+        insightValue: "data tercecer"
       },
       {
         id: "knowledge_silo",
         label: "Cuma 1–2 orang yang tahu caranya",
+        emoji: "🧠",
         nextNode: "solution-direction",
-        update: { bottleneck: "knowledge_silo" }
+        update: { bottleneck: "knowledge_silo" },
+        reaction: "Kena. Kalau cuma 1–2 orang tahu, satu orang cuti atau resign, proses berhenti. Itu risiko tersembunyi.",
+        insightSlot: "bottleneck",
+        insightValue: "pengetahuan terkonsentrasi di sedikit orang"
+      },
+      {
+        id: "bottleneck_other",
+        label: "Lainnya",
+        emoji: "✏️",
+        nextNode: "solution-direction",
+        update: {},
+        reaction: "Oke, terima kasih. Saya catat titik macet spesifik Anda.",
+        insightSlot: "bottleneck",
+        insightValue: "titik macet spesifik Anda",
+        freeText: true,
+        freeTextPlaceholder: "Di mana proses biasanya berhenti?"
       }
     ],
-    statusLabel: "Hipotesis 3 dari 4",
-    insights: ["Bottleneck tampaknya ada di alur kerja, bukan di jumlah orang"]
+    statusLabel: "Menguji titik macet (bottleneck)"
   },
 
   "solution-direction": {
     id: "solution-direction",
+    // Pesan pertama dirakit dinamis dari jawaban user — momen "wow" coach membaca.
+    dynamicMessages: [rangkumanMessage],
     messages: [
       {
-        text: "Kalau saya rangkum, sepertinya Anda tidak butuh sistem besar dulu. Anda butuh quick win yang bikin bisnis terasa lebih ringan, lebih terlihat, dan tidak terlalu bergantung pada energi pribadi owner.",
-        delayMs: 1400,
+        text: "Kabar baiknya — Anda nggak butuh sistem besar dulu. Anda butuh quick win yang bikin bisnis terasa lebih ringan, lebih keliatan, dan nggak terlalu bergantung ke energi Anda sendiri.",
+        delayMs: 1200,
         typewriter: true
       },
       {
-        text: "Apakah ini sesuai yang Anda cari?",
-        delayMs: 600,
+        text: "Sebelum saya susun insight-nya, arah mana yang paling cocok sama Anda?",
+        delayMs: 700,
         typewriter: true
       }
     ],
     quickReplies: [
       {
         id: "quick_win",
-        label: "Iya, itu yang saya cari",
+        label: "Iya, quick win dulu aja",
+        emoji: "⚡",
         nextNode: "transition-to-result",
-        update: { solutionStyle: "quick_win" }
+        update: { solutionStyle: "quick_win" },
+        reaction: "Pas. Kita ambil satu titik yang kalau diberesin, efeknya langsung kerasa. Itu cara terbaik ngebangun momentum.",
+        insightSlot: "solution",
+        insightValue: "quick win dulu, bukan proyek besar"
       },
       {
         id: "full_setup",
-        label: "Saya butuh yang lebih agresif",
+        label: "Saya mau yang lebih agresif",
+        emoji: "🚀",
         nextNode: "transition-to-result",
-        update: { solutionStyle: "full_setup" }
+        update: { solutionStyle: "full_setup" },
+        reaction: "Oke, Anda siap sesuatu yang lebih menyeluruh. Nanti saya susun urutannya — tetap mulai dari yang berdampak tercepat, lalu perluas.",
+        insightSlot: "solution",
+        insightValue: "setup menyeluruh, bertahap"
       },
       {
         id: "pilot",
-        label: "Saya masih belum yakin, mau coba pilot dulu",
+        label: "Belum yakin, coba pilot kecil dulu",
+        emoji: "🧪",
         nextNode: "transition-to-result",
-        update: { solutionStyle: "pilot" }
+        update: { solutionStyle: "pilot" },
+        reaction: "Pilihan paling bijak. Pilot kecil yang terukur lebih meyakinkan daripada proyek besar yang ambigu.",
+        insightSlot: "solution",
+        insightValue: "pilot terukur dulu"
+      },
+      {
+        id: "solution_other",
+        label: "Lainnya",
+        emoji: "✏️",
+        nextNode: "transition-to-result",
+        update: {},
+        reaction: "Oke, saya catat harapan spesifik Anda. Ini jadi acuan arah solusi yang paling pas.",
+        insightSlot: "solution",
+        insightValue: "arah solusi spesifik Anda",
+        freeText: true,
+        freeTextPlaceholder: "Apa yang Anda harapkan dari solusi ini?"
       }
     ],
-    statusLabel: "Hipotesis 4 dari 4",
-    insights: ["Arah solusi: quick win dulu, bukan proyek besar"]
+    statusLabel: "Menyusun arah solusi"
   },
 
   "transition-to-result": {
     id: "transition-to-result",
     messages: [
       {
-        text: "Oke, saya sudah cukup paham polanya. Saya susun insight-nya sebentar.",
+        text: "Oke, saya udah cukup paham polanya. Saya rangkum jadi insight yang bisa langsung Anda baca.",
         delayMs: 1000,
         typewriter: true
       }
@@ -234,3 +405,14 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
 };
 
 export const START_NODE: FlowNodeId = "welcome";
+
+/**
+ * Slot insight yang terisi sepanjang sesi. Urutan ini juga jadi urutan
+ * tampil di InsightAccumulator panel.
+ */
+export const INSIGHT_SLOTS: Array<{ id: InsightSlotId; label: string }> = [
+  { id: "pressure", label: "Titik tekanan" },
+  { id: "rootCause", label: "Akar masalah" },
+  { id: "bottleneck", label: "Bottleneck" },
+  { id: "solution", label: "Arah solusi" }
+];

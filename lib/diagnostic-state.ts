@@ -15,6 +15,7 @@ export type DiagnosticState = {
   bottleneck: Bottleneck | null;
   solutionStyle: SolutionStyle | null;
   severity: "mild" | "moderate" | "serious" | null;
+  freeTextNotes: string[];
 };
 
 export type PartialDiagnosticState = Partial<DiagnosticState>;
@@ -24,7 +25,8 @@ export const initialDiagnosticState: DiagnosticState = {
   rootCause: null,
   bottleneck: null,
   solutionStyle: null,
-  severity: null
+  severity: null,
+  freeTextNotes: []
 };
 
 const PRESSURE_TO_CHALLENGE: Record<PressureSource, ChallengeId> = {
@@ -112,7 +114,7 @@ export function toWizardAnswers(state: DiagnosticState): WizardAnswers {
     impactLevel: impactFromState(state),
     frictionSource,
     adoptionStyle: adoptionFromState(state),
-    detailNote: "",
+    detailNote: state.freeTextNotes.length > 0 ? state.freeTextNotes.join("\n---\n") : "",
     contextAnswers: {}
   };
 }

@@ -154,50 +154,80 @@ supabase db push
 ```
 
 **Migrasi penting terbaru:**
-- `20260612000000_update_event_screens.sql` — update event screen constraint untuk Mini Session flow baru (q1-q6, review, loading, result, leadGate).
+- `20260612000000_update_event_screens.sql` — update event screen constraint untuk Mini Session flow baru (q1-q6, review, loading, result, leadGate, coach).
 - `20260615000000_discovery_fields.sql` — menambahkan kolom `employee_count` dan `yearly_revenue` di tabel `discovery_requests`.
 
 ---
 
-## 9. Mini Session Flow (Redesign v3 — Pak Nell feedback)
+## 9. Mini Session Flow — AI Business Coach (Diagnostic Conversation)
 
-Flow terbaru setelah iterasi feedback:
+Flow adalah **diagnostic conversation** — bukan chatbot form, bukan pula wizard. Mental model intinya:
+
+> **AI berhipotesis → user mengoreksi/mengonfirmasi → AI makin tajam → insight muncul real-time → report terasa sebagai hasil coaching.**
+
+Perbedaan kunci vs form biasa: user tidak merasa **mengisi**, user merasa **dibaca**. Tiga mekanisme yang menghasilkan rasa itu:
+
+1. **AI selalu bertanya dalam format observasi → dugaan → konfirmasi** (bukan tanya langsung kosong).
+2. **AI memberi `reaction` setelah setiap jawaban** — momen *"iya juga ya"* yang muncul SEBELUM pertanyaan berikutnya. Tiap pilihan punya reaksi berbeda.
+3. **Insight terakumulasi di panel persistent** (`InsightAccumulator`) — slot terisi satu per satu sepanjang sesi, tidak scroll lewat. User merasa *"sistem sedang memproses saya"*.
 
 ```
-Hero → Q1 → Q2 → Q3 → Q4 → Q5 → Q6 → Review → Loading → Result → LeadGate
+Hero → CoachContainer (chat)
+  → welcome        (AI buka dengan "koreksi kalau saya meleset")
+  → pressure-reading  → reaction → insight #1 terisi
+  → root-cause        → reaction → insight #2 terisi
+  → bottleneck-test   → reaction → insight #3 terisi
+  → solution-direction (rangkuman dinamis dari jawaban user) → reaction → insight #4 terisi
+  → inline mini report
+  → conversational lead gate
+  → WhatsApp discovery URL
 ```
 
 ### Prinsip UX
 
 - **Bahasa pemilik bisnis**, tanpa jargon teknikal.
-- **Tidak ada kata “konsultan / konsultasi”** di product copy; selalu diarahkan ke **solusi**.
-- **Auto-advance**: setelah user pilih opsi multiple choice, wizard langsung lanjut tanpa tombol **Lanjut**.
-- Tombol **Lanjut** hanya muncul saat user memilih **“Lainnya”** (membutuhkan isian teks) atau di step Q6 / Review.
-- **“Lainnya” + free-text** tersedia di setiap wizard stage (Q1-Q5 dan semua follow-up) untuk menangkap konteks spesifik.
-- Kontak (nama, WA, jumlah karyawan, omzet per tahun) diminta **SETELAH** value diberikan, di LeadGate.
+- **Tidak ada kata “konsultan / konsultasi”** di product copy; selalu diarahkan ke **solusi** / **AI Business Coach**.
+- **Auto-advance**: setelah user pilih opsi multiple choice, coach langsung lanjut tanpa tombol **Lanjut**.
+- Tombol **Lanjut** hanya muncul saat user memilih **“Lainnya”** (membutuhkan isian teks bebas).
+- **“Lainnya” + free-text** tersedia di setiap ronde pilihan (`pressure-reading`, `root-cause`, `bottleneck-test`, `solution-direction`).
+- **AI reaction per pilihan**: setiap `QuickReply` membawa `reaction` (bot message) yang diputar setelah user memilih — bukan generic, tapi spesifik untuk pilihan itu. Inilah yang membuat coach terasa benar-benar "membaca" user.
+- **Insight accumulator persistent**: 4 slot (Titik tekanan / Akar masalah / Bottleneck / Arah solusi) terisi bertahap, tetap terlihat di viewport. Saat semua terisi → label berubah jadi "Pola terbaca 100%". Badge "baru" muncul via CSS animation saat slot pertama kali terisi.
+- **Rangkuman dinamis (Round 4)**: `solution-direction` punya `dynamicMessages` yang merakit rangkuman dari state — *"Tekanan utamanya bukan di permintaan, tapi di biaya operasional berulang, akarnya di keputusan menumpuk di owner..."*. Momen "wow" coach membaca.
+- **Status label** dibingkai sebagai proses diagnosis: "Memulai sesi diagnostik", "Mengenali tekanan bisnis", "Mempersempit akar masalah", "Menguji titik macet", "Menyusun arah solusi" — bukan "3 dari 6".
+- Kontak (nama perusahaan, nama, WA, jumlah karyawan, omzet per tahun) diminta **SETELAH** value diberikan, satu per satu, di conversational lead gate.
+- **Widget desktop**: panel melayang di pojok kanan atas dengan tombol minimize/dock. Klik minimize akan menyusut menjadi floating pill di pojok kanan bawah.
+- **Focus trap & accessibility**: tombol `Tab` terjebak di dalam widget, `Escape` minimize, input auto-focus saat lead gate / free-text.
+- **Tracking**: semua interaksi coach dikirim sebagai event dengan screen `coach`.
 
-### Step detail
+### Ronde diagnosis
 
-| Step | Konten |
-|------|--------|
-| Q1 | **Fokus utama bisnis** — 4 pilihan + Lainnya: Omset stagnan/turun, Biaya besar/boros, Ada risiko kecurangan/data tidak aman/brand tidak dipercaya, Kas & stok sering meleset |
-| Q2 | **Titik bocor terbesar** — difilter berdasarkan Q1, 4 pilihan + Lainnya per cluster |
-| Q2a | Follow-up volume/severity sesuai detail yang dipilih |
-| Q2b | **Stack operasional** — WhatsApp + Spreadsheet, ERP, E-commerce/Marketplace, CRM/Helpdesk, Lainnya |
-| Q3 | **Seberapa sering masalah terjadi** — Jarang, 1-2x seminggu, Hampir setiap hari, Setiap hari, Lainnya |
-| Q4 | **Akar masalah / sumber gesekan** — Input data berulang, Gabung data/buat laporan manual, Respons & follow-up lambat, Kesalahan & kendali proses, Pengetahuan hanya di kepala orang, Lainnya |
-| Q4a | Follow-up channel/lokasi gesekan sesuai sumber yang dipilih |
-| Q5 | **Cara kerja sama** — Pesat.AI jalankan penuh, Pesat.AI setup + tim lanjutkan, Tim internal eksekusi dengan blueprint, Mulai dari pilot kecil, Lainnya |
-| Q6 | **Konteks tambahan (opsional)** — textarea bebas |
-| Review | Ringkasan jawaban sebelum generate hasil |
-| Loading | 4 insight edukatif, tanpa tombol Lanjut |
-| Result | TLDR card, AIDA flow, tema ungu (indigo/violet/fuchsia), bahasa sederhana, ROI calculator |
-| LeadGate | Kontak + employee count + yearly revenue diminta SETELAH value diberikan |
+Setiap ronde memakai format **observasi → dugaan → konfirmasi**. AI bertanya dengan hipotesis, bukan pertanyaan kosong.
+
+| Ronde | Observasi/dugaan AI | Pilihan user (human phrasing) |
+|------|---------------------|-------------------------------|
+| welcome | "Nanti Anda tinggal koreksi kalau saya meleset — saya mulai dari mengenali tekanan bisnis" | **Mulai diagnosa** |
+| pressure-reading | "Bisnis biasanya tidak goyah karena satu keputusan besar. Tekanannya datang dari kebocoran kecil yang numpuk diam-diam." | "Uang keluar terus, tapi saya nggak merasa lebih ringan" / "Tim sibuk, hasilnya segitu-gitu aja" / "Kalau saya lepas, saya takut ada yang miss" / "Masalah sering baru keliatan setelah telat" / Lainnya |
+| root-cause | "Akar masalahnya bukan satu hal besar — tapi salah satu dari pola berikut" | "Kerja kecil berulang" / "Keputusan naik terus ke saya" / "Masalah telat keliatan" / "Campuran semuanya" / Lainnya |
+| bottleneck-test | "Waktu hal-hal kecil macet, biasanya berhenti di mana?" | "Input & cek ulang manual" / "Nunggu keputusan saya" / "Data tercecer" / "Cuma 1–2 orang tahu caranya" / Lainnya |
+| solution-direction | **Rangkuman dinamis** dari jawaban + "Anda nggak butuh sistem besar dulu" | "Quick win dulu" / "Yang lebih agresif" / "Pilot kecil dulu" / Lainnya |
+| report | "Oke, saya sudah cukup paham polanya" | Inline mini report 4 kartu |
+| lead gate | "Saya butuh beberapa data singkat" | companyName → name → WA → employeeCount → yearlyRevenue |
+| done | — | WhatsApp URL ke tim Pesat.AI |
+
+### AI reaction (momen "iya juga ya")
+
+Setelah setiap pilihan user, AI memutar `reaction` spesifik **sebelum** lanjut ke pertanyaan berikutnya. Contoh:
+
+- User pilih 👤 "Kalau saya lepas, saya takut ada yang miss" → AI: *"Kena. Berarti bisnis masih bergantung ke keterlibatan Anda. Itu biasanya sinyal keputusan kecil belum punya sistem..."*
+- User pilih 🚧 "Keputusan naik terus ke saya" → AI: *"Kena. Kalau keputusan kecil terus berhenti di Anda, biaya termahal sebenarnya bukan gaji — tapi lambatnya seluruh alur bisnis."*
+
+Timing: jeda 300ms setelah bubble user → reaction diputar → jeda 500ms → pertanyaan next (supaya reaksi sempat "berdenting").
 
 ### Personalisasi AI
 
-- Semua jawaban **“Lainnya”** tersimpan di `sessions.answers.contextAnswers.*Other`.
+- Semua jawaban **“Lainnya”** di-append ke array `freeTextNotes` di `DiagnosticState`, lalu digabung menjadi `detailNote` saat generate hasil.
 - Sistem mengambil recent Other answers dari database dan menginjeksi ke prompt LLM agar copy result terasa lebih relevan (real-time “fine-tuning”).
+- State diagnosis di-map ke `WizardAnswers` lewat `lib/diagnostic-state.ts#toWizardAnswers`, sehingga rule engine dan LLM prompt tidak perlu diubah.
 
 ---
 
@@ -205,18 +235,30 @@ Hero → Q1 → Q2 → Q3 → Q4 → Q5 → Q6 → Review → Loading → Result
 
 | File | Tanggung jawab |
 |------|----------------|
-| `components/PesatExperience.tsx` | Wizard UI utama |
+| `components/PesatExperience.tsx` | Entry point landing + memunculkan `CoachContainer` |
+| `components/coach/CoachContainer.tsx` | Container chatbot coach (header, status, messages, input, lead gate) |
+| `components/coach/useCoachSequence.ts` | Orchestrasi pesan, reply, **reaction**, akumulasi insight, & transisi node |
+| `components/coach/useFocusTrap.ts` | Focus trap & Escape-to-minimize |
+| `components/coach/QuickReplyGrid.tsx` | Grid pilihan quick reply |
+| `components/coach/ChatInput.tsx` | Input teks dengan tombol kirim / Lanjut |
+| `components/coach/CoachMessage.tsx` | Bubble pesan coach dengan typewriter |
+| `components/coach/UserMessage.tsx` | Bubble pesan user |
+| `components/coach/InsightAccumulator.tsx` | Panel persistent 4-slot insight (terisi bertahap, badge "baru" via CSS animation) |
+| `components/coach/AnalysisStatus.tsx` | Status label di atas chat |
+| `components/coach/MiniReport.tsx` | Inline 4-card coaching report |
+| `components/coach/StickyConversionBar.tsx` | CTA “Bahas Temuan Ini 20 Menit” |
 | `components/ResultView.tsx` | Halaman hasil shareable |
-| `components/ResultPanel.tsx` | Panel hasil di dalam wizard |
 | `components/ImpactComparisonChart.tsx` | Chart Before/After yang readable |
+| `lib/diagnostic-flow.ts` | Script percakapan coach: node, pesan, quick replies, **reaction**, **insightSlot**, **dynamicMessages** |
+| `lib/diagnostic-state.ts` | State diagnosis + mapper ke `WizardAnswers` |
 | `lib/solutions.ts` | Katalog solusi, pertanyaan, loading insights, follow-ups |
 | `lib/rule-engine.ts` | Logika seleksi solusi, impact metrics, findings |
 | `lib/types.ts` | TypeScript types |
-| `lib/validation.ts` | Sanitasi & validasi input |
+| `lib/validation.ts` | Sanitasi & validasi input, event screen whitelist |
 | `lib/openai-result.ts` | LLM copy generation dengan fallback |
 | `lib/db.ts` | Database client + helper recent Other examples |
 | `app/api/result/route.ts` | Generate & persist result |
-| `app/api/session/route.ts` | Persist session answers |
+| `app/api/session/route.ts` | Persist session answers & contact |
 | `app/api/discovery/route.ts` | Handle discovery request |
 
 ---
@@ -281,5 +323,9 @@ npm run smoke:prod
 
 - Jangan commit secret values ke repo.
 - Custom domain `pesat.ai` attachment dilakukan via Cloudflare; untuk sementara worker juga accessible via `pesat-ai-homepage.n311311.workers.dev`.
-- UI redesign terbaru memprioritaskan **clarity bahasa bisnis** dan **auto-advance flow** di atas visual polish.
+- UI redesign memprioritaskan rasa **"sedang dipetakan, dipahami, dan diarahkan"** — bukan "mengisi kuis". Tiga pilar: observasi→dugaan→konfirmasi, AI reaction per pilihan, insight accumulator persistent.
+- **Data-driven conversation**: semua copy, reaction, dan insight slot didefinisikan di `lib/diagnostic-flow.ts`. Mengubah alur percakapan = edit file ini saja, bukan komponen.
+- **Insight accumulator** memakai CSS animation murni untuk badge "baru" (bukan state/effect) untuk menghindari cascading renders (lint rule `react-hooks/set-state-in-effect`).
+- **DynamicMessages**: node `solution-direction` merakit rangkuman dari `DiagnosticState` lewat `rangkumanMessage()` — baca state via ref agar selalu mendapat snapshot terbaru pasca-reply.
+- Plugin `tailwindcss-animate` digunakan untuk animasi quick replies/status; jangan lupa daftarkan di `tailwind.config.ts`.
 - Semua copy product dijaga agar tidak mengandung kata “konsultan / konsultasi”; fokus pada **solusi** dan **hasil bisnis**.

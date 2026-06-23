@@ -1,13 +1,11 @@
 import {
   AVAILABLE_SOLUTIONS,
-  DETAIL_FOLLOW_UPS,
   DETAIL_LABELS,
   DETAIL_SOLUTION_MAP,
-  FRICTION_FOLLOW_UPS,
   FRICTION_SOURCES,
   TRANSITION_FACTS
 } from "@/lib/solutions";
-import type { AdoptionId, ChallengeId, ContextAnswerKey, DiagnosisPack, EfficiencyMetric, Finding, FrictionSourceId, GeneratedResult, HiddenCost, ImpactId, ImpactRanges, PesatSolution, PlanPhase, SolutionCard, WizardAnswers } from "@/lib/types";
+import type { AdoptionId, ChallengeId, DiagnosisPack, EfficiencyMetric, Finding, FrictionSourceId, GeneratedResult, HiddenCost, ImpactId, ImpactRanges, PesatSolution, PlanPhase, SolutionCard, WizardAnswers } from "@/lib/types";
 
 const CLUSTER_PRIORITY: Record<ChallengeId, string[]> = {
   revenue: ["ai_sales_assistant", "ai_repeat_order", "ai_crm_pintar", "ai_dynamic_pricing"],

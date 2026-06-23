@@ -29,8 +29,9 @@ import {
 } from "@/lib/solutions";
 import { ImpactComparisonChart } from "@/components/ImpactComparisonChart";
 import { CoachContainer } from "@/components/coach/CoachContainer";
-import { toWizardAnswers, type DiagnosticState } from "@/lib/diagnostic-state";
+
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
+import { saveSession as persistSession } from "@/lib/session";
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from "@/lib/landing";
 import type { AdoptionId, ChallengeId, ContactData, ContextAnswerKey, DetailId, GeneratedResult, ImpactId, FrictionSourceId, WizardAnswers } from "@/lib/types";
 
@@ -191,16 +192,9 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     Boolean(contact.yearlyRevenue && contact.yearlyRevenue.trim());
 
   async function saveSession(nextAnswers = answers, nextContact = contact, completed = false) {
-    const activeSessionId = sessionId || crypto.randomUUID();
+    const activeSessionId = await persistSession(sessionId, nextAnswers, nextContact, completed);
     if (!sessionId) setSessionId(activeSessionId);
-
-    const response = await fetch("/api/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: activeSessionId, answers: nextAnswers, contact: nextContact, completed })
-    }).catch(() => null);
-    const data = response ? ((await response.json().catch(() => ({}))) as { sessionId?: string }) : {};
-    return data.sessionId || activeSessionId;
+    return activeSessionId;
   }
 
   async function startWizard() {
@@ -226,13 +220,6 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
     if (!isToggleOff && id !== "other") {
       advanceWithFact("q1", "q2");
     }
-  }
-
-  async function finishCoach(diagnosticState: DiagnosticState) {
-    const wizardAnswers = toWizardAnswers(diagnosticState);
-    setAnswers(wizardAnswers);
-    setDetailNote("");
-    await generateResult(wizardAnswers);
   }
 
   async function generateResult(nextAnswersOverride?: WizardAnswers) {
@@ -512,7 +499,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
           <Footer onStartWizard={startWizard} />
         </>
       ) : step === "coach" ? (
-        <CoachContainer onClose={() => setStep("hero")} onFinish={finishCoach} />
+        <CoachContainer onClose={() => setStep("hero")} />
       ) : (
         <section className="fixed inset-0 z-20 overflow-y-auto bg-surface">
           <div className={`mx-auto flex min-h-screen w-full flex-col px-5 py-5 sm:px-8 ${step === "result" ? "max-w-5xl" : "max-w-3xl"}`}>
@@ -1282,7 +1269,7 @@ function ResultPanel({
           </div>
         ) : null}
 
-        {/* Before → After → Savings/Lift Cards -->
+        {/* Before → After → Savings/Lift Cards */}
         {isRevenueCluster ? (
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <BeforeAfterCard label="Before" value={`Rp ${formatRupiah(monthlyRevenue)}`} icon={<Clock className="h-5 w-5" />} tone="muted" />

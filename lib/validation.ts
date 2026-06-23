@@ -33,7 +33,7 @@ const frictionSourceIds = [
 ] as const satisfies readonly FrictionSourceId[];
 const adoptionIds = ["dfy", "diy", "hybrid", "starting"] as const satisfies readonly AdoptionId[];
 const eventTypes = ["screen_view", "click"] as const;
-const eventScreens = ["hero", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate", "admin"] as const;
+const eventScreens = ["hero", "q1", "q2", "q3", "q4", "q5", "q6", "review", "loading", "result", "leadGate", "admin", "coach"] as const;
 
 const challengeSet = new Set<string>(challengeIds);
 const detailSet = new Set<string>(detailIds);
