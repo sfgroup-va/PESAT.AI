@@ -75,7 +75,7 @@ const ROOTCAUSE_SUMMARY: Record<string, string> = {
 const BOTTLENECK_SUMMARY: Record<string, string> = {
   manual_admin: "input & cek ulang data manual",
   approval_pileup: "antrean keputusan",
-  data_scattered: "data tercecer di banyak tempat",
+  data_scattered: "data tersebar di banyak tempat",
   knowledge_silo: "pengetahuan yang cuma dipegang 1–2 orang"
 };
 
@@ -108,7 +108,7 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
         typewriter: true
       },
       {
-        text: "Nanti Anda tinggal koreksi kalau saya meleset — saya mulai dari membaca pola besarnya dulu, lalu kita persempit bareng.",
+        text: "Nanti Anda tinggal koreksi kalau saya meleset — saya mulai dari mengenali tekanan besarnya dulu, lalu kita persempit bersama.",
         delayMs: 1200,
         typewriter: true
       }
@@ -129,12 +129,12 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     id: "pressure-reading",
     messages: [
       {
-        text: "Di kondisi pasar seperti sekarang, bisnis biasanya tidak goyah karena satu keputusan besar. Tekanannya datang dari kebocoran kecil yang numpuk diam-diam.",
+        text: "Di kondisi seperti sekarang, bisnis biasanya tidak goyah karena satu keputusan besar. Tekanannya datang dari kebocoran kecil yang menumpuk diam-diam.",
         delayMs: 800,
         typewriter: true
       },
       {
-        text: "Dari empat pola ini, mana yang paling deket sama yang Anda rasakan?",
+        text: "Dari empat pola ini, mana yang paling dekat dengan yang Anda rasakan?",
         delayMs: 800,
         typewriter: true
       }
@@ -142,7 +142,7 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     quickReplies: [
       {
         id: "cost_pressure",
-        label: "Uang keluar terus, tapi saya nggak merasa lebih ringan",
+        label: "Uang keluar terus, tapi saya tidak merasa lebih ringan",
         emoji: "💸",
         nextNode: "root-cause",
         update: { pressureSource: "cost_pressure", severity: "moderate" },
@@ -152,17 +152,17 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
       },
       {
         id: "effort_pressure",
-        label: "Tim kelihatan sibuk, tapi hasilnya segitu-gitu aja",
+        label: "Tim terlihat sibuk, tapi hasilnya stagnan",
         emoji: "🏃",
         nextNode: "root-cause",
         update: { pressureSource: "cost_pressure", severity: "moderate" },
-        reaction: "Oke. Kalau tim udah sibuk tapi hasilnya belum berubah, saya belum curiga di jumlah orang. Saya lebih curiga di cara kerjanya — energi habis di tempat yang salah.",
+        reaction: "Oke. Kalau tim sudah sibuk tapi hasilnya belum berubah, saya belum curiga pada jumlah orang. Saya lebih curiga pada cara kerjanya — energi terkuras di tempat yang salah.",
         insightSlot: "pressure",
-        insightValue: "cara kerja yang hisab energi tim"
+        insightValue: "cara kerja yang menghabiskan energi tim"
       },
       {
         id: "owner_pressure",
-        label: "Kalau saya lepas, saya takut ada yang miss",
+        label: "Kalau saya lepas, saya takut ada yang terlewat",
         emoji: "👤",
         nextNode: "root-cause",
         update: { pressureSource: "risk_trust_pressure", severity: "serious" },
@@ -172,13 +172,13 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
       },
       {
         id: "visibility_pressure",
-        label: "Masalah sering baru keliatan setelah telat",
+        label: "Masalah sering baru terlihat setelah terlambat",
         emoji: "⏰",
         nextNode: "root-cause",
         update: { pressureSource: "cash_stock_pressure", severity: "serious" },
-        reaction: "Kena. Berarti Anda sering bereaksi terlambat — bukan karena nggak peduli, tapi karena info datang setelah kerugiannya terjadi.",
+        reaction: "Kena. Berarti Anda sering bereaksi terlambat — bukan karena tidak peduli, tapi karena informasi datang setelah kerugiannya terjadi.",
         insightSlot: "pressure",
-        insightValue: "visibilitas yang telat"
+        insightValue: "visibilitas yang terlambat"
       },
       {
         id: "pressure_other",
@@ -200,7 +200,7 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     id: "root-cause",
     messages: [
       {
-        text: "Saya persempit satu tingkat lagi. Biasanya kalau kayak gini, akar masalahnya bukan satu hal besar — tapi salah satu dari pola berikut. Mana yang paling nguras energi Anda?",
+        text: "Saya persempit satu tingkat lagi. Biasanya kalau seperti ini, akar masalahnya bukan satu hal besar — tapi salah satu dari pola berikut. Mana yang paling menguras energi Anda?",
         delayMs: 1000,
         typewriter: true
       }
@@ -208,17 +208,17 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     quickReplies: [
       {
         id: "repeated_work",
-        label: "Kerja kecil yang berulang terus",
+        label: "Kerja kecil yang berulang",
         emoji: "🔄",
         nextNode: "bottleneck-test",
         update: { rootCause: "repeated_work" },
-        reaction: "Menarik. Kerja berulang itu biaya yang paling nggak keliatan di laporan — tapi paling nyata di energi tim.",
+        reaction: "Menarik. Kerja berulang adalah biaya yang paling tidak terlihat di laporan — tapi paling nyata di energi tim.",
         insightSlot: "rootCause",
         insightValue: "kerja berulang yang terus jalan"
       },
       {
         id: "owner_bottleneck",
-        label: "Keputusan kecil naik terus ke saya",
+        label: "Keputusan kecil selalu ke saya",
         emoji: "🚧",
         nextNode: "bottleneck-test",
         update: { rootCause: "owner_bottleneck" },
@@ -228,21 +228,21 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
       },
       {
         id: "late_visibility",
-        label: "Masalah baru keliatan saat udah telat",
+        label: "Masalah baru terlihat saat sudah terlambat",
         emoji: "⏰",
         nextNode: "bottleneck-test",
         update: { rootCause: "late_visibility" },
-        reaction: "Kena. Visibilitas yang telat = Anda ambil keputusan hari ini pakai data kemarin.",
+        reaction: "Kena. Visibilitas yang terlambat berarti Anda mengambil keputusan hari ini dengan data kemarin.",
         insightSlot: "rootCause",
         insightValue: "masalah telat terlihat"
       },
       {
         id: "mixed",
-        label: "Campuran semuanya",
+        label: "Campuran dari semuanya",
         emoji: "🌀",
         nextNode: "bottleneck-test",
         update: { rootCause: "mixed" },
-        reaction: "Oke, campuran. Itu wajar. Nanti saya susun prioritasnya — mana yang kalau diberesin dulu, sisanya ikut ringan.",
+        reaction: "Oke, campuran. Itu wajar. Nanti saya susun prioritasnya — mana yang kalau diselesaikan dulu, sisanya ikut ringan.",
         insightSlot: "rootCause",
         insightValue: "kebocoran dari banyak sisi"
       },
@@ -266,7 +266,7 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     id: "bottleneck-test",
     messages: [
       {
-        text: "Satu hal lagi biar saya yakin. Waktu hal-hal kecil macet di bisnis Anda, biasanya berhenti di mana?",
+        text: "Satu hal lagi agar saya yakin. Ketika hal-hal kecil macet di bisnis Anda, biasanya berhenti di mana?",
         delayMs: 1000,
         typewriter: true
       }
@@ -278,13 +278,13 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
         emoji: "📝",
         nextNode: "solution-direction",
         update: { bottleneck: "manual_admin" },
-        reaction: "Nah, itu. Input manual itu pekerjaan yang sebenernya bisa dijalankan sistem — tapi sekarang dikerjakan manusia, berulang, tiap hari.",
+        reaction: "Nah, itu. Input manual adalah pekerjaan yang sebenarnya bisa dijalankan sistem — tapi sekarang dikerjakan manusia, berulang, setiap hari.",
         insightSlot: "bottleneck",
         insightValue: "input manual berulang"
       },
       {
         id: "approval_pileup",
-        label: "Nunggu keputusan saya / atasan",
+        label: "Menunggu keputusan saya / atasan",
         emoji: "⏳",
         nextNode: "solution-direction",
         update: { bottleneck: "approval_pileup" },
@@ -294,13 +294,13 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
       },
       {
         id: "data_scattered",
-        label: "Data tercecer di banyak tempat",
+        label: "Data tersebar di banyak tempat",
         emoji: "📊",
         nextNode: "solution-direction",
         update: { bottleneck: "data_scattered" },
-        reaction: "Kena. Data tercecer artinya tiap keputusan butuh gathering dulu — dan sering versinya beda-beda.",
+        reaction: "Kena. Data tersebar artinya setiap keputusan butuh mengumpulkan data dulu — dan sering versinya berbeda-beda.",
         insightSlot: "bottleneck",
-        insightValue: "data tercecer"
+        insightValue: "data tersebar"
       },
       {
         id: "knowledge_silo",
@@ -308,7 +308,7 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
         emoji: "🧠",
         nextNode: "solution-direction",
         update: { bottleneck: "knowledge_silo" },
-        reaction: "Kena. Kalau cuma 1–2 orang tahu, satu orang cuti atau resign, proses berhenti. Itu risiko tersembunyi.",
+        reaction: "Kena. Kalau hanya 1–2 orang yang tahu, satu orang cuti atau resign saja proses bisa berhenti. Itu risiko tersembunyi.",
         insightSlot: "bottleneck",
         insightValue: "pengetahuan terkonsentrasi di sedikit orang"
       },
@@ -334,12 +334,12 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     dynamicMessages: [rangkumanMessage],
     messages: [
       {
-        text: "Kabar baiknya — Anda nggak butuh sistem besar dulu. Anda butuh quick win yang bikin bisnis terasa lebih ringan, lebih keliatan, dan nggak terlalu bergantung ke energi Anda sendiri.",
+        text: "Kabar baiknya — Anda tidak butuh sistem besar dulu. Anda butuh quick win yang membuat bisnis terasa lebih ringan, lebih terlihat, dan tidak terlalu bergantung pada energi Anda sendiri.",
         delayMs: 1200,
         typewriter: true
       },
       {
-        text: "Sebelum saya susun insight-nya, arah mana yang paling cocok sama Anda?",
+        text: "Sebelum saya susun insight-nya, arah mana yang paling cocok untuk Anda?",
         delayMs: 700,
         typewriter: true
       }
@@ -347,17 +347,17 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     quickReplies: [
       {
         id: "quick_win",
-        label: "Iya, quick win dulu aja",
+        label: "Iya, quick win dulu saja",
         emoji: "⚡",
         nextNode: "transition-to-result",
         update: { solutionStyle: "quick_win" },
-        reaction: "Pas. Kita ambil satu titik yang kalau diberesin, efeknya langsung kerasa. Itu cara terbaik ngebangun momentum.",
+        reaction: "Pas. Kita ambil satu titik yang kalau diselesaikan, efeknya langsung terasa. Itu cara terbaik membangun momentum.",
         insightSlot: "solution",
         insightValue: "quick win dulu, bukan proyek besar"
       },
       {
         id: "full_setup",
-        label: "Saya mau yang lebih agresif",
+        label: "Saya ingin yang lebih agresif",
         emoji: "🚀",
         nextNode: "transition-to-result",
         update: { solutionStyle: "full_setup" },
@@ -395,7 +395,7 @@ export const COACH_FLOW: Record<FlowNodeId, FlowNode> = {
     id: "transition-to-result",
     messages: [
       {
-        text: "Oke, saya udah cukup paham polanya. Saya rangkum jadi insight yang bisa langsung Anda baca.",
+        text: "Oke, saya sudah cukup paham polanya. Saya rangkum jadi insight yang bisa langsung Anda baca.",
         delayMs: 1000,
         typewriter: true
       }
