@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Sora } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/home/ThemeProvider";
+import { CoachProvider } from "@/components/coach/CoachProvider";
+import { FloatingCoachWidget } from "@/components/coach/FloatingCoachWidget";
 
 // Body / UI — premium humanist geometric (SF-Pro-adjacent, not the over-used Inter)
 const sans = Plus_Jakarta_Sans({
@@ -48,7 +50,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <div className="grain-overlay" aria-hidden />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <CoachProvider>
+            {children}
+            <FloatingCoachWidget />
+          </CoachProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

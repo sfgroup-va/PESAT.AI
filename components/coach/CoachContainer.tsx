@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Minus, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useCoachSequence, type ChatItem } from "./useCoachSequence";
 import { CoachMessage } from "./CoachMessage";
 import { UserMessage } from "./UserMessage";
@@ -29,7 +29,6 @@ const LEAD_FIELDS: Array<{ key: keyof ContactData; label: string; placeholder: s
 
 export function CoachContainer({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<"chat" | "generating" | "report" | "leadGate" | "submitting" | "done">("chat");
-  const [isMinimized, setIsMinimized] = useState(false);
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [resultError, setResultError] = useState("");
   const [extraItems, setExtraItems] = useState<ChatItem[]>([]);
@@ -90,7 +89,7 @@ export function CoachContainer({ onClose }: { onClose: () => void }) {
     }
   });
 
-  useFocusTrap(containerRef, !isMinimized, () => setIsMinimized(true));
+  useFocusTrap(containerRef, true, onClose);
 
   useEffect(() => {
     void track("screen_view", { subScreen: "coach_open", sessionId: sessionIdRef.current });
@@ -120,7 +119,7 @@ export function CoachContainer({ onClose }: { onClose: () => void }) {
   }, [pendingFreeText, leadStep, phase]);
 
   useEffect(() => {
-    if (!isMinimized && containerRef.current) {
+    if (containerRef.current) {
       const id = setTimeout(() => {
         const focusable = containerRef.current?.querySelectorAll<HTMLElement>(
           "button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"])"
@@ -132,7 +131,7 @@ export function CoachContainer({ onClose }: { onClose: () => void }) {
       }, 100);
       return () => clearTimeout(id);
     }
-  }, [isMinimized]);
+  }, []);
 
   async function track(type: "screen_view" | "click", metadata?: Record<string, unknown>) {
     try {
@@ -262,41 +261,14 @@ export function CoachContainer({ onClose }: { onClose: () => void }) {
     onClose();
   }
 
-  function toggleMinimize() {
-    setIsMinimized((prev) => {
-      const next = !prev;
-      void track("click", { action: next ? "minimize_coach" : "expand_coach", sessionId: sessionIdRef.current });
-      return next;
-    });
-  }
-
   const showQuickReplies = phase === "chat" && isChoosing && !pendingFreeText && currentNode.quickReplies && currentNode.quickReplies.length > 0;
   const allItems = [...items, ...extraItems];
   const currentStatus = phase === "generating" ? "Menyusun hasil diagnosis" : statusLabel;
 
-  if (isMinimized) {
-    return (
-      <button
-        type="button"
-        onClick={toggleMinimize}
-        className="fixed bottom-5 right-5 z-30 flex animate-scale-in items-center gap-3 rounded-full border border-neutral-200 bg-white px-4 py-3 shadow-2xl shadow-neutral-900/10 transition hover:-translate-y-0.5 hover:shadow-xl"
-        aria-label="Buka AI Business Coach"
-      >
-        <div className="relative">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white">
-            <span className="text-base font-bold">P</span>
-          </div>
-          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400" />
-        </div>
-        <span className="hidden pr-1 text-sm font-bold text-neutral-900 sm:inline">AI Business Coach</span>
-      </button>
-    );
-  }
-
   return (
     <section
       ref={containerRef}
-      className="fixed inset-0 z-30 flex animate-scale-in flex-col bg-neutral-50 sm:inset-auto sm:right-4 sm:top-4 sm:h-[calc(100vh-2rem)] sm:w-[420px] overflow-hidden sm:rounded-[2rem] sm:border sm:border-neutral-200 sm:shadow-2xl sm:shadow-neutral-900/10"
+      className="relative flex h-full w-full flex-col overflow-hidden bg-neutral-50"
     >
       {/* Header */}
       <div className="relative flex items-center justify-between border-b border-neutral-100 bg-white px-5 py-4 sm:rounded-t-[2rem]">
@@ -316,14 +288,6 @@ export function CoachContainer({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={toggleMinimize}
-            className="grid h-9 w-9 place-items-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700"
-            aria-label="Minimize"
-          >
-            <Minus className="h-[18px] w-[18px]" />
-          </button>
           <button
             type="button"
             onClick={handleClose}

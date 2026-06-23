@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useCoach } from "@/components/coach/CoachProvider";
 import {
   AlertTriangle,
   ArrowRight,
@@ -51,12 +52,13 @@ function waLink(text: string) {
 }
 
 export function ServicesContent() {
+  const { openCoach } = useCoach();
   const [active, setActive] = useState<ServiceCategoryId | "all">("all");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<ServiceItem | null>(null);
 
-  const goHome = () => {
-    window.location.href = "/";
+  const startCoach = () => {
+    openCoach();
   };
 
   // Lock scroll + ESC to close while modal open
@@ -101,7 +103,7 @@ export function ServicesContent() {
 
   return (
     <main className="bg-surface text-foreground">
-      <Header onStartWizard={goHome} />
+      <Header onStartWizard={startCoach} />
 
       {/* ===== Hero ===== */}
       <section className="relative isolate overflow-hidden bg-surface pt-28 pb-12 sm:pt-32 lg:pt-36 lg:pb-16">
@@ -137,7 +139,7 @@ export function ServicesContent() {
           <RevealOnScroll delay={210}>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
               <button
-                onClick={goHome}
+                onClick={startCoach}
                 className="motion-cta-shimmer fx-ring group inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-sm font-semibold text-surface shadow-[0_18px_50px_-16px_rgba(15,23,42,0.5)] transition hover:-translate-y-0.5"
               >
                 <Sparkles className="h-5 w-5" />
@@ -289,7 +291,7 @@ export function ServicesContent() {
           </RevealOnScroll>
           <RevealOnScroll delay={140}>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <button onClick={goHome} className="motion-cta-shimmer fx-glow inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-white px-7 text-base font-semibold text-neutral-950 transition hover:-translate-y-0.5">
+              <button onClick={startCoach} className="motion-cta-shimmer fx-glow inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-white px-7 text-base font-semibold text-neutral-950 transition hover:-translate-y-0.5">
                 <Sparkles className="h-5 w-5" />
                 Buktikan Sendiri dalam 5 Menit
                 <ArrowRight className="h-5 w-5" />
@@ -303,11 +305,11 @@ export function ServicesContent() {
         </div>
       </section>
 
-      <Footer onStartWizard={goHome} />
+      <Footer onStartWizard={startCoach} />
 
       {/* ===== Detail Modal ===== */}
       {selected ? (
-        <ServiceModal service={selected} tint={TINT[tintOf(selected.category)]} categoryLabel={labelOf(selected.category)} onClose={() => setSelected(null)} goHome={goHome} />
+        <ServiceModal service={selected} tint={TINT[tintOf(selected.category)]} categoryLabel={labelOf(selected.category)} onClose={() => setSelected(null)} goHome={startCoach} />
       ) : null}
     </main>
   );

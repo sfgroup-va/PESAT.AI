@@ -28,7 +28,7 @@ import {
   STACK_FOLLOW_UP
 } from "@/lib/solutions";
 import { ImpactComparisonChart } from "@/components/ImpactComparisonChart";
-import { CoachContainer } from "@/components/coach/CoachContainer";
+import { useCoach } from "@/components/coach/CoachProvider";
 
 import { hasUsableWhatsAppNumber } from "@/lib/validation";
 import { saveSession as persistSession } from "@/lib/session";
@@ -151,6 +151,7 @@ function useLoadingSequence(insights: typeof LOADING_INSIGHTS, onComplete: () =>
 
 export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   const cfg = landing ?? DEFAULT_LANDING_CONFIG;
+  const { openCoach } = useCoach();
   const [step, setStep] = useState<Step>("hero");
   const [sessionId, setSessionId] = useState<string>("");
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers);
@@ -200,7 +201,7 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
   async function startWizard() {
     const activeSessionId = await saveSession();
     await track("click", "hero", { cta: "Mulai Sesi dengan AI Business Coach" }, activeSessionId);
-    setStep("coach");
+    openCoach();
   }
 
   function selectChallenge(id: ChallengeId | "other") {
@@ -483,9 +484,9 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
-      {step === "hero" ? (
-        <>
-          <Header onStartWizard={startWizard} />
+    {step === "hero" || step === "coach" ? (
+      <>
+        <Header onStartWizard={startWizard} />
           <Hero onStartWizard={startWizard} onScheduleDiscovery={scheduleDiscovery} overrides={cfg.overrides} />
           {cfg.sections.fomo ? <Fomo onStartWizard={startWizard} /> : null}
           {cfg.sections.pillars ? <Pillars onStartWizard={startWizard} /> : null}
@@ -496,11 +497,9 @@ export function PesatExperience({ landing }: { landing?: LandingConfig } = {}) {
           {cfg.sections.testimonial ? <Testimonial /> : null}
           {cfg.sections.pricing ? <Pricing onStartWizard={startWizard} /> : null}
           {cfg.sections.ctaDark ? <CtaBand variant="dark" showSecondary onStartWizard={startWizard} onScheduleDiscovery={scheduleDiscovery} /> : null}
-          <Footer onStartWizard={startWizard} />
-        </>
-      ) : step === "coach" ? (
-        <CoachContainer onClose={() => setStep("hero")} />
-      ) : (
+        <Footer onStartWizard={startWizard} />
+      </>
+    ) : (
         <section className="fixed inset-0 z-20 overflow-y-auto bg-surface">
           <div className={`mx-auto flex min-h-screen w-full flex-col px-5 py-5 sm:px-8 ${step === "result" ? "max-w-5xl" : "max-w-3xl"}`}>
             {/* Header */}
