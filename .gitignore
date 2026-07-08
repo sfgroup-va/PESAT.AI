@@ -9,6 +9,12 @@ out
 .wrangler
 *.log
 
+# Local backups & machine-specific copies
+backups/
+*-Keplu*
+*-Desktop-Nell*
+*-NoiroPC*
+
 # Internal handoff docs — contain real secrets, never push
-CLOUDFLARE_GUIDE.md
+CLOUDFARE_GUIDE.md
 .claude

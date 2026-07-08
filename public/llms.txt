@@ -1,0 +1,26 @@
+# Pesat.AI
+
+> Homepage dan mini session AI untuk bisnis Indonesia. Bantu pemilik bisnis, C-level, dan tim operasional menemukan peluang AI paling cepat berdampak dalam 5 menit — tanpa signup, tanpa kartu kredit.
+
+Pesat.AI menyediakan katalog 33 solusi AI praktis yang dikelompokkan dalam 6 area: Naik Revenue, Hemat Biaya, Prediksi Akurat, Keputusan Cepat, Bisnis Aman, dan Brand Dipercaya. Setiap solusi dilengkapi contoh nyata, analogi, estimasi waktu, biaya, dan risiko.
+
+Pengunjung menjalankan mini session lewat wizard 5 menit di homepage. Mereka menjawab pertanyaan singkat tentang tantangan utama, titik bocor, intensitas masalah, sumber gesekan, dan gaya adopsi. Backend memetakan jawaban ke cluster solusi menggunakan rule engine; OpenAI hanya memperkuat copy hasil, tidak menciptakan solusi atau angka baru. Output berupa diagnosis operasional shareable (URL + PDF) yang bisa dibahas langsung dengan tim Pesat.AI.
+
+## Produk & Metodologi
+
+- [Beranda / Mini Session](https://pesat.ai/): Wizard 5 menit untuk mendiagnosis peluang AI, otomasi, efisiensi biaya, dan risiko operasional.
+- [Katalog Layanan AI](https://pesat.ai/services): 33 solusi AI dalam 6 cluster dengan filter, contoh nyata, analogi, dan estimasi.
+- [Hasil Mini Session](https://pesat.ai/result/[sessionId]): Laporan shareable berupa diagnosis, impact cards, before/after, dan roadmap 90 hari.
+
+## Kontak
+
+- [WhatsApp Pesat.AI](https://wa.me/6281290401240?text=Halo%20Pesat.AI%2C%20saya%20mau%20tanya%20layanan%20AI): Kontak langsung ke tim untuk tanya layanan atau jadwalkan strategy call.
+
+## Resources
+
+- [Sitemap](https://pesat.ai/sitemap.xml): Daftar URL publik yang dapat diindex.
+- [robots.txt](https://pesat.ai/robots.txt): Aturan akses crawler untuk bot.
+
+## Optional
+
+- [Admin Funnel](https://pesat.ai/admin): Dashboard internal funnel drop-off dan discovery count (memerlukan akses).
