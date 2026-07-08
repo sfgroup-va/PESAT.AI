@@ -13,6 +13,7 @@ Pesat.AI adalah landing page + Mini Session diagnostic tool untuk **B2B AI solut
 - **Database:** Neon Postgres / Supabase (session, events, discovery requests)
 - **AI copy generation:** OpenAI Responses API (with deterministic fallback)
 - **Styling:** Tailwind CSS
+- **LLM discovery:** `public/llms.txt` tersedia di `/llms.txt` untuk AI crawlers (lihat [LLMs.txt](#llmstxt))
 
 ---
 
@@ -281,7 +282,28 @@ npm run check:quality
 
 ---
 
-## 12. Common Issues
+## 12. LLMs.txt
+
+Project menyediakan file `public/llms.txt` yang dipublikasikan di endpoint `/llms.txt`. File ini berisi ringkasan project, produk, metodologi, kontak, dan resources dalam format yang mudah dibaca oleh AI crawlers.
+
+### URL
+
+- Production: https://pesat.ai/llms.txt
+- Worker staging: https://pesat-ai-homepage.n311311.workers.dev/llms.txt
+
+### Cara maintain
+
+File `public/llms.txt` adalah file statis. Untuk mengupdate:
+
+1. Edit `public/llms.txt`.
+2. Jalankan `npm run check:quality` untuk memastikan tidak ada masalah.
+3. Commit dan push ke `main` — deploy otomatis akan memublikasikan versi baru.
+
+> Tips: jangan mengubah struktur markdown secara drastis karena banyak AI parser mengandalkan heading `#`, `##`, dan list.
+
+---
+
+## 13. Common Issues
 
 ### `workerd-windows-64` not found
 
@@ -298,9 +320,14 @@ npm run check:quality
 **Cause:** Git Credential Manager meminta dialog autentikasi.
 **Fix:** Push dari environment yang sudah authenticated, atau gunakan HTTPS dengan PAT valid.
 
+### Typecheck / lint error karena file backup `-Keplu`, `-Desktop-Nell`, atau `-NoiroPC`
+
+**Cause:** File backup/machine-copy ikut masuk ke TypeScript compilation atau ESLint scan.
+**Fix:** Pindahkan file-file tersebut ke folder `backups/` (sudah di-ignore) atau hapus. Pastikan `.gitignore` dan `tsconfig.json` exclude folder `backups/`.
+
 ---
 
-## 13. Useful Commands
+## 14. Useful Commands
 
 ```bash
 # Check domain readiness
@@ -319,7 +346,7 @@ npm run smoke:prod
 
 ---
 
-## 14. Notes
+## 15. Notes
 
 - Jangan commit secret values ke repo.
 - Custom domain `pesat.ai` attachment dilakukan via Cloudflare; untuk sementara worker juga accessible via `pesat-ai-homepage.n311311.workers.dev`.
@@ -329,3 +356,13 @@ npm run smoke:prod
 - **DynamicMessages**: node `solution-direction` merakit rangkuman dari `DiagnosticState` lewat `rangkumanMessage()` — baca state via ref agar selalu mendapat snapshot terbaru pasca-reply.
 - Plugin `tailwindcss-animate` digunakan untuk animasi quick replies/status; jangan lupa daftarkan di `tailwind.config.ts`.
 - Semua copy product dijaga agar tidak mengandung kata “konsultan / konsultasi”; fokus pada **solusi** dan **hasil bisnis**.
+
+---
+
+## 16. Fix Log / Changelog
+
+| Date | Perubahan | Status |
+|------|-----------|--------|
+| 2026-07-08 | Implementasi `public/llms.txt` untuk AI crawlers; deploy ke Cloudflare Workers via GitHub Actions | ✅ Deployed |
+| 2026-07-08 | Bersihkan file backup `-Keplu` dan update `.gitignore` + `tsconfig.json` agar tidak ikut compile | ✅ Repo clean |
+| 2026-07-08 | Fix lint error `react-hooks/set-state-in-effect` di `components/LandingEditor.tsx` | ✅ Quality gate lolos |
