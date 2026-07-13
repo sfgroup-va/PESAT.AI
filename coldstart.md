@@ -359,10 +359,90 @@ npm run smoke:prod
 
 ---
 
-## 16. Fix Log / Changelog
+## 16. CMS Landing Pages
+
+CMS untuk mengelola landing page bisnis berada di `/admin/landing` (dashboard) dan `/admin/landing/[slug]` (editor per halaman). Route `/cms` juga redirect ke `/admin/landing`.
+
+| File | Tanggung jawab |
+|------|----------------|
+| `app/admin/landing/page.tsx` | Route dashboard CMS landing page |
+| `app/admin/landing/[slug]/page.tsx` | Route editor untuk satu landing page |
+| `app/cms/page.tsx` | Redirect `/cms` → `/admin/landing` |
+| `components/LandingCmsDashboard.tsx` | Dashboard daftar landing page |
+| `components/LandingEditor.tsx` | Editor konten, layout, dan CTA landing page |
+
+### 16.1 Form submission UX
+
+Form di landing page **tidak langsung redirect ke WhatsApp** setelah submit. Alur wajib:
+
+1. User isi form → submit.
+2. Sistem persist data (ke database / discovery request).
+3. User diarahkan ke **thank-you page** internal.
+4. Di thank-you page baru muncul tombol **Hubungkan ke WhatsApp** sebagai pilihan, bukan redirect paksa.
+
+Tujuannya: user merasa datanya terekam dan akan di-follow-up oleh tim `pesat.ai`, bukan sekadar dilempar ke chat.
+
+### 16.2 Thank-you page spec
+
+Tampilan thank-you page mengikuti referensi dari tim Conversion:
+
+- **Headline:** `Data Berhasil Dikirim!`
+- **Subcopy:** `Terima kasih sudah mengisi data. Izinkan kami mengarahkan Anda ke WhatsApp Sales Konsultan untuk detail promo & brosur?`
+- **Primary CTA:** tombol hijau dengan ikon WhatsApp — `Hubungkan ke WhatsApp`
+- **Secondary action:** link teks `Nanti Saja, Kembali ke Halaman Utama`
+- **Visual:** ikon / ilustrasi success (sparkle / check) di atas headline untuk memberi feedback positif.
+
+Button WhatsApp membawa URL ke WA sales Pesat.AI dengan pesan yang sudah tersusun. Link kembali mengarahkan ke homepage (`/`).
+
+### 16.3 Tracking
+
+- **Tracking pixel / event tracker dipasang pada tombol `Hubungkan ke WhatsApp` di thank-you page**, bukan pada submit form awal.
+- Jika CMS menyediakan field tracking (UTM, pixel ID, event name), field tersebut di-bind ke button WA agar tim Conversion bisa mengukur konversi dari thank-you page ke WhatsApp.
+
+### 16.4 Known issues / todo
+
+- Beberapa section landing page (misalnya *Use Case* dan *Portfolio/Hasil Nyata*) masih tampak kosong di preview; perlu diisi konten default atau validasi required field di CMS editor.
+- Saat membuat landing page baru, cek setiap section sudah memiliki konten / asset sebelum publish.
+
+---
+
+## 17. Fix Log / Changelog
 
 | Date | Perubahan | Status |
 |------|-----------|--------|
+| 2026-07-10 | Update `coldstart.md`: tambahkan section **CMS Landing Pages** — spec form submit → thank-you page, desain thank-you page, tracking di tombol WA, dan catatan section kosong | ✅ Dokumentasi updated |
 | 2026-07-08 | Implementasi `public/llms.txt` untuk AI crawlers; deploy ke Cloudflare Workers via GitHub Actions | ✅ Deployed |
 | 2026-07-08 | Bersihkan file backup `-Keplu` dan update `.gitignore` + `tsconfig.json` agar tidak ikut compile | ✅ Repo clean |
 | 2026-07-08 | Fix lint error `react-hooks/set-state-in-effect` di `components/LandingEditor.tsx` | ✅ Quality gate lolos |
+
+---
+
+## 2026-07-13 21:30 — Implement deposit page + PayPal integration
+
+- **Type:** CODING
+- **Status:** COMPLETED
+- **Files touched:** `app/deposit/page.tsx`, `app/deposit/thank-you/page.tsx`, `app/admin/deposit/page.tsx`, `components/DepositEditor.tsx`, `components/deposit/PayPalDepositButtons.tsx`, `lib/deposit.ts`, `lib/deposit-server.ts`, `lib/paypal.ts`, `app/api/deposit/config/route.ts`, `app/api/paypal/order/route.ts`, `app/api/paypal/capture/route.ts`, `app/api/admin/deposit/route.ts`, `app/api/admin/deposit/publish/route.ts`, `app/api/admin/deposit/transactions/route.ts`, `supabase/migrations/20260713000000_deposit_pages_and_transactions.sql`, `wrangler.jsonc`, `.env.example`, `.env.production.example`, `components/AdminDashboard.tsx`, `VERSION.md`
+- **Key decisions:**
+  - Mengimplementasi spesifikasi `docs/superpowers/specs/2026-07-13-deposit-page-design.md` secara penuh.
+  - Default `deposit_pages.is_published` di-set `true` agar `/deposit` langsung tidak 404 setelah migrasi dan deploy.
+  - PayPal Client ID publik disimpan di `wrangler.jsonc` sebagai fallback; secret `PAYPAL_SECRET` diset di `.env.local` (lokal) dan sebagai Worker secret (production).
+  - Menggunakan PayPal live endpoint `https://api-m.paypal.com` dengan server-side order creation & capture.
+- **Blockers:** none — deployment production memerlukan push ke main + apply migrasi DB + set Worker secret PAYPAL_SECRET.
+- **Next step:** Push ke `main`, apply `supabase/migrations/20260713000000_deposit_pages_and_transactions.sql`, dan set `wrangler secret put PAYPAL_SECRET`.
+- **Inspector:** PASSED
+- **Backup location:** `backups/2026-07-13_000000_implement-deposit-page/`
+- **coldstart.md stored at:** `D:\Ansel-OneDrive\OneDrive\PESAT AI\coldstart.md`
+- **Browser used:** none
+
+## 2026-07-10 00:00 — Update coldstart.md CMS Landing Page spec
+
+- **Type:** WRITING
+- **Status:** COMPLETED
+- **Files touched:** `coldstart.md`
+- **Key decisions:** Menambahkan section **CMS Landing Pages** berdasarkan screenshot feedback WA tim Conversion. Menyepakati alur form submit → thank-you page internal → tombol WA, spesifikasi copy & CTA thank-you page, serta tracking hanya di tombol WhatsApp.
+- **Blockers:** none
+- **Next step:** Implementasi perubahan di form handler + buat komponen thank-you page di landing/offer flow; tambahkan tracking event pada tombol WA.
+- **Inspector:** PASSED
+- **Backup location:** `backups/2026-07-10_000000_update-coldstart-cms/`
+- **coldstart.md stored at:** `D:\Ansel-OneDrive\OneDrive\PESAT AI\coldstart.md`
+- **Browser used:** none

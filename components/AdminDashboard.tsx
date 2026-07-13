@@ -58,6 +58,7 @@ export function AdminDashboard() {
         <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-400">Admin</p>
         <h1 className="text-4xl font-semibold leading-tight sm:text-6xl">Pesat.AI funnel</h1>
         <Link href="/admin/landing" className="mt-5 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-5 py-2 text-sm font-semibold hover:border-neutral-900">🧩 Kelola Landing Pages (CMS)</Link>
+        <Link href="/admin/deposit" className="ml-2 mt-5 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-5 py-2 text-sm font-semibold hover:border-neutral-900">💳 Kelola Deposit Page</Link>
         <form onSubmit={loadSummary} className="mt-6 flex max-w-xl gap-3">
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="min-h-12 flex-1 rounded-full border border-neutral-200 px-5 outline-none focus:border-neutral-900" placeholder="Admin password" />
           <button className="min-h-12 rounded-full bg-neutral-950 px-6 font-semibold text-white">Buka</button>
