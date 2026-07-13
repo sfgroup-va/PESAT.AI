@@ -2,7 +2,7 @@
 
 ## v0.10 — 2026-07-13
 
-- Type: Feature
+- Type: Feature + Deploy
 - Changes:
   - Implement halaman `/deposit` dengan PayPal Smart Buttons (live).
   - Tambah halaman `/deposit/thank-you` setelah pembayaran berhasil.
@@ -11,6 +11,9 @@
   - Tambah API admin `/api/admin/deposit`, `/api/admin/deposit/publish`, `/api/admin/deposit/transactions`.
   - Tambah migration `20260713000000_deposit_pages_and_transactions.sql` (default published, $500).
   - Integrasi PayPal Client ID via `wrangler.jsonc` + `NEXT_PUBLIC_PAYPAL_CLIENT_ID`; secret via `PAYPAL_SECRET`.
+  - Set `PAYPAL_SECRET` di Cloudflare Worker via `wrangler secret put`.
+  - Tambah step `Apply database migrations` di `.github/workflows/deploy.yml` agar migration dijalankan otomatis saat deploy.
+  - Deploy ke production via GitHub Actions workflow #31; `/deposit` sudah live dan memunculkan tombol PayPal.
 - Files touched:
   - `app/deposit/page.tsx`
   - `app/deposit/thank-you/page.tsx`
@@ -31,4 +34,6 @@
   - `.env.example`
   - `.env.production.example`
   - `components/AdminDashboard.tsx`
+  - `.github/workflows/deploy.yml`
+  - `VERSION.md`
 - Breaking: no
