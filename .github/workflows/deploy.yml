@@ -31,6 +31,19 @@ jobs:
       - name: Build (OpenNext for Cloudflare)
         run: npx opennextjs-cloudflare build
 
+      - name: Apply database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -e
+          if [ -n "$DATABASE_URL" ]; then
+            sudo apt-get update -y && sudo apt-get install -y postgresql-client
+            for file in supabase/migrations/*.sql; do
+              echo "Applying $file"
+              psql "$DATABASE_URL" -f "$file"
+            done
+          fi
+
       - name: Deploy Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
