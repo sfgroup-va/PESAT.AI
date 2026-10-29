@@ -417,16 +417,23 @@ Button WhatsApp membawa URL ke WA sales Pesat.AI dengan pesan yang sudah tersusu
 | 2026-07-08 | Fix lint error `react-hooks/set-state-in-effect` di `components/LandingEditor.tsx` | ✅ Quality gate lolos |
 | 2026-10-27 | Reverse engineer Glossary Builder & Roborank.io; implementasi Glosarium AI B2B lokal (`/glossary` & `/glossary/[slug]`) dengan 17 istilah, Schema JSON-LD, A-Z index, search, and internal link mesh | ✅ Selesai |
 | 2026-10-27 | Tambah generator HTML statis `scripts/build-glossary-html.mjs` → output `glossary-html/` (18 file, bisa dibuka langsung tanpa server) | ✅ Verified |
-| 2026-10-29 | QA & Standarisasi Glosarium AI B2B: ekspansi ke 23 istilah (tambah GEO, DRA™, AHE Method™, AI Demand Forecasting, AI Sales Assistant, Diagnostic Mini Session), integrasi Header & Footer resmi situs dengan coach launcher, UX upgrades (one-click copy definition, reading progress bar, contextual mini session hooks), sinkronisasi statis HTML (24 file) ke glossary-html/ dan backup drive, quality gate 100% pass | ✅ Ready for Deploy |
+| 2026-10-29 | QA & Standarisasi Glosarium AI B2B: ekspansi ke 23 istilah (tambah GEO, DRA™, AHE Method™, AI Demand Forecasting, AI Sales Assistant, Diagnostic Mini Session), integrasi Header & Footer resmi situs dengan coach launcher, UX upgrades (one-click copy definition, reading progress bar, contextual mini session hooks), sinkronisasi statis HTML (24 file) ke glossary-html/ dan backup drive | ✅ Verified |
+| 2026-10-29 | Refresh `CLOUDFLARE_API_TOKEN` di GitHub Secrets & deploy ke Cloudflare Workers via GitHub Actions (Run ID: `40848593459`) → live di `https://pesat.ai/glossary` | ✅ Deployed & Live |
 
 ---
 
 ## 2026-10-29 — Publish Glosarium AI B2B + UX Upgrades
-- **Status:** COMPLETED
-- **Files touched:** `lib/glossary-data.ts`, `app/glossary/page.tsx`, `app/glossary/[slug]/page.tsx`, `components/glossary/GlossaryHubView.tsx`, `components/glossary/GlossaryTermView.tsx`, `app/sitemap.ts`, `public/llms.txt`, `components/home/data.ts`, `scripts/build-glossary-html.mjs`, `glossary-html/`
-- **Decisions:** 23 istilah B2B AI disinkronkan ke Header & Footer resmi, penambahan One-Click Copy Definition button, scroll progress bar, contextual Mini Session CTA hook, sinkronisasi HTML statis ke folder lokal dan backup F:.
-- **Quality Gate:** 100% pass (tests, audit, eslint 0 warnings/errors pada file glossary, typecheck).
-- **Next:** Push ke origin main untuk memicu deploy Cloudflare Workers.
+- **Status:** COMPLETED & DEPLOYED (Live at `https://pesat.ai/glossary`)
+- **Files touched:** `lib/glossary-data.ts`, `app/glossary/page.tsx`, `app/glossary/[slug]/page.tsx`, `components/glossary/GlossaryHubView.tsx`, `components/glossary/GlossaryTermView.tsx`, `app/sitemap.ts`, `public/llms.txt`, `components/home/data.ts`, `scripts/build-glossary-html.mjs`, `glossary-html/`, `scripts/audit-requirements.mjs`, `coldstart.md`
+- **Decisions & Implementation:**
+  - 23 istilah B2B AI dikurasi dan diselaraskan dengan 6 pilar layanan Pesat.AI dan metodologi founder Nell VH (AHE Method™, DRA™, GEO, AI Demand Forecasting, AI Sales Assistant, Diagnostic Mini Session).
+  - Integrasi Header dan Footer resmi situs (navigasi lengkap, multi-kolom footer, strict copy compliance tanpa kata konsultan).
+  - UX Expert upgrades: One-Click Quick Copy Definition button, subtle reading progress indicator bar, contextual Mini Session CTA hooks per kategori, dan modal coach launcher.
+  - Cross-platform CRLF normalization di `scripts/audit-requirements.mjs`.
+  - Generator HTML statis mandiri di `scripts/build-glossary-html.mjs` dengan 24 file statis (`glossary-html/` dan backup `F:\Zcode shenanigans\pesat-ai-backup\glossary-html`).
+  - Pembaruan secret `CLOUDFLARE_API_TOKEN` pada repository GitHub Actions, sukses re-run deploy ke Cloudflare Workers dengan status HTTP 200 OK di `https://pesat.ai/glossary`.
+- **Quality Gate:** 100% pass (tests, audit, eslint, typecheck).
+- **Live Verification:** `https://pesat.ai/glossary` (HTTP 200 OK), `https://pesat.ai/sitemap.xml`, `https://pesat.ai/llms.txt`.
 
 ---
 
