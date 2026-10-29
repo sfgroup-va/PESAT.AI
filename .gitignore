@@ -18,3 +18,4 @@ backups/
 # Internal handoff docs — contain real secrets, never push
 CLOUDFARE_GUIDE.md
 .claude
+.browser-sessions/

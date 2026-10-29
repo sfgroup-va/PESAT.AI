@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Apa Itu Token Optimization? Definisi, Cara Kerja &amp; Contoh B2B | Pesat.AI</title>
+<meta name="description" content="Glosarium AI B2B &amp; Otomasi Operasional Pesat.AI">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#f8fafc;--card:#fff;--ink:#0f172a;--soft:#475569;--mute:#94a3b8;--line:#e2e8f0;
+  --acc:#4f46e5;--acc2:#4338ca;--green:#059669;--amber:#b45309;--purple:#7e22ce;
+  --header-bg:#0a0a14;
+}
+html[data-theme=dark]{
+  --bg:#070710;--card:#0f111c;--ink:#f1f5f9;--soft:#cbd5e1;--mute:#64748b;--line:#1e293b;
+  --acc:#818cf8;--acc2:#a5b4fc;--header-bg:#0a0a14;
+}
+*{margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--acc);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+
+/* Pesat.AI Official Header Bar */
+header.bar{
+  position:sticky;top:0;z-index:40;
+  background:#0a0a14;
+  background-image:radial-gradient(circle at 50% 0%,rgba(99,102,241,0.22),transparent 30rem);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  color:#fff;
+}
+.bar-in{
+  max-width:1120px;margin:0 auto;padding:12px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.brand{display:flex;align-items:baseline;gap:8px;text-decoration:none}
+.brand-text{font-weight:800;font-size:1.15rem;color:#fff;letter-spacing:-.02em}
+.brand-text span{color:#818cf8}
+.brand-sub{font-size:.74rem;color:rgba(255,255,255,0.5);font-weight:600;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,0.15)}
+.bar nav{display:flex;align-items:center;gap:16px;font-size:.82rem;font-weight:600}
+.bar nav a{color:rgba(255,255,255,0.7);transition:color .15s}
+.bar nav a:hover{color:#fff;text-decoration:none}
+.bar nav a.active{color:#fff;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:999px}
+.bar-actions{display:flex;align-items:center;gap:10px}
+.theme-btn{
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);
+  color:#fff;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:.76rem;font-weight:600;
+  transition:all .15s;
+}
+.theme-btn:hover{background:rgba(255,255,255,0.16);border-color:rgba(255,255,255,0.4)}
+.btn-top{
+  background:#fff;color:#0a0a14;padding:7px 16px;border-radius:999px;
+  font-weight:700;font-size:.8rem;text-decoration:none;transition:transform .15s;
+}
+.btn-top:hover{text-decoration:none;opacity:.95;transform:translateY(-1px)}
+
+main{padding:36px 0 72px}
+.crumb{font-size:.75rem;color:var(--mute);margin-bottom:18px;display:flex;gap:6px;flex-wrap:wrap}
+.crumb a{color:var(--acc)}
+h1{font-size:2.2rem;line-height:1.2;letter-spacing:-.025em;font-weight:800}
+h2{font-size:1.35rem;letter-spacing:-.015em;font-weight:700;margin:0 0 10px}
+h3{font-size:1.05rem;font-weight:700}
+.sub{color:var(--soft);font-size:1.02rem;margin-top:10px;max-width:72ch}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,transparent);border:1px solid color-mix(in srgb,var(--acc) 22%,transparent);padding:5px 11px;border-radius:999px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+.lead{margin-top:22px;border-left:4px solid var(--acc);font-size:1.06rem;font-weight:500;line-height:1.7}
+.takeaways{margin-top:22px;background:color-mix(in srgb,var(--green) 7%,transparent);border:1px solid color-mix(in srgb,var(--green) 22%,transparent);border-radius:16px;padding:20px 22px}
+.takeaways .cap{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
+.takeaways ul{list-style:none;display:grid;gap:9px;font-size:.94rem;color:var(--soft)}
+.takeaways li{display:flex;gap:9px}
+.takeaways li b{color:var(--green)}
+section.blk{margin-top:34px}
+section.blk p{color:var(--soft);font-size:.97rem;margin-top:8px}
+.warn{margin-top:34px;background:color-mix(in srgb,var(--purple) 7%,transparent);border:1px solid color-mix(in srgb,var(--purple) 24%,transparent);border-radius:16px;padding:20px 22px}
+.warn .cap{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--purple);margin-bottom:8px}
+.warn p{font-style:italic;color:var(--soft);font-size:.96rem}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.9rem;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);background:color-mix(in srgb,var(--line) 40%,transparent)}
+tr:last-child td{border-bottom:none}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:10px}
+summary{cursor:pointer;font-weight:600;font-size:.95rem;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";float:right;color:var(--acc);font-weight:400}
+details[open] summary::after{content:"–"}
+details p{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:.92rem;color:var(--soft)}
+.sources{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);font-size:.82rem;color:var(--soft)}
+.sources .cap{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:10px}
+.sources ol{margin-left:18px;display:grid;gap:7px}
+.cta{margin-top:44px;border-radius:22px;padding:30px 26px;color:#fff;background:linear-gradient(135deg,#312e81,#1e1b4b 55%,#0f172a);border:1px solid rgba(255,255,255,0.1)}
+.cta h3{font-size:1.3rem;color:#fff}
+.cta p{color:#c7d2fe;font-size:.94rem;margin-top:8px;max-width:65ch}
+.cta .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:20px}
+.btn{background:#fff;color:#0f172a;padding:11px 22px;border-radius:999px;font-weight:700;font-size:.88rem;transition:opacity .15s}
+.btn:hover{text-decoration:none;opacity:.9}
+.ghost{color:#c7d2fe;font-size:.88rem;font-weight:600}
+.related{margin-top:48px;padding-top:26px;border-top:1px solid var(--line)}
+.related .cap{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:14px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+.card{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;transition:all .15s}
+.card:hover{border-color:var(--acc);text-decoration:none;transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,0.04)}
+.card .t{font-weight:700;font-size:.95rem;color:var(--ink)}
+.card .d{font-size:.82rem;color:var(--soft);margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+.card .m{font-size:.72rem;color:var(--mute);margin-top:12px;font-weight:600}
+.search{position:relative;margin-top:28px}
+.search input{width:100%;padding:14px 18px 14px 44px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:.94rem;font-family:inherit;outline:none}
+.search input:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 16%,transparent)}
+.search svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--mute);fill:none;stroke-width:2}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{background:var(--card);border:1px solid var(--line);color:var(--soft);padding:7px 14px;border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.az{display:flex;flex-wrap:wrap;gap:5px;margin-top:22px;font-size:.78rem;font-weight:700;position:sticky;top:58px;background:color-mix(in srgb,var(--bg) 95%,transparent);backdrop-filter:blur(10px);padding:10px 0;z-index:20;border-bottom:1px solid var(--line)}
+.az a{border:1px solid var(--line);background:var(--card);color:var(--acc);width:30px;height:30px;display:grid;place-items:center;border-radius:8px;transition:all .15s}
+.az a:hover{background:var(--acc);color:#fff;border-color:var(--acc);text-decoration:none}
+.az span{color:var(--mute);opacity:.4;width:30px;height:30px;display:grid;place-items:center}
+.group{margin-top:36px;scroll-margin-top:120px}
+.group-h{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:16px}
+.group-h .L{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:var(--acc);color:#fff;font-weight:800;font-size:.95rem}
+.group-h .n{font-size:.74rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.start{margin-top:28px;background:color-mix(in srgb,var(--amber) 8%,transparent);border:1px solid color-mix(in srgb,var(--amber) 25%,transparent);border-radius:18px;padding:22px 24px}
+.start .cap{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin-bottom:6px}
+.start p{font-size:.92rem;color:var(--soft);margin-bottom:14px}
+.empty{display:none;text-align:center;padding:48px 20px;color:var(--mute);border:1px dashed var(--line);border-radius:16px;margin-top:24px}
+.empty.on{display:block}
+
+/* Pesat.AI Official Multi-column Footer */
+footer.site-footer{
+  border-top:1px solid rgba(255,255,255,0.1);
+  background:#0a0a14;
+  color:#fff;
+  padding:56px 0 32px;
+  margin-top:64px;
+}
+.footer-wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.footer-grid{display:grid;gap:36px;grid-template-columns:1.4fr 1fr 1fr 1fr}
+.footer-brand{font-size:1.3rem;font-weight:800;letter-spacing:-.02em}
+.footer-brand span{color:#818cf8}
+.footer-desc{margin-top:12px;max-width:280px;font-size:.84rem;line-height:1.7;color:rgba(255,255,255,0.6)}
+.footer-btn{
+  margin-top:20px;display:inline-flex;align-items:center;gap:8px;
+  background:#fff;color:#0a0a14;padding:8px 18px;border-radius:999px;
+  font-size:.82rem;font-weight:700;text-decoration:none;transition:transform .15s;
+}
+.footer-btn:hover{transform:translateY(-1px);text-decoration:none}
+.footer-title{font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:16px}
+.footer-col ul{list-style:none;display:grid;gap:10px}
+.footer-col a{font-size:.84rem;color:rgba(255,255,255,0.65);transition:color .15s}
+.footer-col a:hover{color:#fff;text-decoration:none}
+.footer-bottom{
+  margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.1);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
+  font-size:.76rem;color:rgba(255,255,255,0.4);
+}
+.footer-links{display:flex;align-items:center;gap:18px}
+.footer-links a{color:rgba(255,255,255,0.6)}
+.footer-links a:hover{color:#fff;text-decoration:none}
+
+@media(max-width:860px){
+  .footer-grid{grid-template-columns:1fr 1fr}
+  .bar nav{display:none}
+  h1{font-size:1.75rem}
+}
+@media(max-width:540px){
+  .footer-grid{grid-template-columns:1fr}
+}
+
+.lead-box{display:flex;flex-direction:column;gap:12px;position:relative}
+@media(min-width:640px){.lead-box{flex-direction:row;justify-content:space-between;align-items:flex-start}}
+.copy-btn{align-self:flex-start;background:var(--card);border:1px solid var(--line);color:var(--soft);border-radius:8px;padding:6px 12px;font-size:.76rem;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .15s}
+.copy-btn:hover{color:var(--acc);border-color:var(--acc)}
+.scroll-bar{position:fixed;top:54px;left:0;right:0;height:2px;background:transparent;z-index:40;pointer-events:none}
+.scroll-progress{height:100%;background:linear-gradient(90deg,#6366f1,#818cf8);width:0%}
+</style>
+<script>(function(){try{var t=localStorage.getItem('gl-theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+</head>
+<body>
+<div class="scroll-bar"><div id="readProgress" class="scroll-progress"></div></div>
+<header class="bar"><div class="bar-in">
+  <a class="brand" href="https://pesat.ai/">
+    <span class="brand-text">Pesat<span>.AI</span></span>
+    <span class="brand-sub">Glosarium AI</span>
+  </a>
+  <nav>
+    <a href="https://pesat.ai/">Beranda</a>
+    <a href="https://pesat.ai/services">Layanan</a>
+    <a href="index.html" class="active">Glosarium</a>
+    <a href="https://pesat.ai/#pillars">6 Pilar Solusi</a>
+    <a href="https://pesat.ai/#pricing">Harga</a>
+    <a href="https://pesat.ai/#founder">Founder</a>
+  </nav>
+  <div class="bar-actions">
+    <button class="theme-btn" onclick="glTheme()" aria-label="Ganti tema">Tema</button>
+    <a class="btn-top" href="https://pesat.ai/">Buktikan Sendiri →</a>
+  </div>
+</div></header>
+<main><div class="wrap">
+<div class="crumb"><a href="https://pesat.ai/">Beranda</a> / <a href="index.html">Glosarium</a> / <span>ROI &amp; Biaya Operasional</span> / <strong>Token Optimization</strong></div>
+<h1>Apa Itu Token Optimization?</h1>
+<p class="sub" style="font-size:.78rem;color:var(--mute);margin-top:10px">Ditinjau Tim Solusi Pesat.AI · Diperbarui 2026-07-07 · 4 menit baca</p>
+<div class="box lead">
+  <div class="lead-box">
+    <div><strong>Optimasi Biaya Token</strong> adalah serangkaian teknik rekayasa prompt, caching konteks, dan perutean model cerdas (model routing) yang bertujuan memangkas tagihan API penyedia AI hingga 70-85% tanpa menurunkan kualitas akurasi hasil bagi operasional bisnis.</div>
+    <button class="copy-btn" onclick="copyDef(this, 'Token Optimization — Optimasi Biaya Token adalah serangkaian teknik rekayasa prompt, caching konteks, dan perutean model cerdas (model routing) yang bertujuan memangkas tagihan API penyedia AI hingga 70-85% tanpa menurunkan kualitas akurasi hasil bagi operasional bisnis. (Sumber: https://pesat.ai/glossary/token-cost-optimization)')">Salin Ringkasan</button>
+  </div>
+</div>
+<div class="takeaways"><div class="cap">Poin Kunci (Key Takeaways)</div><ul><li><b>→</b><span>Token adalah unit terkecil pemrosesan teks yang menjadi dasar tarif tagihan penyedia AI (OpenAI, Anthropic, Google).</span></li><li><b>→</b><span>Model routing: gunakan model kecil dan murah (seperti Haiku atau GPT-4o-mini) untuk 80% tugas penyortiran ringan.</span></li><li><b>→</b><span>Model besar dan mahal hanya dipanggil untuk penalaran rumit atau analisis hukum kritis.</span></li><li><b>→</b><span>Pemanfaatan Prompt Caching memotong biaya token berulang hingga 90% pada dokumen referensi panjang.</span></li></ul></div>
+<section class="blk"><h2>Cara Kerja Token Optimization</h2><p>Sistem optimasi token bekerja seperti manajer logistik. Ketika ada permintaan masuk, router cerdas pertama-tama mengklasifikasikan kompleksitas tugas. Jika tugasnya sekadar mengekstrak nama dan tanggal dari faktur, sistem mengarahkannya ke model hemat berbiaya $0.15 per 1 juta token. Hanya jika dokumen memiliki klausul sengketa ambigu, query diteruskan ke model flagship premium.</p></section>
+<section class="blk"><h2>Dampak Nyata pada P&amp;L dan Operasional Bisnis</h2><p>Membuat implementasi AI berkelanjutan dan scalable. Perusahaan tidak perlu cemas tagihan software membengkak tak terkendali saat volume transaksi bulanan bertambah dari ribuan menjadi ratusan ribu interaksi.</p></section>
+<section class="blk"><h2>Contoh Penerapan Nyata di Lapangan</h2><p>Perusahaan customer care B2B berhasil memangkas tagihan API bulanan dari $2.400 menjadi hanya $380 setelah menerapkan prompt caching pada basis pengetahuan SOP dan memfilter 75% tiket pertanyaan berulang menggunakan model mini yang ter-fine-tuning ringan.</p></section>
+<div class="warn"><div class="cap">Kekeliruan Umum di Kalangan Pemilik Bisnis</div><p>&ldquo;Banyak tim membuang-buang uang dengan selalu menggunakan model tercanggih dan termahal untuk semua hal (misalnya memakai model penalaran berat hanya untuk mengecek apakah sebuah kata berformat email atau bukan).&rdquo;</p></div>
+
+<section class="blk"><h2>Pertanyaan yang Sering Diajukan (FAQ)</h2><details><summary>Apa itu Prompt Caching?</summary><p>Fitur penyedia AI modern di mana teks panduan atau dokumen tebal yang sering dibaca tidak lagi dihitung dengan tarif penuh pada panggilan berikutnya, melainkan mendapat diskon hingga 90%.</p></details></section>
+<section class="blk"><h2>Kesimpulan Praktis</h2><p>Memahami Token Optimization bukan tentang mempelajari sintaks kode rumit, melainkan tentang mengenali di mana titik gesekan operasional perusahaan Anda bisa dialihkan ke sistem cerdas. Langkah awal terbaik adalah mengidentifikasi satu alur kerja yang paling banyak menyita jam kerja tim Anda setiap minggunya.</p></section>
+<div class="sources"><div class="cap">Sumber &amp; Referensi Terpercaya</div><ol><li><a href="https://docs.anthropic.com/" target="_blank" rel="noopener nofollow">Prompt Caching and Cost Reduction at Scale</a> — Anthropic Documentation</li></ol></div>
+<div class="cta">
+  <span style="display:inline-block;background:rgba(99,102,241,0.25);padding:3px 10px;border-radius:999px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c7d2fe;margin-bottom:8px">Kalkulasi Balik Modal AI</span>
+  <h3>Hitung Potensi Hemat Biaya &amp; ROI Operasional</h3>
+  <p>Jangan investasikan software sebelum tahu angka balik modalnya. Mini Session Pesat.AI memetakan penghematan biaya riil untuk alur kerja bisnis Anda.</p>
+  <div class="row"><a class="btn" href="https://pesat.ai/">Uji Mini Session</a><a class="ghost" href="https://wa.me/6281290401240">Diskusi Solusi via WhatsApp →</a></div>
+</div>
+<div class="related"><div class="cap">Istilah Terkait (Internal Knowledge Mesh)</div><div class="grid"><a class="card" href="b2b-ai-roi.html"><div class="t">ROI AI B2B (Return on Investment)</div><div class="d">ROI AI B2B adalah rasio terukur antara keuntungan finansial bersih yang diperoleh perusahaan (melalui pemangkasan jam kerja manual, pengurangan kesalahan fatal, dan percepatan siklus penjualan) terhadap total biaya lisensi, infrastruktur, dan implementasi sistem kecerdasan buatan.</div><div class="m">5 menit baca</div></a><a class="card" href="rule-engine-vs-llm.html"><div class="t">Rule Engine vs LLM (Aturan Pasti vs AI Generatif)</div><div class="d">Rule Engine vs LLM adalah perbandingan dua pendekatan komputasi bisnis: sistem aturan pasti berbasis kode 'jika-maka' yang 100% deterministik dan murah, dibandingkan dengan model bahasa besar generatif berbasis probabilitas yang fleksibel dalam memahami konteks manusia.</div><div class="m">5 menit baca</div></a><a class="card" href="context-window.html"><div class="t">Context Window (Jendela Konteks)</div><div class="d">Context Window adalah kapasitas maksimum jumlah token (kata atau karakter) yang dapat dibaca, diproses, dan diingat secara bersamaan oleh model AI dalam satu sesi percakapan atau satu siklus permintaan data.</div><div class="m">4 menit baca</div></a><a class="card" href="sla-response-time-ai.html"><div class="t">SLA AI Response Time &amp; Monitoring</div><div class="d">SLA AI Response Time &amp; Monitoring adalah standar kesepakatan tingkat layanan terkait kecepatan waktu respons sistem cerdas (biasanya di bawah 2-3 detik) serta pengawasan performa kestabilan server secara real-time guna menjamin kepuasan pelanggan B2B.</div><div class="m">4 menit baca</div></a></div></div>
+</div></main>
+<footer class="site-footer">
+  <div class="footer-wrap">
+    <div class="footer-grid">
+      <div class="footer-col brand-col">
+        <div class="footer-brand">Pesat<span>.AI</span></div>
+        <p class="footer-desc">AI Revenue System untuk bisnis Indonesia. Ubah masalah jadi solusi AI yang nyata, terukur, dan terpakai.</p>
+        <a class="footer-btn" href="https://pesat.ai/">Buktikan Sendiri dalam 5 Menit</a>
+      </div>
+      <div class="footer-col">
+        <p class="footer-title">Navigasi</p>
+        <ul>
+          <li><a href="https://pesat.ai/">Beranda</a></li>
+          <li><a href="https://pesat.ai/services">Layanan</a></li>
+          <li><a href="index.html">Glosarium AI</a></li>
+          <li><a href="https://pesat.ai/#pillars">6 Pilar Solusi</a></li>
+          <li><a href="https://pesat.ai/#how-it-works">Cara Kerja</a></li>
+          <li><a href="https://pesat.ai/#pricing">Harga</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <p class="footer-title">Solusi</p>
+        <ul>
+          <li><a href="https://pesat.ai/#pillars">Revenue Engine</a></li>
+          <li><a href="https://pesat.ai/#pillars">Cost Killer &amp; Ops</a></li>
+          <li><a href="https://pesat.ai/#pillars">Predictive &amp; Forecasting</a></li>
+          <li><a href="https://pesat.ai/#pillars">Brand Trust &amp; GEO</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <p class="footer-title">Perusahaan</p>
+        <ul>
+          <li><a href="https://pesat.ai/#founder">Founder</a></li>
+          <li><a href="https://jetdigitalpro.com/" target="_blank" rel="noopener">JetDigitalPro ↗</a></li>
+          <li><a href="https://jasa-seo.id/" target="_blank" rel="noopener">Jasa-SEO.id ↗</a></li>
+          <li><a href="https://gcrindex.com/" target="_blank" rel="noopener">GCRIndex ↗</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Pesat.AI. All Rights Reserved.</p>
+      <div class="footer-links">
+        <a href="https://wa.me/6281290401240" target="_blank" rel="noopener">WhatsApp ↗</a>
+        <a href="https://pesat.ai/#pricing">Harga</a>
+        <a href="https://pesat.ai/#founder">Tentang</a>
+      </div>
+    </div>
+  </div>
+</footer>
+<script>
+function glTheme(){var d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');try{localStorage.setItem('gl-theme',d?'light':'dark')}catch(e){}}
+function copyDef(btn, text){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(function(){
+      btn.innerText='✓ Tersalin';
+      setTimeout(function(){btn.innerText='Salin Ringkasan';}, 2000);
+    });
+  }
+}
+window.addEventListener('scroll', function(){
+  var bar = document.getElementById('readProgress');
+  if(!bar) return;
+  var top = window.scrollY, max = document.documentElement.scrollHeight - window.innerHeight;
+  bar.style.width = (max > 0 ? (top / max * 100) : 0) + '%';
+}, { passive: true });
+</script>
+</body></html>

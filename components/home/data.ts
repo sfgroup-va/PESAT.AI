@@ -257,6 +257,7 @@ export type NavLink = { label: string; href: string };
 
 export const navLinks: NavLink[] = [
   { label: "Layanan", href: "/services" },
+  { label: "Glosarium", href: "/glossary" },
   { label: "6 Pilar Solusi", href: "/#pillars" },
   { label: "Cara Kerja", href: "/#how-it-works" },
   { label: "Harga", href: "/#pricing" },

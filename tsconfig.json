@@ -37,6 +37,13 @@
   ],
   "exclude": [
     "node_modules",
-    "backups/**"
+    "backups/**",
+    "**/*-Keplu*",
+    "**/*-Desktop-Nell*",
+    "**/*-NoiroPC*",
+    ".next/dev/types/**",
+    ".next/types/app/cms/**",
+    ".next/types/app/offer/**",
+    ".next/types/validator.ts"
   ]
 }

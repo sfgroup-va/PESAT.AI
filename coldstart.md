@@ -410,10 +410,23 @@ Button WhatsApp membawa URL ke WA sales Pesat.AI dengan pesan yang sudah tersusu
 
 | Date | Perubahan | Status |
 |------|-----------|--------|
+| 2026-07-13 | Implementasi halaman `/deposit` + integrasi PayPal live + admin editor & DB migration | ✅ Deployed |
 | 2026-07-10 | Update `coldstart.md`: tambahkan section **CMS Landing Pages** — spec form submit → thank-you page, desain thank-you page, tracking di tombol WA, dan catatan section kosong | ✅ Dokumentasi updated |
 | 2026-07-08 | Implementasi `public/llms.txt` untuk AI crawlers; deploy ke Cloudflare Workers via GitHub Actions | ✅ Deployed |
 | 2026-07-08 | Bersihkan file backup `-Keplu` dan update `.gitignore` + `tsconfig.json` agar tidak ikut compile | ✅ Repo clean |
 | 2026-07-08 | Fix lint error `react-hooks/set-state-in-effect` di `components/LandingEditor.tsx` | ✅ Quality gate lolos |
+| 2026-10-27 | Reverse engineer Glossary Builder & Roborank.io; implementasi Glosarium AI B2B lokal (`/glossary` & `/glossary/[slug]`) dengan 17 istilah, Schema JSON-LD, A-Z index, search, and internal link mesh | ✅ Selesai |
+| 2026-10-27 | Tambah generator HTML statis `scripts/build-glossary-html.mjs` → output `glossary-html/` (18 file, bisa dibuka langsung tanpa server) | ✅ Verified |
+| 2026-10-29 | QA & Standarisasi Glosarium AI B2B: ekspansi ke 23 istilah (tambah GEO, DRA™, AHE Method™, AI Demand Forecasting, AI Sales Assistant, Diagnostic Mini Session), integrasi Header & Footer resmi situs dengan coach launcher, UX upgrades (one-click copy definition, reading progress bar, contextual mini session hooks), sinkronisasi statis HTML (24 file) ke glossary-html/ dan backup drive, quality gate 100% pass | ✅ Ready for Deploy |
+
+---
+
+## 2026-10-29 — Publish Glosarium AI B2B + UX Upgrades
+- **Status:** COMPLETED
+- **Files touched:** `lib/glossary-data.ts`, `app/glossary/page.tsx`, `app/glossary/[slug]/page.tsx`, `components/glossary/GlossaryHubView.tsx`, `components/glossary/GlossaryTermView.tsx`, `app/sitemap.ts`, `public/llms.txt`, `components/home/data.ts`, `scripts/build-glossary-html.mjs`, `glossary-html/`
+- **Decisions:** 23 istilah B2B AI disinkronkan ke Header & Footer resmi, penambahan One-Click Copy Definition button, scroll progress bar, contextual Mini Session CTA hook, sinkronisasi HTML statis ke folder lokal dan backup F:.
+- **Quality Gate:** 100% pass (tests, audit, eslint 0 warnings/errors pada file glossary, typecheck).
+- **Next:** Push ke origin main untuk memicu deploy Cloudflare Workers.
 
 ---
 
