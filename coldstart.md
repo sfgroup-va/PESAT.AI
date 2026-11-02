@@ -443,6 +443,18 @@ Button WhatsApp membawa URL ke WA sales Pesat.AI dengan pesan yang sudah tersusu
     * Next.js static generation 43/43 halaman sukses (`npm run build`).
     * Generator HTML statis 24 halaman tersinkronisasi (`node scripts/build-glossary-html.mjs`).
     * Evaluasi ulang skor SEO & GEO mencapai **9.8/10**.
+  - **Deployment & Live Verification:**
+    * Commit: `19ff968` pushed ke branch `main`.
+    * GitHub Actions deploy selesai dan sukses mendeploy ke Cloudflare Workers.
+    * Verifikasi live:
+      - `https://pesat.ai/` (HTTP 200, Schema Organization, WebSite, FAQPage terpasang)
+      - `https://pesat.ai/services` (HTTP 200, Schema CollectionPage & 33 Service terpasang)
+      - `https://pesat.ai/offer` (HTTP 200, terindeks di sitemap)
+      - `https://pesat.ai/glossary` (HTTP 200, 23 istilah DefinedTermSet)
+      - `https://pesat.ai/glossary/geo-generative-engine-optimization` (HTTP 200, Article speakable)
+      - `https://pesat.ai/robots.txt` (HTTP 200, 11 bot AI allowed)
+      - `https://pesat.ai/sitemap.xml` (HTTP 200, rute statis & glosarium lengkap)
+      - `https://pesat.ai/llms-full.txt` (HTTP 200 OK, format context lengkap)
 
 ---
 
