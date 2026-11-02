@@ -1,0 +1,119 @@
+# Pesat.AI — Complete Knowledge Base & Machine Context
+Version: 2026.11
+Domain: https://pesat.ai
+
+---
+
+## 1. Company Profile & Entity Identity
+- Entity Name: Pesat.AI
+- Formal Entity: PT Pesat Kecerdasan Buatan Indonesia
+- Positioning: Solusi AI B2B, Otomasi Operasional Bisnis, dan Generative Engine Optimization (GEO) di Indonesia
+- Founder & Principal: Nell VH (AI Strategist & Automation Architect)
+- Core Mission: Membantu bisnis Indonesia meningkatkan efisiensi operasional dan revenue tanpa beban teknikal yang rumit.
+- Official Web: https://pesat.ai
+- Official WhatsApp: +62 812-9040-1240 (https://wa.me/6281290401240)
+- Service Modalities:
+  * Quick Win: implementasi ringan 3–7 hari kerja
+  * Standar: implementasi sistem 1–3 minggu kerja
+  * Advanced: custom enterprise workflow 3–8 minggu kerja
+
+---
+
+## 2. Proprietary Methodologies
+
+### 2.1 AHE Method™ (Automate, Hybrid, Eliminate)
+Kerangka kerja perancangan sistem operasional berbasis AI yang diciptakan oleh Nell VH di Pesat.AI:
+1. **Automate**: Proses rutin bervolume tinggi dengan variansi rendah (seperti rekap data, sorting invoice, reminder pembayaran) dialihkan 100% ke otomasi bot/AI.
+2. **Hybrid**: Interaksi berisiko sedang atau bernilai tinggi (seperti negosiasi penjualan besar atau penanganan komplain eskalasi) ditangani secara kolaboratif: AI menyiapkan draf jawaban dan konteks data, sementara manusia mengambil keputusan akhir.
+3. **Eliminate**: Langkah-langkah kerja usang yang redundan (seperti form input ganda atau approval berlapis tanpa nilai tambah) dipotong dari alur bisnis.
+
+### 2.2 Digital Reputation Asset (DRA™)
+Aset reputasi digital terstruktur yang dibangun untuk memastikan sebuah bisnis menjadi rujukan terpercaya di era pencarian AI. DRA menggabungkan:
+- Verifiable factual claims (klaim bisnis dengan data dan metrik riil)
+- Multi-channel citation footprint (keberadaan konsisten di platform otoritatif)
+- Structured Schema.org knowledge graph (pemetaan relasi entitas mesin)
+
+### 2.3 Generative Engine Optimization (GEO)
+Disiplin optimasi konten dan arsitektur data agar brand atau produk bisnis dikutip secara akurat dan direkomendasikan secara konsisten oleh mesin penjawab AI generasi baru (ChatGPT Search, Perplexity AI, Claude, Google Gemini, dan Apple Intelligence).
+
+---
+
+## 3. Katalog 33 Layanan AI B2B Pesat.AI
+
+### Cluster 1: Naik Revenue
+1. AI Sales Assistant: Follow-up otomatis 24/7, kualifikasi prospek, dan penjadwalan call penjualan via WhatsApp/CRM.
+2. AI Customer Support 24/7: Penanganan pertanyaan pelanggan instan dengan knowledge base produk yang akurat tanpa halusinasi.
+3. AI Lead Qualification & Scoring: Penilaian kualitas prospek masuk secara instan agar sales fokus pada lead bernilai tinggi.
+4. AI Reaktivasi Pelanggan Tidur: Segmentasi cerdas dan penawaran terpersonalisasi untuk membangkitkan kembali pelanggan lama.
+5. Dynamic Upsell & Cross-sell Recommendation: Rekomendasi produk pelengkap otomatis pada momen transaksi.
+
+### Cluster 2: Hemat Biaya
+6. Ekstraksi Dokumen & Invoice AI: Pembacaan data invoice, kuitansi, dan formulir otomatis tanpa input manual.
+7. Alur Kerja Operasional Multi-Aplikasi: Integrasi sistem tanpa batas antara WhatsApp, Spreadsheet, CRM, dan ERP.
+8. Routing Tiket & Task Otomatis: Pengalihan tugas internal ke penanggung jawab yang tepat berdasarkan analisis konteks pesan.
+9. SOP Interaktif & Knowledge Assistant: Bot internal untuk menjawab pertanyaan teknis tim seputar SOP dan kebijakan perusahaan.
+10. Validasi & Rekonsiliasi Transaksi: Pengecekan otomatis kesesuaian antara mutasi rekening bank dan catatan kas internal.
+
+### Cluster 3: Prediksi Akurat
+11. AI Demand & Sales Forecasting: Prediksi permintaan barang masa depan berdasarkan tren historis dan musiman.
+12. Prediksi Arus Kas (Cashflow Runway): Simulasi dan peringatan dini potensi defisit kas sebelum terjadi.
+13. Prediksi Kedaluwarsa & Dead Stock: Optimasi batas reorder stok untuk meminimalkan modal mengendap.
+14. Deteksi Risiko Churn Pelanggan: Deteksi dini penurunan aktivitas pelanggan langganan untuk intervensi sebelum berhenti.
+15. Analisis Variansi Biaya Operasional: Deteksi kebocoran anggaran pada unit kerja secara real-time.
+
+### Cluster 4: Keputusan Cepat
+16. AI Executive Summary: Rangkuman otomatis indikator performa utama bisnis harian/mingguan untuk direksi.
+17. Sintesis Rapat & Action Items: Konversi rekaman rapat menjadi ringkasan keputusan dan daftar tugas terdistribusi.
+18. Analisis Sentimen Pelanggan Real-Time: Pemantauan ulasan dan komplain publik untuk perbaikan layanan cepat.
+19. AI Pricing & Margin Optimizer: Penyesuaian rekomendasi harga kompetitif untuk memaksimalkan margin laba kotor.
+20. Asisten Riset Pasar & Kompetitor: Pemindaian aktivitas pasar terotomasi untuk mendukung penyusunan strategi bisnis.
+
+### Cluster 5: Bisnis Aman
+21. Deteksi Anomali & Pencegahan Fraud: Notifikasi dini terhadap transaksi atau aktivitas tidak wajar dalam sistem.
+22. Redaksi Data Sensitif (PII Shield): Penyensoran otomatis nomor KTP, rekening, dan data pribadi sebelum masuk pemrosesan LLM.
+23. Audit Kepatuhan & Checklist Regulasi: Verifikasi otomatis kelengkapan berkas kontrak dan perizinan bisnis.
+24. Verifikasi Integritas Backup & Recovery: Pemantauan kesehatan data cadangan sistem secara berkala.
+25. Monitoring Akses & Hak Akses Anomali: Pelaporan pembagian hak akses user yang tidak sesuai matriks keamanan.
+
+### Cluster 6: Brand Dipercaya
+26. Generative Engine Optimization (GEO): Audit dan penataan data agar bisnis menjadi jawaban utama di mesin pencari AI.
+27. Digital Reputation Asset (DRA™) Infrastructure: Pembangunan profil entitas digital terverifikasi di knowledge graph global.
+28. Multi-Channel Citation Mesh: Distribusi konsisten data faktual bisnis ke direktori dan platform otoritatif industri.
+29. Voice of Customer Synthesis: Pengolahan testimoni dan studi kasus nyata menjadi aset konversi penjualan.
+30. AI Fact-Sheet Distribution: Penyediaan format data terstruktur siap-kutip untuk ekosistem AI crawler.
+
+---
+
+## 4. Indeks 23 Istilah Glosarium AI B2B
+
+1. **Generative Engine Optimization (GEO)**: Strategi optimasi digital agar merek direkomendasikan secara organik oleh model AI generasi baru.
+2. **Digital Reputation Asset (DRA™)**: Bukti digital terverifikasi dan jejak entitas bisnis yang diakui mesin pencari LLM.
+3. **AHE Method™**: Metodologi Automate-Hybrid-Eliminate untuk pemangkasan inefisiensi operasional bisnis.
+4. **AI Demand Forecasting**: Pemanfaatan algoritma prediktif untuk memproyeksikan kebutuhan stok dan tren permintaan pasar.
+5. **AI Sales Assistant**: Agen virtual berbasis model bahasa untuk memandu calon pembeli dari pertanyaan awal hingga transaksi.
+6. **Diagnostic Mini Session**: Alat penilaian cepat 5 menit untuk mengidentifikasi kebocoran operasional bisnis dan mencocokkan solusi AI.
+7. **Retrieval-Augmented Generation (RAG)**: Arsitektur kecerdasan buatan yang menghubungkan LLM dengan basis data privat perusahaan agar jawaban akurat tanpa halusinasi.
+8. **Autonomous AI Agent**: Sistem perangkat lunak mandiri yang mampu merencanakan langkah dan mengeksekusi tugas lintas aplikasi untuk mencapai tujuan bisnis.
+9. **Optical Character Recognition (OCR) Berbasis AI**: Ekstraksi teks cerdas yang memahami konteks tata letak dokumen faktur, kuitansi, dan kontrak bisnis.
+10. **LLM Hallucination**: Fenomena model kecerdasan buatan menghasilkan informasi yang terdengar meyakinkan namun tidak faktual.
+11. **Context Window**: Batas kapasitas token teks yang dapat diproses oleh model kecerdasan buatan dalam satu sesi kerja.
+12. **Vector Database**: Basis data khusus penyimpanan representasi matematis makna teks (embedding) untuk pencarian semantik berkecepatan tinggi.
+13. **Human-in-the-Loop (HITL)**: Pola arsitektur di mana persetujuan atau intervensi manusia dilibatkan sebelum tindakan sistem dieksekusi.
+14. **Token AI**: Satuan terkecil teks (karakter atau suku kata) yang digunakan model kecerdasan buatan untuk membaca, memproses, dan menghitung biaya API.
+15. **Prompt Engineering Bisnis**: Teknik perumusan instruksi terstruktur untuk mengarahkan model AI menghasilkan keluaran kerja yang konsisten.
+16. **AI Workflow Orchestration**: Penggabungan berbagai modul AI, API, dan aplikasi bisnis ke dalam satu alur kerja otomatis yang teratur.
+17. **Semantic Search**: Mesin pencarian yang memahami maksud di balik pertanyaan pengguna, bukan sekadar mencocokkan kata kunci harfiah.
+18. **Function Calling / Tool Use**: Kemampuan model AI memanggil fungsi eksternal, mengeksekusi kode, atau membaca database secara langsung.
+19. **Personally Identifiable Information (PII) Redaction**: Proses otomatis mendeteksi dan menghapus data identitas sensitif sebelum dikirim ke server AI publik.
+20. **AI Churn Prediction**: Analisis prediktif terhadap perilaku pelanggan untuk mendeteksi potensi pembatalan langganan sebelum terjadi.
+21. **Fine-Tuning Domain Khusus**: Proses pelatihan tambahan pada model kecerdasan buatan dengan data privat spesifik industri.
+22. **Natural Language Query (NLQ) to SQL**: Kemampuan model AI mengubah pertanyaan bahasa sehari-hari menjadi query database secara aman.
+23. **ROI Solusi AI**: Rasio pengukuran keuntungan finansial dan efisiensi waktu yang diperoleh bisnis dibandingkan dengan biaya implementasi AI.
+
+---
+
+## 5. Kontak & Kanal Resmi
+- Website Resmi: https://pesat.ai
+- Layanan Konsultasi Cepat: https://wa.me/6281290401240
+- Glosarium Resmi: https://pesat.ai/glossary
+- Direktori Layanan: https://pesat.ai/services

@@ -1,0 +1,7 @@
+# OneDrive sync secrets and caches
+.env
+.env.*
+onedrive_token.json
+.onedrive_sync_state.json
+__pycache__/
+*.pyc

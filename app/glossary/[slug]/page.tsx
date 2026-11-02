@@ -30,10 +30,20 @@ export async function generateMetadata({
   const plainDef = term.leadDefinition.replace(/\*\*/g, "");
   const title = `Apa Itu ${term.shortName}? Definisi, Cara Kerja & Contoh B2B | Pesat.AI`;
   const description = `${plainDef.slice(0, 155)}...`;
+  const category = GLOSSARY_CATEGORIES.find((c) => c.id === term.categoryId);
 
   return {
     title,
     description,
+    keywords: [
+      term.shortName,
+      term.term,
+      `apa itu ${term.shortName}`,
+      `definisi ${term.shortName}`,
+      "AI B2B",
+      "otomasi bisnis",
+      category?.name || "Kecerdasan Buatan"
+    ],
     alternates: {
       canonical: `/glossary/${term.slug}`
     },
@@ -43,13 +53,23 @@ export async function generateMetadata({
       url: `/glossary/${term.slug}`,
       siteName: "Pesat.AI",
       type: "article",
+      locale: "id_ID",
       publishedTime: term.datePublished,
-      modifiedTime: term.dateModified
+      modifiedTime: term.dateModified,
+      images: [
+        {
+          url: "/images/ai-search-visibility.png",
+          width: 1200,
+          height: 630,
+          alt: `Definisi ${term.shortName} - Pesat.AI`
+        }
+      ]
     },
     twitter: {
       card: "summary_large_image",
       title,
-      description
+      description,
+      images: ["/images/ai-search-visibility.png"]
     }
   };
 }
@@ -75,13 +95,24 @@ export default async function GlossarySlugPage({
       {
         "@type": "Article",
         "@id": `${siteUrl}/glossary/${term.slug}#article`,
-        headline: `Apa Itu ${term.shortName}?`,
+        headline: `Apa Itu ${term.shortName}? Definisi, Cara Kerja & Contoh B2B`,
         description: term.leadDefinition.replace(/\*\*/g, ""),
+        inLanguage: "id-ID",
         datePublished: term.datePublished,
         dateModified: term.dateModified,
+        speakable: {
+          "@type": "SpeakableSpecification",
+          cssSelector: ["#lead-definition", "article > p:first-of-type"]
+        },
+        about: [
+          { "@type": "Thing", name: term.term },
+          { "@type": "Thing", name: term.shortName },
+          ...(category ? [{ "@type": "Thing", name: category.name }] : [])
+        ],
         author: {
-          "@type": "Organization",
-          name: "Tim Solusi Pesat.AI",
+          "@type": "Person",
+          name: "Nell VH",
+          jobTitle: "Founder & AI Strategist",
           url: siteUrl
         },
         publisher: {

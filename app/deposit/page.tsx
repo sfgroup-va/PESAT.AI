@@ -10,11 +10,17 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const result = await loadDepositConfig();
   if (!result.ok) {
-    return { title: "Deposit | Pesat.AI" };
+    return {
+      title: "Deposit Komitmen Layanan | Pesat.AI",
+      description: "Halaman konfirmasi deposit komitmen layanan solusi AI Pesat.AI.",
+      robots: { index: false, follow: true }
+    };
   }
   return {
-    title: result.data.title,
-    robots: { index: false, follow: true }
+    title: `${result.data.title} | Pesat.AI`,
+    description: result.data.subtitle || "Konfirmasi deposit komitmen implementasi solusi AI Pesat.AI.",
+    robots: { index: false, follow: true },
+    alternates: { canonical: "/deposit" }
   };
 }
 

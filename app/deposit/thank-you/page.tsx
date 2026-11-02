@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Deposit Berhasil | Pesat.AI",
-  robots: { index: false, follow: true }
+  robots: { index: false, follow: false }
 };
 
 export const runtime = "nodejs";

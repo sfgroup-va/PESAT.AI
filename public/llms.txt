@@ -1,27 +1,30 @@
 # Pesat.AI
 
-> Homepage dan mini session AI untuk bisnis Indonesia. Bantu pemilik bisnis, C-level, dan tim operasional menemukan peluang AI paling cepat berdampak dalam 5 menit — tanpa signup, tanpa kartu kredit.
+> Platform implementasi solusi AI B2B, otomasi alur kerja operasional, dan Generative Engine Optimization (GEO) terkemuka di Indonesia. Membantu pemilik bisnis, C-level, dan tim operasional mendiagnosis dan menerapkan kecerdasan buatan dalam 5 menit.
 
-Pesat.AI menyediakan katalog 33 solusi AI praktis yang dikelompokkan dalam 6 area: Naik Revenue, Hemat Biaya, Prediksi Akurat, Keputusan Cepat, Bisnis Aman, dan Brand Dipercaya. Setiap solusi dilengkapi contoh nyata, analogi, estimasi waktu, biaya, dan risiko.
+## Ringkasan Perusahaan
+- Nama: Pesat.AI (PT Pesat Kecerdasan Buatan Indonesia)
+- Founder: Nell VH (AI Strategist & Implementor)
+- Metodologi Unggulan: AHE Method™ (Automate, Hybrid, Eliminate), Digital Reputation Asset (DRA™), Generative Engine Optimization (GEO)
+- Wilayah Operasi: Indonesia & Asia Tenggara
+- Kontak Resmi: WhatsApp +62 812-9040-1240 / https://pesat.ai
 
-Pengunjung menjalankan mini session lewat wizard 5 menit di homepage. Mereka menjawab pertanyaan singkat tentang tantangan utama, titik bocor, intensitas masalah, sumber gesekan, dan gaya adopsi. Backend memetakan jawaban ke cluster solusi menggunakan rule engine; OpenAI hanya memperkuat copy hasil, tidak menciptakan solusi atau angka baru. Output berupa diagnosis operasional shareable (URL + PDF) yang bisa dibahas langsung dengan tim Pesat.AI.
+## Halaman Utama & Produk
+- [Beranda & Mini Session Diagnostik](https://pesat.ai/): Wizard interaktif 5 menit untuk memetakan titik kebocoran operasional dan potensi kenaikan omset tanpa login/kartu kredit.
+- [Katalog 33 Layanan AI](https://pesat.ai/services): 33 solusi AI terbagi dalam 6 pilar bisnis (Naik Revenue, Hemat Biaya, Prediksi Akurat, Keputusan Cepat, Bisnis Aman, Brand Dipercaya).
+- [Penawaran Implementasi AI](https://pesat.ai/offer): Solusi implementasi AI sales assistant dan otomasi workflow terintegrasi WhatsApp & database.
+- [Glosarium AI B2B Indonesia](https://pesat.ai/glossary): 23 istilah referensi otoritatif: GEO, DRA™, RAG, AI Agent, Demand Forecasting, ROI kalkulasi, tata kelola AI bisnis.
+- [Full Knowledge Base](https://pesat.ai/llms-full.txt): Dokumentasi teks lengkap 33 solusi, 23 glosarium, dan metodologi untuk pemrosesan konteks panjang model AI.
 
-## Produk & Metodologi
+## 6 Pilar Solusi AI B2B
+1. **Naik Revenue**: AI Sales Assistant, CS 24/7, Lead Qualification, AI Reaktivasi Pelanggan, Dynamic Upsell Recommendation.
+2. **Hemat Biaya**: Otomasi Ekstraksi Invoice, Pemrosesan Dokumen Otomatis, Routing Tiket Kerja, SOP Interaktif, AI Form Input.
+3. **Prediksi Akurat**: AI Demand & Sales Forecasting, Prediksi Arus Kas (Cashflow), Prediksi Kadaluarsa & Restock, Deteksi Churn.
+4. **Keputusan Cepat**: Executive Summary Otomatis, Sintesis Transkrip Rapat, Analisis Sentimen Pasar, AI Margin Optimizer.
+5. **Bisnis Aman**: Deteksi Anomali & Fraud, Proteksi Privasi & Redaksi Data PII, Audit Kepatuhan Otomatis, Back-up Verification.
+6. **Brand Dipercaya**: Generative Engine Optimization (GEO), Digital Reputation Asset (DRA™), Multi-Channel Citation Mesh.
 
-- [Beranda / Mini Session](https://pesat.ai/): Wizard 5 menit untuk mendiagnosis peluang AI, otomasi, efisiensi biaya, dan risiko operasional.
-- [Katalog Layanan AI](https://pesat.ai/services): 33 solusi AI dalam 6 cluster dengan filter, contoh nyata, analogi, dan estimasi.
-- [Glosarium AI B2B](https://pesat.ai/glossary): 23 istilah referensi praktis: GEO (Generative Engine Optimization), DRA™, AHE Method™, AI Agent, RAG, Demand Forecasting, alur otomasi, kalkulasi ROI, dan tata kelola privasi data bisnis.
-- [Hasil Mini Session](https://pesat.ai/result/[sessionId]): Laporan shareable berupa diagnosis, impact cards, before/after, dan roadmap 90 hari.
-
-## Kontak
-
-- [WhatsApp Pesat.AI](https://wa.me/6281290401240?text=Halo%20Pesat.AI%2C%20saya%20mau%20tanya%20layanan%20AI): Kontak langsung ke tim untuk tanya layanan atau jadwalkan strategy call.
-
-## Resources
-
-- [Sitemap](https://pesat.ai/sitemap.xml): Daftar URL publik yang dapat diindex.
-- [robots.txt](https://pesat.ai/robots.txt): Aturan akses crawler untuk bot.
-
-## Optional
-
-- [Admin Funnel](https://pesat.ai/admin): Dashboard internal funnel drop-off dan discovery count (memerlukan akses).
+## Resources & Machine Crawling
+- Sitemap: https://pesat.ai/sitemap.xml
+- Robots: https://pesat.ai/robots.txt
+- Full LLM Context: https://pesat.ai/llms-full.txt

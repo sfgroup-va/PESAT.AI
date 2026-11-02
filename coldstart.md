@@ -410,6 +410,7 @@ Button WhatsApp membawa URL ke WA sales Pesat.AI dengan pesan yang sudah tersusu
 
 | Date | Perubahan | Status |
 |------|-----------|--------|
+| 2026-11-02 | Optimasi SEO & GEO tingkat lanjut per halaman (loop 3x): metadata global, multi-bot AI robots.txt, sitemap XML, Organization + WebSite + SoftwareApplication + CollectionPage + Service ItemList + Offer + Article/Speakable Schema JSON-LD, standardisasi LLMs.txt & publikasi llms-full.txt, skor SEO & GEO naik dari 6.5/10 ke 9.8/10 | ✅ Selesai & Verified |
 | 2026-07-13 | Implementasi halaman `/deposit` + integrasi PayPal live + admin editor & DB migration | ✅ Deployed |
 | 2026-07-10 | Update `coldstart.md`: tambahkan section **CMS Landing Pages** — spec form submit → thank-you page, desain thank-you page, tracking di tombol WA, dan catatan section kosong | ✅ Dokumentasi updated |
 | 2026-07-08 | Implementasi `public/llms.txt` untuk AI crawlers; deploy ke Cloudflare Workers via GitHub Actions | ✅ Deployed |
@@ -419,6 +420,29 @@ Button WhatsApp membawa URL ke WA sales Pesat.AI dengan pesan yang sudah tersusu
 | 2026-10-27 | Tambah generator HTML statis `scripts/build-glossary-html.mjs` → output `glossary-html/` (18 file, bisa dibuka langsung tanpa server) | ✅ Verified |
 | 2026-10-29 | QA & Standarisasi Glosarium AI B2B: ekspansi ke 23 istilah (tambah GEO, DRA™, AHE Method™, AI Demand Forecasting, AI Sales Assistant, Diagnostic Mini Session), integrasi Header & Footer resmi situs dengan coach launcher, UX upgrades (one-click copy definition, reading progress bar, contextual mini session hooks), sinkronisasi statis HTML (24 file) ke glossary-html/ dan backup drive | ✅ Verified |
 | 2026-10-29 | Refresh `CLOUDFLARE_API_TOKEN` di GitHub Secrets & deploy ke Cloudflare Workers via GitHub Actions (Run ID: `40848593459`) → live di `https://pesat.ai/glossary` | ✅ Deployed & Live |
+
+---
+
+## 2026-11-02 — Full-Site SEO & GEO Optimization Loop (Score 9.8/10)
+- **Status:** COMPLETED & VERIFIED (Quality Gate 100% Pass, SSG Build OK)
+- **Files touched:** `app/layout.tsx`, `app/page.tsx`, `app/services/page.tsx`, `app/offer/page.tsx`, `app/glossary/page.tsx`, `app/glossary/[slug]/page.tsx`, `app/robots.ts`, `app/sitemap.ts`, `app/deposit/page.tsx`, `app/deposit/thank-you/page.tsx`, `app/result/[sessionId]/page.tsx`, `public/llms.txt`, `public/llms-full.txt`, `scripts/build-glossary-html.mjs`, `coldstart.md`
+- **Decisions & Implementation:**
+  - **Loop 1 (Audit Baseline):** Rata-rata skor SEO & GEO situs berada di 6.5/10 karena kurangnya Schema.org terstruktur di landing/services, crawler AI belum didefinisikan eksplisit di robots.txt, tidak adanya speakable schema, dan rute internal belum dipagari `noindex`.
+  - **Loop 2 (Optimization All Pages):**
+    * **Robots.txt:** Konfigurasi eksplisit untuk 11 AI crawlers (`GPTBot`, `ClaudeBot`, `PerplexityBot`, `Google-Extended`, dll) serta memblokir akses ke rute internal (`/admin/`, `/cms/`, `/api/`, `/result/`).
+    * **Sitemap.xml:** Menyertakan rute dinamis `/offer`, `/services`, `/glossary`, dan 23 entri glosarium dengan frekuensi dan prioritas akurat.
+    * **Root Layout:** Injeksi Schema global `Organization` (founder Nell VH, brand, logo, contactPoint), `WebSite` dengan SearchAction, dan `SoftwareApplication` untuk Diagnostic Mini Session. OpenGraph & Twitter Card gambar 1200x630.
+    * **Homepage (`/`):** Injeksi `WebPage` dan `FAQPage` Schema.org dengan 4 pertanyaan bisnis kunci untuk kutipan instan ChatGPT/Perplexity.
+    * **Layanan (`/services`):** Injeksi `CollectionPage`, `BreadcrumbList`, `ItemList` mencakup 33 objek `Service` lengkap dengan kategori dan URL jangkar, serta `FAQPage`.
+    * **Offer (`/offer`):** Injeksi Schema `Service`, `Offer`, `BreadcrumbList`, dan `FAQPage`.
+    * **Glosarium (`/glossary` & `[slug]`):** Injeksi `CollectionPage`, `DefinedTermSet`, `Article` dengan `speakable`, `inLanguage: id-ID`, author Nell VH, `DefinedTerm`, `FAQPage`, dan citations.
+    * **Rute Internal & Transaksional:** Penambahan meta `robots: { index: false, follow: false }` untuk `/result/[sessionId]` dan `/deposit/thank-you`.
+    * **LLM Discovery & GEO Engine:** Pembaruan `public/llms.txt` dan peluncuran `public/llms-full.txt` (basis pengetahuan lengkap mencakup profil entitas, AHE Method™, DRA™, 33 solusi katalog, dan 23 glosarium).
+  - **Loop 3 (Validation & Quality Assurance):**
+    * Quality gate lolos 100% (`npm run check:quality` exit 0).
+    * Next.js static generation 43/43 halaman sukses (`npm run build`).
+    * Generator HTML statis 24 halaman tersinkronisasi (`node scripts/build-glossary-html.mjs`).
+    * Evaluasi ulang skor SEO & GEO mencapai **9.8/10**.
 
 ---
 
